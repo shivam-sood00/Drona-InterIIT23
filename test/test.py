@@ -11,11 +11,23 @@ import time
 # TCP_IP = '192.168.4.1'
 # TCP_PORT = 23
 
-myDrone = comms.comms('192.168.4.1',23,True)
-myDrone.arm()
-myDrone.setThrottle(1000)
-myDrone.setThrottle(1050)
+
+
+TCP_IP = '192.168.4.1'
+TCP_PORT = 23
+BUFFER_SIZE = 1024
+# if(self.debug):
+print("Trying to Connect")
+mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# if(self.debug):
+mySocket.connect((TCP_IP, TCP_PORT))
+print("Connection Established")
+
+RC = comms.MSP_SET_RAW_RC(mySocket,True)
+CMD = comms.MSP_SET_COMMAND(mySocket,True)
+RC.arm()
+CMD.takeOff()
 time.sleep(3)
-myDrone.disarm()
-myDrone.disconnect()
+RC.disarm()
+mySocket.close()
 

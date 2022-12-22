@@ -1,17 +1,8 @@
 import socket,time,math
-class comms:
-    
-    def __init__(self,TCP_IP, TCP_PORT,debug=False):
-        self.TCP_IP=TCP_IP
-        self.TCP_PORT=TCP_PORT
-        self.BUFFER_SIZE = 1024
-        self.debug=debug
-        if(self.debug):
-            print("Trying to Connect")
-        self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        if(self.debug):
-            print("Connection Established")
-        self.mySocket.connect((TCP_IP, TCP_PORT))
+
+class MSP_SET_RAW_RC:
+    def __init__(self,mySocket,debug=False):
+        self.mySocket=mySocket
         headerArray=bytearray([36,77,60])
         self.valueArray=bytearray([])
         roll=1500                    
@@ -138,6 +129,104 @@ class comms:
 
     def recieveResponse(self):
         return self.mySocket.recv(self.BUFFER_SIZE)
+
+
+class MSP_SET_COMMAND:
+    def __init__(self,mySocket,debug=False):
+        self.mySocket = mySocket
+        headerArray=bytearray([36,77,60])
+        self.valueArray=bytearray([])    
+        self.valueArray.extend(headerArray)
+        self.valueArray.append(2)
+        self.valueArray.append(217)
+        #default??
+        self.valueArray.extend([0,0])
+        self.valueArray.append(234)
+        self.Array=self.valueArray[:]
+        if(self.debug):
+            print(self.Array)
+        self.isConnected=False
     
-    def disconnect(self):
-        self.mySocket.close()
+    def changeCRC(self):
+        self.CRCArray=self.Array[3:-1]
+        self.CRCValue=0
+        for d in self.CRCArray:
+            self.CRCValue= self.CRCValue^d
+        return self.CRCValue
+    
+    def getBytes(self,value): 
+        self.LSB=value % 256
+        self.MSB=math.floor(value/256)
+        return bytearray([self.LSB,self.MSB])
+    
+    def takeOff(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(1))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Taking Off")
+        self.sendPacket(self.Array)
+    
+    def land(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(2))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Landing")
+        self.sendPacket(self.Array)
+
+    def backFlip(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(3))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Back Flip")
+        self.sendPacket(self.Array)
+
+    def frontFlip(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(4))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Front flip")
+        self.sendPacket(self.Array)
+    
+    def rightFlip(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(5))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Right Flip")
+        self.sendPacket(self.Array)
+        
+    def leftFlip(self):
+        arr=bytearray([])
+        arr.extend(self.getBytes(6))
+        self.Array[5]=arr[0]
+        self.Array[6]=arr[1]
+        Val=self.changeCRC()
+        self.Array[7]=Val
+        if(self.debug):
+            print("Left Flip")
+        self.sendPacket(self.Array)
+
+    def sendPacket(self,lValueArray):
+        self.mySocket.send(lValueArray)
+
+    def recieveResponse(self):
+        return self.mySocket.recv(self.BUFFER_SIZE)
