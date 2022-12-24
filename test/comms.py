@@ -3,6 +3,7 @@ import socket,time,math
 class MSP_SET_RAW_RC:
     def __init__(self,mySocket,debug=False):
         self.mySocket=mySocket
+        #header(2 bytes), 60 - to the controller, 62 - from the contr.
         headerArray=bytearray([36,77,60])
         self.valueArray=bytearray([])
         roll=1500                    
@@ -10,20 +11,26 @@ class MSP_SET_RAW_RC:
         throttle=1500 
         yaw=1500                      
         aux1=1200
-        aux2=1000
+        #Dev mode 
+        # aux2=1000
+        aux2=1500
         aux3=1500
         aux4=1200      
         self.valueArray.extend(headerArray)
-        self.valueArray.append(16)
-        self.valueArray.append(200)
-        self.valueArray.extend([220,5])
+        self.valueArray.append(16) #MSG LENGTH
+        self.valueArray.append(200) #MSG TYPE FOR RAW_RC
+        #Initialising in terms of bytes (roll,pitch...)
+        # (l)
+        self.valueArray.extend([220,5]) 
         self.valueArray.extend([220,5])
         self.valueArray.extend([220,5])
         self.valueArray.extend([220,5])
         self.valueArray.extend([176,4])
-        self.valueArray.extend([232,3])
+        # self.valueArray.extend([232,3])
+        self.valueArray.extend([220,5])
         self.valueArray.extend([220,5])
         self.valueArray.extend([176,4])
+        #Checksum
         self.valueArray.append(234)
         self.Array=self.valueArray[:]
         if(self.debug):
@@ -71,6 +78,7 @@ class MSP_SET_RAW_RC:
 
     
     def disarm(self):
+        #AUX-4 = 1500
         self.Array[19]=176
         self.Array[20]=4
         Val=self.changeCRC()
@@ -84,6 +92,9 @@ class MSP_SET_RAW_RC:
         arr.extend(self.getBytes(value))
         self.Array[9]=arr[0]
         self.Array[10]=arr[1]
+        #aux 3 = 1800 for throttle 
+        self.Array[17]=8
+        self.Array[18]=7
         Val=self.changeCRC()
         self.Array[21]=Val
         if(self.debug):
