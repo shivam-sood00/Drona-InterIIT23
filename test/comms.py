@@ -6,30 +6,40 @@ class MSP_SET_RAW_RC:
         #header(2 bytes), 60 - to the controller, 62 - from the contr.
         headerArray=bytearray([36,77,60])
         self.valueArray=bytearray([])
+        self.debug = debug
         roll=1500                    
         pitch=1500                 
-        throttle=1500 
+        throttle=1800 
         yaw=1500                      
-        aux1=1200
+        aux1=1500
         #Dev mode 
         # aux2=1000
         aux2=1500
         aux3=1500
-        aux4=1200      
+        aux4=1500      
         self.valueArray.extend(headerArray)
         self.valueArray.append(16) #MSG LENGTH
         self.valueArray.append(200) #MSG TYPE FOR RAW_RC
         #Initialising in terms of bytes (roll,pitch...)
         # (l)
-        self.valueArray.extend([220,5]) 
-        self.valueArray.extend([220,5])
-        self.valueArray.extend([220,5])
-        self.valueArray.extend([220,5])
-        self.valueArray.extend([176,4])
-        # self.valueArray.extend([232,3])
-        self.valueArray.extend([220,5])
-        self.valueArray.extend([220,5])
-        self.valueArray.extend([176,4])
+        # self.valueArray.extend([220,5]) 
+        # self.valueArray.extend([220,5])
+        # self.valueArray.extend([220,5])
+        # self.valueArray.extend([220,5])
+        # self.valueArray.extend([176,4])
+        # self.valueArray.extend([220,5])
+        # self.valueArray.extend([220,5])
+        # self.valueArray.extend([176,4])
+        # import pdb;pdb.set_trace()
+        self.valueArray.extend(list(self.getBytes(roll)))
+        self.valueArray.extend(list(self.getBytes(pitch)))
+        self.valueArray.extend(list(self.getBytes(throttle)))
+        self.valueArray.extend(list(self.getBytes(yaw)))
+        self.valueArray.extend(list(self.getBytes(aux1)))
+        self.valueArray.extend(list(self.getBytes(aux2)))
+        self.valueArray.extend(list(self.getBytes(aux3)))
+        self.valueArray.extend(list(self.getBytes(aux4)))
+        
         #Checksum
         self.valueArray.append(234)
         self.Array=self.valueArray[:]
@@ -84,6 +94,8 @@ class MSP_SET_RAW_RC:
         Val=self.changeCRC()
         self.Array[21]=Val
         self.sendPacket(self.Array)
+        if(self.debug):
+            print("Dirmed")
         
         
     
@@ -93,12 +105,13 @@ class MSP_SET_RAW_RC:
         self.Array[9]=arr[0]
         self.Array[10]=arr[1]
         #aux 3 = 1800 for throttle 
-        self.Array[17]=8
-        self.Array[18]=7
+        # self.Array[17]=8
+        # self.Array[18]=7
         Val=self.changeCRC()
         self.Array[21]=Val
         if(self.debug):
             print("Throttle set to ",value)
+        print(list(self.Array))
         self.sendPacket(self.Array)
         
     
@@ -109,6 +122,8 @@ class MSP_SET_RAW_RC:
         self.Array[6]=arr[1]
         Val=self.changeCRC()
         self.Array[21]=Val
+        if(self.debug):
+            print("Roll set to ",value)
         self.sendPacket(self.Array)
         
         
@@ -145,6 +160,7 @@ class MSP_SET_RAW_RC:
 class MSP_SET_COMMAND:
     def __init__(self,mySocket,debug=False):
         self.mySocket = mySocket
+        self.debug = debug
         headerArray=bytearray([36,77,60])
         self.valueArray=bytearray([])    
         self.valueArray.extend(headerArray)
