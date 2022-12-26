@@ -241,3 +241,30 @@ class MSP_SET_COMMAND:
 
     def recieveResponse(self):
         return self.mySocket.recv(self.BUFFER_SIZE)
+
+class MSP_ATTITUDE:
+    def __init__(self,mySocket,debug=False):
+        self.mySocket=mySocket
+        #header(2 bytes), 60 - to the controller, 62 - from the contr.
+        headerArray=bytearray([36,77,60])
+        self.valueArray=bytearray([])      
+        self.valueArray.extend(headerArray)
+        self.valueArray.append(6) #MSG LENGTH
+        self.valueArray.append(108) #MSG TYPE FOR RAW_RC
+        #Initialising in terms of bytes (roll,pitch...)
+        # (l)
+        self.valueArray.extend([0,0]) 
+        self.valueArray.extend([0,0])
+        self.valueArray.extend([0,0])
+        #Checksum
+        self.valueArray.append(234)
+        self.Array=self.valueArray[:]
+        if(self.debug):
+            print(self.Array)
+        self.isConnected=False
+    
+    def recieveResponse(self):
+        return self.mySocket.recv(self.BUFFER_SIZE)
+    
+    def sendPacket(self):
+        self.mySocket.send(self.Array)
