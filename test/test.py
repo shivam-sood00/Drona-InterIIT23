@@ -1,5 +1,4 @@
 # Code for testing the communication with drone
-
 import socket
 import comms
 import time
@@ -27,8 +26,12 @@ RC = comms.MSP_SET_RAW_RC(mySocket,True)
 CMD = comms.MSP_SET_COMMAND(mySocket,True)
 ATT = comms.MSP_ATTITUDE(mySocket,True)
 RC.arm()
+
+RC.setThrottle(900)
+RC.setThrottle(1000)
 ATT.sendPacket()
 arr = ATT.recieveResponse()
+arr = list(arr)
 print(arr)
 # CMD.takeOff()
 time.sleep(3)

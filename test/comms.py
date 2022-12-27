@@ -95,7 +95,7 @@ class MSP_SET_RAW_RC:
         self.Array[21]=Val
         self.sendPacket(self.Array)
         if(self.debug):
-            print("Dirmed")
+            print("Disarmed")
         
         
     
@@ -261,6 +261,8 @@ class MSP_SET_COMMAND:
 class MSP_ATTITUDE:
     def __init__(self,mySocket,debug=False):
         self.mySocket=mySocket
+        self.debug = debug
+        self.BUFFER_SIZE=1024
         #header(2 bytes), 60 - to the controller, 62 - from the contr.
         headerArray=bytearray([36,77,60])
         self.valueArray=bytearray([])      
@@ -269,9 +271,9 @@ class MSP_ATTITUDE:
         self.valueArray.append(108) #MSG TYPE FOR RAW_RC
         #Initialising in terms of bytes (roll,pitch...)
         # (l)
-        self.valueArray.extend([0,0]) 
-        self.valueArray.extend([0,0])
-        self.valueArray.extend([0,0])
+        # self.valueArray.extend([0,0]) 
+        # self.valueArray.extend([0,0])
+        # self.valueArray.extend([0,0])
         #Checksum
         self.valueArray.append(234)
         self.Array=self.valueArray[:]
@@ -279,8 +281,19 @@ class MSP_ATTITUDE:
             print(self.Array)
         self.isConnected=False
     
+    def changeCRC(self):
+        self.CRCArray=self.Array[3:-1]
+        self.CRCValue=0
+        for d in self.CRCArray:
+            self.CRCValue= self.CRCValue^d
+        return self.CRCValue
+    
     def recieveResponse(self):
         return self.mySocket.recv(self.BUFFER_SIZE)
     
     def sendPacket(self):
+        Val=self.changeCRC()
+        self.Array[5]=Val
+        if(self.debug):
+            print("sending request for out package:", list(self.Array))
         self.mySocket.send(self.Array)
