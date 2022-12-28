@@ -2,6 +2,7 @@
 import socket
 import comms
 import time
+import threading
 #if camera connected:
 # TCP_IP = '192.168.0.1'
 # TCP_PORT = 9060
@@ -11,30 +12,19 @@ import time
 # TCP_PORT = 23
 
 
-
-TCP_IP = '192.168.4.1'
-TCP_PORT = 23
-BUFFER_SIZE = 1024
-# if(self.debug):
-print("Trying to Connect")
-mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# if(self.debug):
-mySocket.connect((TCP_IP, TCP_PORT))
-print("Connection Established")
-
-RC = comms.MSP_SET_RAW_RC(mySocket,True)
-CMD = comms.MSP_SET_COMMAND(mySocket,True)
-ATT = comms.MSP_ATTITUDE(mySocket,True)
-RC.arm()
-
-RC.setThrottle(900)
-RC.setThrottle(1000)
-ATT.sendPacket()
-arr = ATT.recieveResponse()
-arr = list(arr)
-print(arr)
-# CMD.takeOff()
-time.sleep(3)
-RC.disarm()
-mySocket.close()
-
+if __name__=="__main__":
+    
+    comms = comms.COMMS(debug=True)
+    comms.IN.Arm(True)
+    comms.IN.setThrottle(900)
+    time.sleep(1)
+    comms.OUT.requestMSPAttitude()
+    readThread = threading.Thread(target=comms.OUT.receiveMSPAttitude)
+    readThread.start()
+    s = time.time()
+    while(time.time()-s<10):
+        comms.OUT.requestMSPAttitude()
+        time.sleep(0.5)
+    readThread.join()
+    comms.IN.Arm(False)
+    comms.disconnect()

@@ -1,299 +1,279 @@
-import socket,time,math
-
-class MSP_SET_RAW_RC:
-    def __init__(self,mySocket,debug=False):
-        self.mySocket=mySocket
-        #header(2 bytes), 60 - to the controller, 62 - from the contr.
-        headerArray=bytearray([36,77,60])
-        self.valueArray=bytearray([])
-        self.debug = debug
-        roll=1500                    
-        pitch=1500                 
-        throttle=1800 
-        yaw=1500                      
-        aux1=1500
-        #Dev mode 
-        # aux2=1000
-        aux2=1500
-        aux3=1500
-        aux4=1500      
-        self.valueArray.extend(headerArray)
-        self.valueArray.append(16) #MSG LENGTH
-        self.valueArray.append(200) #MSG TYPE FOR RAW_RC
-        #Initialising in terms of bytes (roll,pitch...)
-        # (l)
-        # self.valueArray.extend([220,5]) 
-        # self.valueArray.extend([220,5])
-        # self.valueArray.extend([220,5])
-        # self.valueArray.extend([220,5])
-        # self.valueArray.extend([176,4])
-        # self.valueArray.extend([220,5])
-        # self.valueArray.extend([220,5])
-        # self.valueArray.extend([176,4])
-        # import pdb;pdb.set_trace()
-        self.valueArray.extend(list(self.getBytes(roll)))
-        self.valueArray.extend(list(self.getBytes(pitch)))
-        self.valueArray.extend(list(self.getBytes(throttle)))
-        self.valueArray.extend(list(self.getBytes(yaw)))
-        self.valueArray.extend(list(self.getBytes(aux1)))
-        self.valueArray.extend(list(self.getBytes(aux2)))
-        self.valueArray.extend(list(self.getBytes(aux3)))
-        self.valueArray.extend(list(self.getBytes(aux4)))
-        
-        #Checksum
-        self.valueArray.append(234)
-        self.Array=self.valueArray[:]
+import socket,time,math,select
+from utlis import *
+class COMMS:
+    def __init__(self,IP='192.168.4.1',Port=23,debug=False):
+        self.TCP_IP = IP
+        self.Port = Port
+        self.debug=debug
+        self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.mySocket.connect((self.TCP_IP, self.Port))
         if(self.debug):
-            print(self.Array)
-        self.isConnected=False
-        
-    def changeCRC(self):
-        self.CRCArray=self.Array[3:-1]
-        self.CRCValue=0
-        for d in self.CRCArray:
-            self.CRCValue= self.CRCValue^d
-        return self.CRCValue
+            print("Socket Connected")
+        self.IN = IN_PACKETS(self.mySocket,debug=self.debug)
+        self.OUT = OUT_PACKETS(self.mySocket,debug=self.debug)
     
-    def getBytes(self,value): 
-        self.LSB=value % 256
-        self.MSB=math.floor(value/256)
-        return bytearray([self.LSB,self.MSB])
-
-##    def connect(self):
-##        self.isConnected=True
-##        if(self.debug):        
-##            print ("Connected to Drone")            
-##        self.sendPacket(self.Array)
-        
-        
-
-    def arm(self):           
-        self.Array[19]=220
-        self.Array[20]=5
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        if(self.debug):
-            print("Armed")
-        self.sendPacket(self.Array)
-            
-            
-
-##        else:
-##            self.Array[21]=0
-##            if(self.debug):
-##                print("Not Connected")
-##            self.sendPacket(self.Array)
-            
-            
-
-    
-    def disarm(self):
-        #AUX-4 = 1500
-        self.Array[19]=176
-        self.Array[20]=4
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        self.sendPacket(self.Array)
-        if(self.debug):
-            print("Disarmed")
-        
-        
-    
-    def setThrottle(self,value):            
-        arr=bytearray([])
-        arr.extend(self.getBytes(value))
-        self.Array[9]=arr[0]
-        self.Array[10]=arr[1]
-        #aux 3 = 1800 for throttle 
-        # self.Array[17]=8
-        # self.Array[18]=7
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        if(self.debug):
-            print("Throttle set to ",value)
-        print(list(self.Array))
-        self.sendPacket(self.Array)
-        
-    
-    def setRoll(self,value):                  
-        arr=bytearray([])
-        arr.extend(self.getBytes(value))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        if(self.debug):
-            print("Roll set to ",value)
-        self.sendPacket(self.Array)
-        
-        
-    
-    def setPitch(self,value):                
-        arr=bytearray([])
-        arr.extend(self.getBytes(value))
-        self.Array[7]=arr[0]
-        self.Array[8]=arr[1]
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        self.sendPacket(self.Array)
-        
-        
-
-    def setYaw(self,value):              
-        arr=bytearray([])
-        arr.extend(self.getBytes(value))
-        self.Array[11]=arr[0]
-        self.Array[12]=arr[1]
-        Val=self.changeCRC()
-        self.Array[21]=Val
-        self.sendPacket(self.Array)
-        
-        
-
-    def sendPacket(self,lValueArray):
-        self.mySocket.send(lValueArray)
-
-    def recieveResponse(self):
-        return self.mySocket.recv(self.BUFFER_SIZE)
-
-
-class MSP_SET_COMMAND:
+    def disconnect(self):
+        self.mySocket.close()
+class IN_PACKETS:
     def __init__(self,mySocket,debug=False):
         self.mySocket = mySocket
         self.debug = debug
-        headerArray=bytearray([36,77,60])
-        self.valueArray=bytearray([])    
-        self.valueArray.extend(headerArray)
-        self.valueArray.append(2)
-        self.valueArray.append(217)
-        #default??
-        self.valueArray.extend([0,0])
-        self.valueArray.append(234)
-        self.Array=self.valueArray[:]
+        #header(2 bytes), 60 - to the controller, 62 - from the controller
+        self.headerArray=bytearray([36,77,60])
+
+    def default_RC(self):
+        valueArray = bytearray([])
+        valueArray.extend(self.headerArray)
+        msgLen = 16
+        valueArray.append(msgLen) #MSG LENGTH
+        valueArray.append(200) #MSG TYPE FOR RAW_RC
+        roll=1500                    
+        pitch=1500                 
+        throttle=1500 
+        yaw=1500                      
+        aux1=1000
+        aux2=1500
+        aux3=1500
+        aux4=1500
+        valueArray.extend(getBytes(roll))
+        valueArray.extend(getBytes(pitch))
+        valueArray.extend(getBytes(throttle))
+        valueArray.extend(getBytes(yaw))
+        valueArray.extend(getBytes(aux1))
+        valueArray.extend(getBytes(aux2))
+        valueArray.extend(getBytes(aux3))
+        valueArray.extend(getBytes(aux4))
+        return valueArray
+    
+    def default_CMD(self):
+        valueArray = bytearray([])
+        valueArray.extend(self.headerArray)
+        valueArray.extend(getBytes(2)) #MSG LENGTH
+        valueArray.extend(getBytes(217)) #MSG TYPE FOR MSP_SET_COMMAND
+        return valueArray
+    
+    def setRoll(self,value):
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[5] = bytes[0]
+        valueArray[6] = bytes[1]
+        valueArray.append(getCRC(valueArray))
         if(self.debug):
-            print(self.Array)
-        self.isConnected=False
+            print("Roll set \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+
+    def setPitch(self,value):
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[7] = bytes[0]
+        valueArray[8] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            print("Pitch set \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
     
-    def changeCRC(self):
-        self.CRCArray=self.Array[3:-1]
-        self.CRCValue=0
-        for d in self.CRCArray:
-            self.CRCValue= self.CRCValue^d
-        return self.CRCValue
+    def setThrottle(self,value):
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[9] = bytes[0]
+        valueArray[10] = bytes[1]
+        valueArray.append(getCRC(valueArray,self.debug))
+        if(self.debug):
+            print("Throttle set \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
     
-    def getBytes(self,value): 
-        self.LSB=value % 256
-        self.MSB=math.floor(value/256)
-        return bytearray([self.LSB,self.MSB])
+    def setYaw(self,value):
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[11] = bytes[0]
+        valueArray[12] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            print("Yaw set \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
     
+    def setMagMode(self,value):
+        if value==True:
+            value=1000
+        else:
+            value=1500
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[13] = bytes[0]
+        valueArray[14] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            if(value==1000):
+                print("MagMode set \nSending Packet: ",list(valueArray))
+            else:
+                print("HeadFreeMode set \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+    
+    def setDevMode(self,value):
+        if value==True:
+            value=1500
+        else:
+            value=1000
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[15] = bytes[0]
+        valueArray[16] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            if(value==1500):
+                print("DevMode set \nSending Packet: ",list(valueArray))
+            else:
+                print("DevMode removed \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+    
+    def setAltHold(self,value):
+        if value==True:
+            value=1500
+        else:
+            value=1000
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[17] = bytes[0]
+        valueArray[18] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            if(value==1500):
+                print("Alt Mode set \nSending Packet: ",list(valueArray))
+            else:
+                print("Throttle Range (not Alt Mode) \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+    
+    def Arm(self,value):
+        if value==True:
+            value=1500
+        else:
+            value=1000
+        valueArray = self.default_RC()
+        bytes = getBytes(value)
+        valueArray[19] = bytes[0]
+        valueArray[20] = bytes[1]
+        valueArray.append(getCRC(valueArray))
+        if(self.debug):
+            if(value==1500):
+                print("Drone Armed \nSending Packet: ",list(valueArray))
+            else:
+                print("Drone Disarmed \nSending Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+        
     def takeOff(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(1))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Taking Off")
-        self.sendPacket(self.Array)
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(1))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Take-Off")
+        self.mySocket.send(valueArray)
     
     def land(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(2))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Landing")
-        self.sendPacket(self.Array)
-
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(2))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Land")
+        self.mySocket.send(valueArray)
+    
     def backFlip(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(3))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Back Flip")
-        self.sendPacket(self.Array)
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(3))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Back-Flip")
+        self.mySocket.send(valueArray)
 
     def frontFlip(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(4))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Front flip")
-        self.sendPacket(self.Array)
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(4))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Front-Flip")
+        self.mySocket.send(valueArray)
     
     def rightFlip(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(5))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Right Flip")
-        self.sendPacket(self.Array)
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(5))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Right-Flip")
+        self.mySocket.send(valueArray)
         
     def leftFlip(self):
-        arr=bytearray([])
-        arr.extend(self.getBytes(6))
-        self.Array[5]=arr[0]
-        self.Array[6]=arr[1]
-        Val=self.changeCRC()
-        self.Array[7]=Val
-        if(self.debug):
-            print("Left Flip")
-        self.sendPacket(self.Array)
+        valueArray = self.default_CMD()
+        valueArray.extend(getBytes(6))
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Left-Flip")
+        self.mySocket.send(valueArray)
 
-    def sendPacket(self,lValueArray):
-        self.mySocket.send(lValueArray)
-
-    def recieveResponse(self):
-        return self.mySocket.recv(self.BUFFER_SIZE)
-
-class MSP_ATTITUDE:
-    def __init__(self,mySocket,debug=False):
-        self.mySocket=mySocket
+class OUT_PACKETS:
+    def __init__(self,mySocket,bufferSize=64,debug=False):
+        self.mySocket = mySocket
         self.debug = debug
-        self.BUFFER_SIZE=1024
-        #header(2 bytes), 60 - to the controller, 62 - from the contr.
-        headerArray=bytearray([36,77,60])
-        self.valueArray=bytearray([])      
-        self.valueArray.extend(headerArray)
-        self.valueArray.append(6) #MSG LENGTH
-        self.valueArray.append(108) #MSG TYPE FOR RAW_RC
-        #Initialising in terms of bytes (roll,pitch...)
-        # (l)
-        # self.valueArray.extend([0,0]) 
-        # self.valueArray.extend([0,0])
-        # self.valueArray.extend([0,0])
-        #Checksum
-        self.valueArray.append(234)
-        self.Array=self.valueArray[:]
-        if(self.debug):
-            print(self.Array)
-        self.isConnected=False
+        self.bufferSize = bufferSize
+        self.headerArray=bytearray([36,77,60])
+        print(self.debug," in out Packets")
+        
+    def requestMSPAttitude(self):
+        valueArray = bytearray([])
+        valueArray.extend(self.headerArray)
+        valueArray.append(0)
+        valueArray.append(108)
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Request for MSP Attitude \nSent Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
+        
+    def requestMSPAltitude(self):
+        valueArray = bytearray([])
+        valueArray.extend(self.headerArray)
+        valueArray.append(0)
+        valueArray.append(109)
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Request for MSP Altitude \nSent Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
     
-    def changeCRC(self):
-        self.CRCArray=self.Array[3:-1]
-        self.CRCValue=0
-        for d in self.CRCArray:
-            self.CRCValue= self.CRCValue^d
-        return self.CRCValue
+    def requestMSPAltitude(self):
+        valueArray = bytearray([])
+        valueArray.extend(self.headerArray)
+        valueArray.append(0)
+        valueArray.append(102)
+        valueArray.append(getCRC(valueArray))
+        if self.debug:
+            print("Request for MSP Altitude \nSent Packet: ",list(valueArray))
+        self.mySocket.send(valueArray)
     
-    def recieveResponse(self):
-        return self.mySocket.recv(self.BUFFER_SIZE)
-    
-    def sendPacket(self):
-        Val=self.changeCRC()
-        self.Array[5]=Val
-        if(self.debug):
-            print("sending request for out package:", list(self.Array))
-        self.mySocket.send(self.Array)
+    def receiveMSPAttitude(self,arr):
+        arr = []
+        while(True):
+            ready = select.select([self.mySocket],[],[],2) # Time out after 2 seconds of not getting data
+            if not ready[0]:
+                orientation = -1
+                break
+            arr1 = self.mySocket.recv(self.bufferSize)
+            arr+=list(arr1)[:]
+            if(self.debug):
+                print(arr)
+            
+            if len(arr)==12:
+                l = []
+                for i in range(5,11,2):
+                    l.append(toDec(arr[i],arr[i+1],(i-5)/2))
+                l[0] = l[0]/10
+                l[1] = l[1]/10
+                if self.debug:
+                    print("\n")
+                    print("roll: ",l[0]," degrees")
+                    print("pitch: ",l[1]," degrees")
+                    print("yaw: ",l[2]," degrees")
+                orientation =  l
+            else:
+                orientation = 0
+            # orientation = comms.OUT.receiveMSPAttitude(arr)
+            if(orientation!=-1):
+                if(type(orientation)!=type(1)):
+                    arr = []
+                print("orientation: ",orientation)
