@@ -11,9 +11,49 @@ class COMMS:
             print("Socket Connected")
         self.IN = IN_PACKETS(self.mySocket,debug=self.debug)
         self.OUT = OUT_PACKETS(self.mySocket,debug=self.debug)
+        self.params = [0]*14
     
     def disconnect(self):
         self.mySocket.close()
+    
+    def updateParams(self):
+        buff = []
+        # updated = 1
+        while(True):
+            ready = select.select([self.mySocket],[],[],2) # Time out after 2 seconds of not getting data
+            if not ready[0]:
+                break
+            out,idx,buff = self.OUT.receiveMSPresponse(buff)
+            if self.debug:
+                print("out,idx,buff: ",out,idx,buff)
+            self.updateParamsIdx(out,idx)
+    
+    def printParams(self):
+        print("Params: ",self.params)
+    
+    def updateParamsIdx(self,out,idx):
+        if idx==108:
+            self.params[0]=out[0]
+            self.params[1]=out[1]
+            self.params[2]=out[2]
+        elif idx==109:
+            self.params[3]=out[0]
+            self.params[4]=out[1]
+        elif idx==102:
+            self.params[5]=out[0]
+            self.params[6]=out[1]
+            self.params[7]=out[2]
+            self.params[8]=out[3]
+            self.params[9]=out[4]
+            self.params[10]=out[5]
+            self.params[11]=out[6]
+            self.params[12]=out[7]
+            self.params[13]=out[8]
+        # else:
+        #     return idx
+        if self.debug:
+            self.printParams()
+        # return 1
 class IN_PACKETS:
     def __init__(self,mySocket,debug=False):
         self.mySocket = mySocket
@@ -214,7 +254,8 @@ class OUT_PACKETS:
         self.debug = debug
         self.bufferSize = bufferSize
         self.headerArray=bytearray([36,77,60])
-        print(self.debug," in out Packets")
+        self.headerArrayOut=bytearray([36,77,62])
+        # print(self.debug," in out Packets")
         
     def requestMSPAttitude(self):
         valueArray = bytearray([])
@@ -236,7 +277,7 @@ class OUT_PACKETS:
             print("Request for MSP Altitude \nSent Packet: ",list(valueArray))
         self.mySocket.send(valueArray)
     
-    def requestMSPAltitude(self):
+    def requestMSPRawIMU(self):
         valueArray = bytearray([])
         valueArray.extend(self.headerArray)
         valueArray.append(0)
@@ -246,34 +287,62 @@ class OUT_PACKETS:
             print("Request for MSP Altitude \nSent Packet: ",list(valueArray))
         self.mySocket.send(valueArray)
     
-    def receiveMSPAttitude(self,arr):
-        arr = []
-        while(True):
-            ready = select.select([self.mySocket],[],[],2) # Time out after 2 seconds of not getting data
-            if not ready[0]:
-                orientation = -1
-                break
-            arr1 = self.mySocket.recv(self.bufferSize)
-            arr+=list(arr1)[:]
-            if(self.debug):
-                print(arr)
+    def receiveMSPresponse(self,buff):            
+        arr = self.mySocket.recv(self.bufferSize)
+        buff += list(arr)[:]
+        if(self.debug):
+            print("buff: ",buff)
+        
+        if len(buff)<5:
+            return [],0,buff
+        
+        # if updated:
+        corrrect = True
+        for i in range(3):
+            if buff[i]!=self.headerArrayOut[i]:
+                corrrect=False
+        
+        if not corrrect:
+            print("Error in buffer......!!!!!")
+            return
+        
+        msgLen = buff[3]
+        if msgLen==0:
+            buff= buff[6:]
+            if self.debug:
+                print("Ignoring 0 len message..!!")
+            return [],0,buff
+        
+        elif len(buff)>=msgLen+6:
+            idx = buff[4]
+            checksum = msgLen^idx
             
-            if len(arr)==12:
-                l = []
-                for i in range(5,11,2):
-                    l.append(toDec(arr[i],arr[i+1],(i-5)/2))
-                l[0] = l[0]/10
-                l[1] = l[1]/10
+            out = []
+            if idx==108:
+                for i in range(0,msgLen,2):
+                    out.append(getSignedDec(buff[i+5],buff[i+6],i/2))
+            elif idx==109:
+                lsb16 = getDec(buff[5],buff[6])
+                msb16 = getDec(buff[7],buff[8])
+                # dividing by 100 to convert to meters and meter-per-second
+                out.append(getDec(lsb16,msb16,256*256)/100)
+                out.append(getSignedDec(buff[9],buff[10],0)/100)
+            elif idx==102:
+                for i in range(0,msgLen,2):
+                    out.append(getSignedDec(buff[i+5],buff[i+6]))
+            
+            for i in range(msgLen):
+                checksum ^= buff[i+5]
+            
+            if checksum==buff[msgLen+5]:
+                buff = buff[msgLen+6:]
                 if self.debug:
-                    print("\n")
-                    print("roll: ",l[0]," degrees")
-                    print("pitch: ",l[1]," degrees")
-                    print("yaw: ",l[2]," degrees")
-                orientation =  l
+                    print("successfully decoded!!\nout: ",out,"\n idx: ",idx,"msgLen: ",msgLen)
+                return out,idx,buff
             else:
-                orientation = 0
-            # orientation = comms.OUT.receiveMSPAttitude(arr)
-            if(orientation!=-1):
-                if(type(orientation)!=type(1)):
-                    arr = []
-                print("orientation: ",orientation)
+                print("Error in decoding the buffer....!!!!")
+                return
+        else:
+            return [],0,buff
+        # else:
+        #     print("should always be updated... somewhere some error")

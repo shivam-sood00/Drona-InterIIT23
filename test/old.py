@@ -1,3 +1,5 @@
+import socket,time,math,select
+from utlis import *
 class MSP_SET_RAW_RC:
     def __init__(self,mySocket,debug=False):
         self.mySocket=mySocket
@@ -258,6 +260,15 @@ class MSP_ATTITUDE:
         if(self.debug):
             print(self.Array)
             
+    def changeCRC(self,debug=False):
+        CRCArray=self.valueArray[3:-1]
+        if debug:
+            print("CRC arrary = ",list(CRCArray))
+        CRCValue=0
+        for d in CRCArray:
+            CRCValue= CRCValue^d
+        return CRCValue
+            
     
     def recieveResponse(self,arr):
         ready = select.select([self.mySocket],[],[],2); """Time out after 2 seconds of not getting data"""
@@ -266,11 +277,11 @@ class MSP_ATTITUDE:
         arr1 = self.mySocket.recv(self.BUFFER_SIZE)
         arr+=list(arr1)[:]
         if(self.debug):
-            print(arr)
+            print("arr: ",arr)
         if len(arr)==12:
             l = []
             for i in range(5,11,2):
-                l.append(toDec(arr[i],arr[i+1],(i-5)/2))
+                l.append(getAttValues(arr[i],arr[i+1],(i-5)/2))
             l[0] = l[0]/10
             l[1] = l[1]/10
             if self.debug:

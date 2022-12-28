@@ -4,14 +4,18 @@ def getBytes(value):
     MSB=math.floor(value/256)
     return bytearray([LSB,MSB])   
 
-def toDec(lsb,msb,k):
-    a = lsb + 256*msb
+def getDec(lsb,msb,base=256):
+    return lsb+base*msb
+
+def getSignedDec(lsb,msb,k=0):
+    a = getDec(lsb,msb)
     if k==2:
         if a>180:
             a = a-360
     else:
         if msb>127:
             a = -2**16+a
+        a/=10
     return a
 
 def getCRC(arr,debug=False):
