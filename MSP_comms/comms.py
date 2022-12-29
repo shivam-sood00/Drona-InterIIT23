@@ -1,5 +1,6 @@
 import socket,time,math,select
 from utils import *
+
 class COMMS:
     def __init__(self,IP='192.168.4.1',Port=23,debug=False):
         self.TCP_IP = IP
@@ -295,7 +296,7 @@ class OUT_PACKETS:
     
     def receiveMSPresponse(self,buff):            
         arr = self.mySocket.recv(self.bufferSize)
-        buff += list(arr)[:]
+        buff += list(arr)
         if(self.debug):
             print("buff: ",buff)
         
@@ -304,10 +305,15 @@ class OUT_PACKETS:
         
         for i in range(3):
             if buff[i]!=self.headerArrayOut[i]:
-                if i==2 && buff[i]==33:
-                    print("Error in buffer....!!!!!")
+                if i==2:
+                    if buff[i]==33:
+                        print("Error sent in out packet....!!!!!")
+                        return
+                    else:
+                        buff = buff[2:]
+                else:
+                    print("garbage received (even header does not match)..!!")
                     return
-                buff = buff[2:]
         
         msgLen = buff[3]
         if msgLen==0:
