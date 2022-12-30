@@ -2,6 +2,9 @@ import socket,time,math,select
 from utils import *
 
 class COMMS:
+    """ 
+    Initialise the socket and define IN & OUT packets   
+    """
     def __init__(self,IP='192.168.4.1',Port=23,debug=False):
         self.TCP_IP = IP
         self.Port = Port
@@ -17,29 +20,34 @@ class COMMS:
     def disconnect(self):
         self.mySocket.close()
     
+    """ 
+    Target Function for the readThread
+    """
     def updateParams(self):
         buff = []
+
+        # Always reading values and updating the buffer within the readThread
         while(True):
             ready = select.select([self.mySocket],[],[],2) # Time out after 2 seconds of not getting data
             if not ready[0]:
                 break
-            out,idx,buff = self.OUT.receiveMSPresponse(buff)
+            out,idx,buff = self.OUT.receiveMSPresponse(buff) # Recieving the MSP Packets
             if self.debug:
                 print("out,idx,buff: ",out,idx,buff)
-            self.updateParamsIdx(out,idx)
+            self.updateParamsIdx(out,idx) # Updating params based on their indices for OUT Packets
     
     def printParams(self):
         print("Params: ",self.params)
     
     def updateParamsIdx(self,out,idx):
-        if idx==108:
+        if idx==108: #MSP_ATTITUDE
             self.params[0]=out[0]
             self.params[1]=out[1]
             self.params[2]=out[2]
-        elif idx==109:
+        elif idx==109: #MSP_ALTITUDE
             self.params[3]=out[0]
             self.params[4]=out[1]
-        elif idx==102:
+        elif idx==102: #MSP_RAW_IMU
             self.params[5]=out[0]
             self.params[6]=out[1]
             self.params[7]=out[2]
@@ -80,7 +88,7 @@ class IN_PACKETS:
         else:
             value=1000
         aux4=value
-        print(aux4)
+        # print("AUX4: ",aux4)
         valueArray.extend(getBytes(roll))
         valueArray.extend(getBytes(pitch))
         valueArray.extend(getBytes(throttle))

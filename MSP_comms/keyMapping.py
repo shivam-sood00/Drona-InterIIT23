@@ -75,4 +75,4 @@ if __name__=="__main__":
         #     print(q)
         #     inputVal=q
         
-    # inputThread.join()
+    inputThread.join()

@@ -8,14 +8,16 @@ if __name__=="__main__":
     
     comms = comms.COMMS(debug=False)
     comms.IN.Arm(True)
+    # time.sleep(2.0)
     # comms.IN.setThrottle(900)
     # comms.IN.setThrottle(1000)
     # comms.IN.setThrottle(1100)
     # comms.IN.setThrottle(1200)
+    # time.sleep(5.0)
     # time.sleep(1)
     # comms.OUT.requestMSPAttitude()
     readThread = threading.Thread(target=comms.updateParams)
-    readThread.start()
+    # readThread.start()
     # comms.IN.setThrottle(1500)
     # comms.IN.setThrottle(1500)
     # comms.IN.setThrottle(1500)
@@ -27,21 +29,26 @@ if __name__=="__main__":
     # comms.IN.Arm(False)
     # comms.IN.Arm(True)
     s = time.time()
-    i = 0
     # comms.IN.setThrottle(900)
-    while(True):
-        # print(i)
-        # i +=1
-        comms.OUT.requestMSPAltitude()
-        print("Altitude",comms.params[3])
-        print("Vertical Velocity:",comms.params[4])
+    while(time.time()-s<1.0):
+        comms.IN.takeOff()
+        time.sleep(0.01)
+    s = time.time()
+    print("Take off ends")
+    while(time.time()-s<5.0):
+        # print("Throttle")
+        comms.IN.setThrottle(1500)
+        time.sleep(0.001)
+    # time.sleep(5.0)
+        # comms.OUT.requestMSPAltitude()
+        # print("Altitude",comms.params[3])
+        # print("Vertical Velocity:",comms.params[4])
 
     #     val = min(1700,900+i)
     #     comms.IN.setThrottle(val)
     #     # comms.OUT.requestMSPAltitude()
     #     # comms.OUT.requestMSPAttitude()
         # comms.OUT.requestMSPRawIMU()
-        time.sleep(0.1)
     
     # s = time.time()
     # i = 0
@@ -55,7 +62,7 @@ if __name__=="__main__":
     # while(time.time()-s<1):
     #     comms.IN.land()
     # comms.IN.land()
-    readThread.join()
+    # readThread.join()
     comms.IN.Arm(False)
     comms.IN.Arm(False)
     comms.disconnect()
