@@ -3,7 +3,7 @@ import math
 def getBytes(value): 
     LSB=value % 256
     MSB=math.floor(value/256)
-    return bytearray([LSB,MSB])   
+    return [LSB,MSB]   
 
 def getDec(lsb,msb,base=256):
     return lsb+base*msb

@@ -1,6 +1,5 @@
 import socket,time,math,select
 from utils import *
-
 class COMMS:
     """ 
     Initialise the socket and define IN & OUT packets   
@@ -15,7 +14,7 @@ class COMMS:
             print("Socket Connected")
         self.IN = IN_PACKETS(self.mySocket,debug=self.debug)
         self.OUT = OUT_PACKETS(self.mySocket,debug=self.debug)
-        self.params = [0]*14
+        self.params = {}
     
     def disconnect(self):
         self.mySocket.close()
@@ -39,24 +38,24 @@ class COMMS:
     def printParams(self):
         print("Params: ",self.params)
     
-    def updateParamsIdx(self,out,idx):
+    def updateParams(self,out,idx):
         if idx==108: #MSP_ATTITUDE
-            self.params[0]=out[0]
-            self.params[1]=out[1]
-            self.params[2]=out[2]
+            self.params["Roll"]=out[0]
+            self.params["Pitch"]=out[1]
+            self.params["Yaw"]=out[2]
         elif idx==109: #MSP_ALTITUDE
-            self.params[3]=out[0]
-            self.params[4]=out[1]
+            self.params["Altitude"]=out[0]
+            self.params["Vario"]=out[1]
         elif idx==102: #MSP_RAW_IMU
-            self.params[5]=out[0]
-            self.params[6]=out[1]
-            self.params[7]=out[2]
-            self.params[8]=out[3]
-            self.params[9]=out[4]
-            self.params[10]=out[5]
-            self.params[11]=out[6]
-            self.params[12]=out[7]
-            self.params[13]=out[8]
+            self.params["AccX"]=out[0]
+            self.params["AccY"]=out[1]
+            self.params["AccZ"]=out[2]
+            self.params["GyroX"]=out[3]
+            self.params["GyroY"]=out[4]
+            self.params["GyroZ"]=out[5]
+            self.params["MagX"]=out[6]
+            self.params["MagY"]=out[7]
+            self.params["MagZ"]=out[8]
         
         if self.debug:
             self.printParams()
@@ -302,62 +301,3 @@ class OUT_PACKETS:
             print("Request for MSP Altitude \nSent Packet: ",list(valueArray))
         self.mySocket.send(valueArray)
     
-    def receiveMSPresponse(self,buff):            
-        arr = self.mySocket.recv(self.bufferSize)
-        buff += list(arr)
-        if(self.debug):
-            print("buff: ",buff)
-        
-        if len(buff)<5:
-            return [],0,buff
-        
-        for i in range(3):
-            if buff[i]!=self.headerArrayOut[i]:
-                if i==2:
-                    if buff[i]==33:
-                        print("Error sent in out packet....!!!!!")
-                        return
-                    else:
-                        buff = buff[2:]
-                else:
-                    print("garbage received (even header does not match)..!!")
-                    return
-        
-        msgLen = buff[3]
-        if msgLen==0:
-            buff= buff[6:]
-            if self.debug:
-                print("Ignoring 0 len message..!!")
-            return [],0,buff
-        
-        elif len(buff)>=msgLen+6:
-            idx = buff[4]
-            checksum = msgLen^idx
-            
-            out = []
-            if idx==108:
-                for i in range(0,msgLen,2):
-                    out.append(getSignedDec(buff[i+5],buff[i+6],i/2))
-            elif idx==109:
-                lsb16 = getDec(buff[5],buff[6])
-                msb16 = getDec(buff[7],buff[8])
-                # dividing by 100 to convert to meters and meter-per-second
-                out.append(getDec(lsb16,msb16,256*256)/100)
-                out.append(getSignedDec(buff[9],buff[10],0)/100)
-            elif idx==102:
-                for i in range(0,msgLen,2):
-                    out.append(getSignedDec(buff[i+5],buff[i+6]))
-            
-            for i in range(msgLen):
-                checksum ^= buff[i+5]
-            
-            if checksum==buff[msgLen+5]:
-                buff = buff[msgLen+6:]
-                if self.debug:
-                    print("successfully decoded!!\nout: ",out,"\n idx: ",idx,"msgLen: ",msgLen)
-                return out,idx,buff
-            else:
-                print("Error in decoding the buffer....!!!!")
-                return
-        else:
-            return [],0,buff
