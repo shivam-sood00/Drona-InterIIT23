@@ -237,7 +237,7 @@ class COMMS:
         elif idx==self.paramsReceived["MSP_ALTITUDE"]: #MSP_ALTITUDE
             self.paramsReceived["Altitude"]=out[0]
             self.paramsReceived["Vario"]=out[1]
-        elif idx==elf.paramsReceived["MSP_RAW_IMU"]: #MSP_RAW_IMU
+        elif idx==self.paramsReceived["MSP_RAW_IMU"]: #MSP_RAW_IMU
             self.paramsReceived["AccX"]=out[0]
             self.paramsReceived["AccY"]=out[1]
             self.paramsReceived["AccZ"]=out[2]
