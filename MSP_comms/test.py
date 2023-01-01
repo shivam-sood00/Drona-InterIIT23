@@ -28,8 +28,6 @@ if __name__=="__main__":
     drone.disArm()    
     drone.disArm()  
     time.sleep(1)  
-    drone.sendData = False
-    readThread.join()
-    writeThread.join()
-    
     drone.disconnect()
+    writeThread.join()
+    readThread.join()

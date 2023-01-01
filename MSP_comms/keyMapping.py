@@ -24,7 +24,7 @@ CTRL+C to quit
 
 """
 
-import threading,comms,time
+import threading,plutoComms,time
 
 
 inputVal = None
@@ -35,44 +35,52 @@ def inputFun():
         inputVal = input("enter key: ")
 
 if __name__=="__main__":
-    inputThread = threading.Thread(target=inputFun)
-    inputThread.start()
-    comms = comms.COMMS()
+    comms = plutoComms.COMMS(debug=False)
     # toggle = False
+    readThread = threading.Thread(target=comms.read)
+    writeThread = threading.Thread(target=comms.write)
+    writeThread.start()
+    readThread.start()
+    
     inputVal = "o"
     while(inputVal!="p"):
+        inputVal = input("enter key: ")
         print("inputVal: ",inputVal)
         if inputVal=="q":
-            comms.IN.takeOff()
+            comms.takeOff()
         elif inputVal==",":
             # toggle = not toggle
-            comms.IN.Arm(True)
+            comms.arm()
         elif inputVal==".":
-            comms.IN.Arm(False)
+            comms.disArm()
+        elif inputVal=="/":
+            comms.boxArm()
         elif inputVal=="e":
-            comms.IN.land()
+            comms.land()
         elif inputVal=="w":
-            comms.IN.setThrottle(1800)
+            comms.increaseHeight()
         elif inputVal=="s":
-            comms.IN.setThrottle(1000)
+            comms.decreaseHeight()
         elif inputVal=="a":
-            comms.IN.setYaw(1200)
+            comms.leftYaw()
         elif inputVal=="d":
-            comms.IN.setYaw(1800)
+            comms.rightYaw()
         elif inputVal=="u":
-            comms.IN.setPitch(1800)
+            comms.forward()
         elif inputVal=="j":
-            comms.IN.setPitch(1200)
+            comms.backward()
         elif inputVal=="h":
-            comms.IN.setRoll(1200)
+            comms.left()
         elif inputVal=="k":
-            comms.IN.setRoll(1800)
+            comms.right()
         elif inputVal=="b":
-            comms.IN.backFlip()
-        time.sleep(0.1)
+            comms.backFlip()
+        elif inputVal=="r":
+            comms.reset()
         # q = cv2.waitKey(1)
+    comms.disconnect()   
+    writeThread.join()
+    readThread.join()
         # if q!=-1:
         #     print(q)
         #     inputVal=q
-        
-    inputThread.join()
