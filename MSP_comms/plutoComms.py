@@ -6,7 +6,7 @@ from utils import *
 Module for MSP Packet
 """
 class MSPPacket:
-    def __init__(self,debug):
+    def __init__(self,debug=False):
         self.debug = debug
         self.header = [36, 77]
         self.direction = {"in":60,"out":62} 
@@ -44,7 +44,12 @@ class MSPPacket:
         return self.msg
 
 """
-Module to facilitate all communication with the pluto drone
+Module to facilitate all communication with the pluto drone    time.sleep(5)
+    # drone.paramsSet["trimRoll"] = 5
+    # drone.paramsSet["trimPitch"] = 5
+    # time.sleep(5)
+    # drone.paramsSet["trimRoll"] = 1
+    # drone.paramsSet["trimPitch"] = 1
 """
 class COMMS:
     def __init__(self,IP='192.168.4.1',Port=23,debug=False):
@@ -63,15 +68,15 @@ class COMMS:
         self.writeLoop = False
         self.readLoop = False
         # list of all type of Payload of all the OUT Packets to be requested
-        self.outServices = {"MSP_ATTITUDE":108,"MSP_ALTITUDE":109,"MSP_RAW_IMU":102}
+        self.outServices = {"MSP_ATTITUDE":108,"MSP_ALTITUDE":109,"MSP_RAW_IMU":102,"MSP_ACC_TRIM":240}
         # list to store MSP messages of the OUT Packets we request
         self.requestMSPPackets = []
         # variable to control buffer size of OUT loop 
         self.outBufferSize = 64
         # Dictionary of all the parameters we write to the pluto drone
-        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0}
+        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":3,"trimRoll":3}
         # Dictionary of all the parameters we read from the pluto drone
-        self.paramsReceived = {"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1}
+        self.paramsReceived = {"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1}
     
     def arm(self):
         self.paramsSet["Roll"] = 1500
@@ -128,6 +133,10 @@ class COMMS:
         self.paramsSet["Throttle"] = 1800
         time.sleep(self.waitTime)
     
+    def lowThrottle(self):
+        self.paramsSet["Throttle"] = 1050
+        time.sleep(self.waitTime)
+    
     def decreaseHeight(self):
         self.paramsSet["Throttle"] = 1300
         time.sleep(self.waitTime)
@@ -142,7 +151,7 @@ class COMMS:
         self.reset()
         self.paramsSet["currentCommand"] = 2
         # Giving extra 2 seconds to land
-        time.sleep(self.waitTime+2)
+        time.sleep(self.waitTime+4)
         self.disArm()
     
     def backFlip(self):
@@ -161,8 +170,22 @@ class COMMS:
     def write(self):
         self.writeLoop = True
         self.getAllRequestMsgs()
+        # if self.paramsSet["trimRoll"]!=0 or self.paramsSet["trimPitch"]!=0: 
+        msgLen = 4
+        typeOfPayload = 239
+        msgData = []
+        msgData.extend(getBytes(self.paramsSet["trimPitch"]))
+        msgData.extend(getBytes(self.paramsSet["trimRoll"]))
+        # self.paramsSet["trimRoll"] = 0
+        # self.paramsSet["trimPitch"] = 0
+        msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
+        # if self.debug:
+        print(msgToBeSent)
+        self.mySocket.send(bytearray(msgToBeSent))
         while(self.writeLoop):
             # Sending MSP_SET_RAW_RC type message
+            if self.paramsSet["Throttle"]!=1000:
+                print("Throttle: ",self.paramsSet["Throttle"])
             msgLen = 16
             typeOfPayload = 200
             msgData = []
@@ -185,7 +208,7 @@ class COMMS:
                 msgData = []
                 msgData.extend(getBytes(self.paramsSet["currentCommand"]))
                 self.paramsSet["currentCommand"]=0
-                msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData);
+                msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
                 if self.debug:
                     print(msgToBeSent)
                 self.mySocket.send(bytearray(msgToBeSent))
@@ -230,14 +253,14 @@ class COMMS:
     
     # function to update the received parameters
     def updateParams(self,out,idx):
-        if idx==self.paramsReceived["MSP_ATTITUDE"]: #MSP_ATTITUDE
+        if idx==self.outServices["MSP_ATTITUDE"]: #MSP_ATTITUDE
             self.paramsReceived["Roll"]=out[0]
             self.paramsReceived["Pitch"]=out[1]
             self.paramsReceived["Yaw"]=out[2]
-        elif idx==self.paramsReceived["MSP_ALTITUDE"]: #MSP_ALTITUDE
+        elif idx==self.outServices["MSP_ALTITUDE"]: #MSP_ALTITUDE
             self.paramsReceived["Altitude"]=out[0]
             self.paramsReceived["Vario"]=out[1]
-        elif idx==self.paramsReceived["MSP_RAW_IMU"]: #MSP_RAW_IMU
+        elif idx==self.outServices["MSP_RAW_IMU"]: #MSP_RAW_IMU
             self.paramsReceived["AccX"]=out[0]
             self.paramsReceived["AccY"]=out[1]
             self.paramsReceived["AccZ"]=out[2]
@@ -247,6 +270,9 @@ class COMMS:
             self.paramsReceived["MagX"]=out[6]
             self.paramsReceived["MagY"]=out[7]
             self.paramsReceived["MagZ"]=out[8]
+        elif idx==self.outServices["MSP_ACC_TRIM"]:
+            self.paramsReceived["trimPitch"]=out[0]
+            self.paramsReceived["trimRoll"]=out[1]
         
         if self.debug:
             self.printParams()
@@ -264,8 +290,10 @@ class COMMS:
     the OUT Packet payload corresponding to which the values are and the remaining buffer.
     Returns empty out list and 0 as payload if buffer does not contain the full message
     """
-    def processBuffer(self,buff):
+    def processBuffer(self,buff,funDebug = False):
         
+        if self.debug or funDebug:
+            print(buff)
         # If length of buffer is less than 5 then it cannot conatin a message, so return buffer as it is
         if len(buff)<5:
             return [],0,buff
@@ -310,6 +338,9 @@ class COMMS:
             elif idx==self.outServices["MSP_RAW_IMU"]:
                 for i in range(0,msgLen,2):
                     out.append(getSignedDec(buff[i+5],buff[i+6]))
+            elif idx==self.outServices["MSP_ACC_TRIM"]:
+                out.append(getDec(buff[5],buff[6]))
+                out.append(getDec(buff[7],buff[8]))
             
             checksum = msgLen^idx
             for i in range(msgLen):

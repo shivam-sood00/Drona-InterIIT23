@@ -61,6 +61,8 @@ if __name__=="__main__":
             comms.increaseHeight()
         elif inputVal=="s":
             comms.decreaseHeight()
+        elif inputVal=="x":
+            comms.lowThrottle()
         elif inputVal=="a":
             comms.leftYaw()
         elif inputVal=="d":
