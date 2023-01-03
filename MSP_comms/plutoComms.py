@@ -58,17 +58,17 @@ class COMMS:
         self.debug=debug
         self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.mySocket.connect((self.TCP_IP, self.Port))
-        self.waitTime = 0.1
+        self.waitTime = 0.17
         if(self.debug):
             print("Socket Connected")
         # Variable to control writing and reading frequency
-        self.inLoopSleepTime = 0.022
+        self.inLoopSleepTime = 0.04
         self.outLoopSleepTime = 0
         # Variable to control writing loop i.e. if we want to write data or not
         self.writeLoop = False
         self.readLoop = False
         # list of all type of Payload of all the OUT Packets to be requested
-        self.outServices = {"MSP_ATTITUDE":108,"MSP_ALTITUDE":109,"MSP_RAW_IMU":102,"MSP_ACC_TRIM":240}
+        self.outServices = {"MSP_ATTITUDE":108,"MSP_ALTITUDE":109,"MSP_RAW_IMU":102,"MSP_ACC_TRIM":240,"MSP_RC":105,"MSP_COMMAND":124}
         # list to store MSP messages of the OUT Packets we request
         self.requestMSPPackets = []
         # variable to control buffer size of OUT loop 
@@ -76,7 +76,7 @@ class COMMS:
         # Dictionary of all the parameters we write to the pluto drone
         self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":3,"trimRoll":3}
         # Dictionary of all the parameters we read from the pluto drone
-        self.paramsReceived = {"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1}
+        self.paramsReceived = {"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1,"rcRoll":-1,"rcPitch":-1, "rcYaw":-1, "rcThrottle" :-1, "rcAUX1":-1, "rcAUX2":-1, "rcAUX3":-1, "rcAUX4":-1,"currentCommand":-1,"commandStatus":-1 }
     
     def arm(self):
         self.paramsSet["Roll"] = 1500
@@ -134,7 +134,7 @@ class COMMS:
         time.sleep(self.waitTime)
     
     def lowThrottle(self):
-        self.paramsSet["Throttle"] = 1050
+        self.paramsSet["Throttle"] = 901
         time.sleep(self.waitTime)
     
     def decreaseHeight(self):
@@ -151,7 +151,7 @@ class COMMS:
         self.reset()
         self.paramsSet["currentCommand"] = 2
         # Giving extra 2 seconds to land
-        time.sleep(self.waitTime+4)
+        time.sleep(self.waitTime+3)
         self.disArm()
     
     def backFlip(self):
@@ -179,13 +179,11 @@ class COMMS:
         # self.paramsSet["trimRoll"] = 0
         # self.paramsSet["trimPitch"] = 0
         msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
-        # if self.debug:
-        print(msgToBeSent)
+        if self.debug :
+            print(msgToBeSent)
         self.mySocket.send(bytearray(msgToBeSent))
         while(self.writeLoop):
             # Sending MSP_SET_RAW_RC type message
-            if self.paramsSet["Throttle"]!=1000:
-                print("Throttle: ",self.paramsSet["Throttle"])
             msgLen = 16
             typeOfPayload = 200
             msgData = []
@@ -198,7 +196,7 @@ class COMMS:
             msgData.extend(getBytes(self.paramsSet["Aux3"]))
             msgData.extend(getBytes(self.paramsSet["Aux4"]))
             msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
-            if self.debug:
+            if self.debug :
                 print(msgToBeSent)
             self.mySocket.send(bytearray(msgToBeSent))
             # Sending MSP_SET_COMMAND type message
@@ -209,11 +207,12 @@ class COMMS:
                 msgData.extend(getBytes(self.paramsSet["currentCommand"]))
                 self.paramsSet["currentCommand"]=0
                 msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
-                if self.debug:
+                if self.debug :
                     print(msgToBeSent)
                 self.mySocket.send(bytearray(msgToBeSent))
             # sending MSP request messages for OUT Packets
             for request in self.requestMSPPackets:
+                print(request)
                 self.mySocket.send(bytearray(request))
             # sleep to control writing frequency
             time.sleep(self.inLoopSleepTime)
@@ -226,6 +225,9 @@ class COMMS:
         # buffer to hold the data sent by drone
         buff = []
         self.readLoop = True
+        # s = time.time()
+        # # i = 0
+        # sum = 0
         # Always reading values and updating the buffer within the readThread utill readLoop is set to false
         while(self.readLoop):
             """
@@ -237,14 +239,23 @@ class COMMS:
             if not ready[0]:
                 break
             """
+            # self.niter+=1
             # receives the response and processes the buffer
             out,idx,buff = self.receiveMSPresponse(buff) 
             if self.debug:
                 print("out,idx,buff: ",out,idx,buff)
             # Updating params based on the OUT Packet received from drone
             self.updateParams(out,idx) 
+            # self.printParams()
+            
+            # print(self.paramsReceived["currentCommand"],self.paramsReceived["commandStatus"])
+            
             # variable to handle the reading frequency
-            time.sleep(self.outLoopSleepTime)
+            # time.sleep(self.outLoopSleepTime)
+            # sum += time.time()-s
+            # # i+=1
+            # print("cur: ",time.time()-s,"\navg: ",sum/self.niter)
+            # s = time.time()
     
     # function to print all the parameters
     def printParams(self):
@@ -273,14 +284,31 @@ class COMMS:
         elif idx==self.outServices["MSP_ACC_TRIM"]:
             self.paramsReceived["trimPitch"]=out[0]
             self.paramsReceived["trimRoll"]=out[1]
+        elif idx==self.outServices["MSP_RC"]:
+            self.paramsReceived["rcRoll"]=out[0]
+            self.paramsReceived["rcPitch"]=out[1]
+            self.paramsReceived["rcYaw"]=out[2]
+            self.paramsReceived["rcThrottle"]=out[3]
+            self.paramsReceived["rcAUX1"]=out[4]
+            self.paramsReceived["rcAUX2"]=out[5]
+            self.paramsReceived["rcAUX3"]=out[6]
+            self.paramsReceived["rcAUX4"]=out[7]         
+            if self.paramsReceived["rcThrottle"] == 1300:
+                print("time lag: ",time.time()-self.s)  
+        elif idx==self.outServices["MSP_COMMAND"]:
+            self.paramsReceived["currentCommand"] = out[0]
+            self.paramsReceived["commandStatus"] = out[1]
         
         if self.debug:
             self.printParams()
     
     # Reads data and appends it at the end of buffer 
     def updateBuffer(self,buff):
+        # s = time.time()
         arr = self.mySocket.recv(self.outBufferSize)
-        buff += list(arr)
+        # self.q += time.time()-s
+        # print("in recv function: ",time.time()-s,"\navg: ",self.q/self.niter)
+        buff.extend(list(arr))
         if(self.debug):
             print("buff: ",buff)
         return buff
@@ -304,14 +332,24 @@ class COMMS:
             if buff[i]!=headerArrayOut[i]:
                 if i==2:
                     if buff[i]==33:
-                        print("Error sent in out packet....!!!!!")
+                        print("Error sent in out packet....!!!!!",buff)
                         return
                     else:
                         buff = buff[2:]
                         return [],0,buff
                 else:
-                    print("garbage received (even header does not match)..!!")
-                    return
+                    index = -1
+                    for i in range(len(buff)):
+                        if buff[i]==headerArrayOut[0]:
+                            if buff[i+1]==headerArrayOut[1]:
+                                index = i
+                    if index!=-1 :
+                        buff = buff[index:]
+                        print("garbage received (even header does not match)..!! IGNORED",buff)
+                        return [],0,buff
+                    else:
+                        print("Error decoding buffer could not be resolved...!!!")
+                        return
         
         msgLen = buff[3]
         # handling the case of empty message
@@ -341,6 +379,12 @@ class COMMS:
             elif idx==self.outServices["MSP_ACC_TRIM"]:
                 out.append(getDec(buff[5],buff[6]))
                 out.append(getDec(buff[7],buff[8]))
+            elif idx==self.outServices["MSP_RC"]:
+                for i in range(0,msgLen,2):
+                    out.append(getSignedDec(buff[i+5],buff[i+6])*10)
+            elif idx==self.outServices["MSP_COMMAND"]:
+                out.append(getDec(buff[5],buff[6]))
+                out.append(buff[7])
             
             checksum = msgLen^idx
             for i in range(msgLen):
@@ -353,14 +397,25 @@ class COMMS:
                     print("successfully decoded!!\nout: ",out,"\n idx: ",idx,"msgLen: ",msgLen)
                 return out,idx,buff
             else:
-                print("Error in decoding the buffer....!!!!")
-                return
+                index = -1
+                for i in range(len(buff)):
+                    if buff[i]==headerArrayOut[0] and i+1!=len(buff):
+                        if buff[i+1]==headerArrayOut[1]:
+                            index = i
+                if index!=-1 :
+                    buff = buff[index:]
+                    print("Error in decoding the buffer....!!!! -> IGNORED",buff)
+                    return [],0,buff
+                else:
+                    print("Error decoding buffer could not be resolved...!!!")
+                    return
         else:
             # return buffer as it is if complete message is not present
             return [],0,buff
     
     # function to receive data and process it to return decoded values and updated buffer
-    def receiveMSPresponse(self,buff):            
+    def receiveMSPresponse(self,buff):        
+        # print("length of buff: ",len(buff))    
         buff = self.updateBuffer(buff)
         return self.processBuffer(buff)
 

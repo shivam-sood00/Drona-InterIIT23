@@ -1,10 +1,16 @@
-# Code for testing the communication with drone
-import comms,time
+import plutoComms
+import time
+import threading
 
-comms = comms.COMMS(debug=True)
-s = time.time()
-while(time.time()-s<4):
-    comms.IN.land()
-
-comms.IN.Arm(False)
-comms.disconnect()
+if __name__=="__main__":
+    
+    drone = plutoComms.COMMS(debug=False)
+    # readThread = threading.Thread(target=drone.read)
+    writeThread = threading.Thread(target=drone.write)
+    writeThread.start()
+    # readThread.start()
+    
+    drone.land()
+    
+    drone.disconnect()
+    writeThread.join()

@@ -29,11 +29,6 @@ import threading,plutoComms,time
 
 inputVal = None
 
-def inputFun():
-    global inputVal
-    while(inputVal!="p"):
-        inputVal = input("enter key: ")
-
 if __name__=="__main__":
     comms = plutoComms.COMMS(debug=False)
     # toggle = False
