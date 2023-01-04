@@ -6,10 +6,10 @@ class KalmanFilter():
     # Control Input U = [Upward Thurst (T - mg), Pitch Torque, Roll Torque, Yaw Torque]
 
     def __init__(self,
-                 X=np.zeros((12, 1)),
-                 P=np.zeros((12, 12)),
-                 process_noise=np.zeros((12, 1)),
-                 Q=np.zeros((12, 12)),
+                 X=np.zeros((15, 1)),
+                 P=np.zeros((15, 15)),
+                 process_noise=np.zeros((15, 1)),
+                 Q=np.zeros((15, 15)),
                  mass=0.1,
                  gravity=9.8,
                  MOI=(0.1, 0.1, 0.1)) -> None:
