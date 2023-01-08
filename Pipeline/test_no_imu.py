@@ -1,10 +1,38 @@
 from vision_pipeline import VisionPipeline
-from kalman_filter import KalmanFilter
+#from kalman_filter import KalmanFilter
 
 import numpy as np
 import time
 import cv2
 from cv2 import aruco
+
+import csv
+
+# used to record the time when we processed last frame
+prev_frame_time = 0
+
+# used to record the time at which we processed current frame
+new_frame_time = 0
+
+# open the file in the write mode
+f = open('vision_data.csv', 'w')
+
+# create the csv writer
+writer = csv.writer(f)
+
+# We need to set resolutions.
+# so, convert them from float to integer.
+frame_width = 1920
+frame_height = 1080
+   
+size = (frame_width, frame_height)
+   
+# Below VideoWriter object will create
+# a frame of above defined 
+result = cv2.VideoWriter('Bhideo.avi', 
+                         cv2.VideoWriter_fourcc(*'MJPG'),
+                         30, size)
+
 
 DEBUG = 1
 
@@ -12,11 +40,11 @@ DEBUG = 1
 if __name__ == '__main__':
 
     depth_res=(720, 1280)
-    rgb_res=(720, 1280)
+    rgb_res=(1080, 1920)
     align_to="rgb"
-    marker_size=3.75
+    marker_size=3.6
     marker_type=aruco.DICT_4X4_50
-    required_marker_id=0
+    required_marker_id = 1
     calib_file_path="../calib_data/MultiMatrix.npz"
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG)
@@ -39,7 +67,7 @@ if __name__ == '__main__':
     aruco_noise_bias = np.zeros((6, 1))
     aruco_noise_cov = np.zeros((6, 6))
 
-    kf = KalmanFilter(init_X.copy(), init_P.copy(), process_noise.copy(), Q.copy(), mass, gravity, MOI)
+    #kf = KalmanFilter(init_X.copy(), init_P.copy(), process_noise.copy(), Q.copy(), mass, gravity, MOI)
 
     last_time = time.time()
 
@@ -58,6 +86,14 @@ if __name__ == '__main__':
 
             depth_img = pipeline.to_image(depth_frame)
             color_img = pipeline.to_image(color_frame)
+
+            result.write(color_img)
+            # time when we finish processing for this frame
+            new_frame_time = time.time()
+            fps = 1/(new_frame_time-prev_frame_time)
+            prev_frame_time = new_frame_time
+            fps = int(fps)
+            print(fps)
             
             marker_corners = pipeline.detect_marker(color_img)
             
@@ -69,22 +105,29 @@ if __name__ == '__main__':
                 last_time = current_time
                 print(f"[{current_time}]: Aruco ESTIMATE: ", aruco_pose)
 
-                kf.apply_system_dynamics(control_input, dt)
-                print(f"[{current_time}]: System Dynamics ESTIMATE: ", kf.H @ kf.X)
-                kf.update_measurement(aruco_pose, aruco_noise_bias, aruco_noise_cov)
-                pose_estimate = (kf.H @ kf.X)
+                # kf.apply_system_dynamics(control_input, dt)
+                # print(f"[{current_time}]: System Dynamics ESTIMATE: ", kf.H @ kf.X)
+                # kf.update_measurement(aruco_pose, aruco_noise_bias, aruco_noise_cov)
+                # pose_estimate = (kf.H @ kf.X)
 
-                print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
+                # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
 
                 z_from_realsense = pipeline.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
                 print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
 
+                data  = [dt,current_time,z_from_realsense]
+                data.extend(aruco_pose.T[0].tolist())
+                writer.writerow(data)
+
             key = cv2.waitKey(1)
             if key & 0xFF == ord('q') or key == 27:
                 cv2.destroyAllWindows()
+                result.release()
                 break
 
 
 
     finally:
         pipeline.stop()
+        f.close()
+        
