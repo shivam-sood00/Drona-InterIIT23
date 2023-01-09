@@ -1,26 +1,51 @@
 import socket,select,time
-from utils import *
+from utils import getBytes,getDec,getSignedDec
+from queue import Queue
 
-
-"""
-Module for MSP Packet
-"""
 class MSPPacket:
+    """
+    This is a class for MSP Packets
+    
+    Attributes:
+        header: a list containing the header of the MSP Packet i.e. [36, 77]
+        direction: a dictionart to store the value mapped to in and out direction of MSGS
+        msg: a list to store the full message
+        debug: a flag to enable prints in code for debugging
+    """
     def __init__(self,debug=False):
+        """
+        Constructor for the MSP Packet Class
+        Initializes the header list and direction dictionary
+        Parameters:
+            debug: to pass in the flag for debugging, by default set to False
+        """
         self.debug = debug
         self.header = [36, 77]
         self.direction = {"in":60,"out":62} 
         self.msg = []
     
-    # Appends CRC at the end of message. This is to check the integrity of the packet
     def appendCRC(self):
+        """
+        This is a member function to appends CRC at the end of message
+        This is to check the integrity of the packet
+        
+        Parameter:
+            None
+        """
         checksum = 0
         for i in range(3,len(self.msg),1):
             checksum ^= self.msg[i]
         self.msg.append(checksum)
     
-    # Returns MSP Packet of in direction for given message length, type of payload and data
     def getInMsgRequest(self,msgLen,typeOfPayload,msgData):
+        """
+        This is a member function to returns MSP Packet of in direction for given message length, type of payload and data
+        
+        Parameter:
+            msgLen: length of message
+            typeOfPayload: stores value assigned to that type of payload
+            msgData: stores the data to be sent
+        """
         self.msg += self.header
         self.msg.append(self.direction["in"])
         self.msg.append(msgLen)
@@ -31,8 +56,15 @@ class MSPPacket:
             print(self.msg)
         return self.msg
     
-    # Returns MSP Packet of out direction for given message length, type of payload and data
     def getOutMsgRequest(self,msgLen,typeOfPayload,msgData):
+        """
+        This is a member function to returns MSP Packet of in direction for given message length, type of payload and data
+        
+        Parameter:
+            msgLen: length of message
+            typeOfPayload: stores value assigned to that type of payload
+            msgData: stores the data to be sent
+        """
         self.msg += self.header
         self.msg.append(self.direction["out"])
         self.msg.append(msgLen)
@@ -43,16 +75,42 @@ class MSPPacket:
             print(self.msg)
         return self.msg
 
-"""
-Module to facilitate all communication with the pluto drone    time.sleep(5)
-    # drone.paramsSet["trimRoll"] = 5
-    # drone.paramsSet["trimPitch"] = 5
-    # time.sleep(5)
-    # drone.paramsSet["trimRoll"] = 1
-    # drone.paramsSet["trimPitch"] = 1
-"""
 class COMMS:
+    """
+    This is the class for all communication with the pluto drone
+    
+    It has two threads running in parallel
+    1) The write Thread: which sends data to the drone based on the values of parameter to be set and requests to be made
+    2) The read Thread: which reads data from the drone and updates the parameters received based on the requests sent
+    
+    Attribute:
+        TCP_IP: IP address of drone
+        Port: Port of the drone
+        debug: a flag to enable prints in code for debugging
+        mySocket: refers to the instance of socket connected to the drone at the specified IP and Port
+        waitTime: variable to control sleep time after every command, so as to ensure that it is sent to the drone in the write thread
+        inLoopSleepTime: variable to control sleep time in write thread, thus controlling publishing frequency
+        outLoopSleepTime: variable to control sleep time in read thread, thus controlling subscribing frequency
+        writeLoop: variable to control writing loop i,e, if we want to write data or not
+        readLoop: variable to control reading loop i.e. if we want to read data or not
+        outServices: Dictionary of all the out packets we request for with their type of payload values
+        requestMSPPackets: List of MSP requests for Out Packets 
+        paramSet: Dictionary of parameter to be set based on their values through IN Packets
+        paramReceived: Dictionary of parameters received from the OUT Packets    
+    
+    """
     def __init__(self,IP='192.168.4.1',Port=23,debug=False):
+        """
+        Constructor for the COMMS class
+        
+        Parameters:
+            :param IP: IP Addresss to connect to, defaults to '192.168.4.1'
+            :type IP: str, optional
+            :param Port: Port to connect to, defaults to 23
+            :type Port: int, optional
+            :param debug: to pass in the flag for debugging, defaults to False
+            :type debug: bool, optional
+        """
         self.TCP_IP = IP
         self.Port = Port
         self.debug=debug
@@ -74,11 +132,14 @@ class COMMS:
         # variable to control buffer size of OUT loop 
         self.outBufferSize = 64
         # Dictionary of all the parameters we write to the pluto drone
-        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":3,"trimRoll":3}
+        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":0,"trimRoll":0}
         # Dictionary of all the parameters we read from the pluto drone
-        self.paramsReceived = {"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1,"rcRoll":-1,"rcPitch":-1, "rcYaw":-1, "rcThrottle" :-1, "rcAUX1":-1, "rcAUX2":-1, "rcAUX3":-1, "rcAUX4":-1,"currentCommand":-1,"commandStatus":-1 }
+        self.paramsReceived = {"timeOfLastUpdate":-1,"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1,"rcRoll":-1,"rcPitch":-1, "rcYaw":-1, "rcThrottle" :-1, "rcAUX1":-1, "rcAUX2":-1, "rcAUX3":-1, "rcAUX4":-1,"currentCommand":-1,"commandStatus":-1 }
     
     def arm(self):
+        """
+        Member Function to Arm the drone
+        """
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1000
@@ -86,6 +147,9 @@ class COMMS:
         time.sleep(self.waitTime)
     
     def boxArm(self):
+        """
+        Member Function to BoxArm the drone 
+        """
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1500
@@ -93,35 +157,59 @@ class COMMS:
         time.sleep(self.waitTime)
     
     def disArm(self):
+        """
+        Member Function to disArm the drone
+        """ 
         self.paramsSet["Throttle"] = 1300
         self.paramsSet["Aux4"] = 1000
         time.sleep(self.waitTime)
     
     def forward(self):
+        """
+        Member Function to increase pitch so that the drone moves forward
+        """
         self.paramsSet["Pitch"] = 1600
         time.sleep(self.waitTime)
         
     def backward(self):
+        """
+        Member function to decrease pitch so that the drone moves backward
+        """
         self.paramsSet["Pitch"] = 1400
         time.sleep(self.waitTime)
         
     def left(self):
+        """
+        Member Function to decrease roll so that the drone moves towards left
+        """
         self.paramsSet["Roll"] = 1400
         time.sleep(self.waitTime)
         
     def right(self):
+        """
+        Member Function to increase roll so that the drone moves towards right
+        """
         self.paramsSet["Roll"] = 1600
         time.sleep(self.waitTime)
         
     def leftYaw(self):
+        """
+        Member Function to decrease yaw so that the drone rotates toward left
+        """
         self.paramsSet["Yaw"] = 1200
         time.sleep(self.waitTime)
     
     def rightYaw(self):
+        """
+        Member Function to increase yaw so that the drone rotates toward right
+        """
         self.paramsSet["Yaw"] = 1800
         time.sleep(self.waitTime)
     
     def reset(self):
+        """
+        Member Functioon to set all parameters to set to default values.
+        """
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1500
@@ -130,24 +218,39 @@ class COMMS:
         time.sleep(self.waitTime)
     
     def increaseHeight(self):
+        """
+        Member Function to increase throttle so that height of drone is increased
+        """
         self.paramsSet["Throttle"] = 1800
         time.sleep(self.waitTime)
     
     def lowThrottle(self):
+        """
+        Member Function to provide a low throttle, generally used for hardware testing
+        """
         self.paramsSet["Throttle"] = 901
         time.sleep(self.waitTime)
     
     def decreaseHeight(self):
+        """
+        Member Function to decrease throttle so that height of drone is decreased
+        """
         self.paramsSet["Throttle"] = 1300
         time.sleep(self.waitTime)
     
     def takeOff(self):
+        """
+        Member Function to set command as takeOff
+        """
         self.disArm()
         self.boxArm()
         self.paramsSet["currentCommand"] = 1
         time.sleep(self.waitTime)
     
     def land(self):
+        """
+        Member Function to set command as land
+        """
         self.reset()
         self.paramsSet["currentCommand"] = 2
         # Giving extra 2 seconds to land
@@ -155,29 +258,35 @@ class COMMS:
         self.disArm()
     
     def backFlip(self):
+        """
+        Member Function to set command as back flip
+        """
         self.paramsSet["currentCommand"] = 3
         time.sleep(self.waitTime)
     
-    # function to generate MSP Packets for all OUT services 
     def getAllRequestMsgs(self):
+        """
+        Member Function to generate MSP Packets for all Out Packets mentioned in OUT services
+        """
         for service in self.outServices.values():
             self.requestMSPPackets.append(MSPPacket().getInMsgRequest(0,service,[]))
-
-    """
-    Target of the Writing Thread
-    ALl writing to drone takes place in this function untill we set sendData to false
-    """
+    
     def write(self):
+        """
+        Member Function which is the target of the Writing Thread
+        ALl writing to drone takes place in this function untill we set sendData to False
+        
+        Before entering the loop we set the ROll and Pitch Trim, as it is to be done only once in the starting
+        In the loop we keep sending the SET_RAW_RC commands, we check if SET_COMMAND is not 0 this we send that also
+        In every iteration, we also request for all the messages we want as OUT Packets
+        """
         self.writeLoop = True
         self.getAllRequestMsgs()
-        # if self.paramsSet["trimRoll"]!=0 or self.paramsSet["trimPitch"]!=0: 
         msgLen = 4
         typeOfPayload = 239
         msgData = []
         msgData.extend(getBytes(self.paramsSet["trimPitch"]))
         msgData.extend(getBytes(self.paramsSet["trimRoll"]))
-        # self.paramsSet["trimRoll"] = 0
-        # self.paramsSet["trimPitch"] = 0
         msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
         if self.debug :
             print(msgToBeSent)
@@ -212,58 +321,51 @@ class COMMS:
                 self.mySocket.send(bytearray(msgToBeSent))
             # sending MSP request messages for OUT Packets
             for request in self.requestMSPPackets:
-                print(request)
                 self.mySocket.send(bytearray(request))
             # sleep to control writing frequency
             time.sleep(self.inLoopSleepTime)
 
-    """
-    Target function to the reading thread
-    All the data sent by the drone is received in this function
-    """
-    def read(self):
+    def read(self,IMUQueue):
+        """
+        Member Function which is target function to the Reading Thread
+        All the data sent by the drone is received in this function
+        
+        In the loop we wait for 2 seconds max, if we do not receive any data on the socket then we break out of the loop
+        While receiving we append that message at the end of the currently existing buffer
+        After this the current buffer is again and again processed and the parameter received are updated untill the buffer can no longer be processed
+        
+        """
         # buffer to hold the data sent by drone
         buff = []
         self.readLoop = True
-        # s = time.time()
-        # # i = 0
-        # sum = 0
         # Always reading values and updating the buffer within the readThread utill readLoop is set to false
         while(self.readLoop):
-            """
-            
-            commented as of now, if code works without this then this should be removed 
-            
+
             # Time out after 2 seconds of not getting data
             ready = select.select([self.mySocket],[],[],2) 
             if not ready[0]:
                 break
-            """
-            # self.niter+=1
-            # receives the response and processes the buffer
-            out,idx,buff = self.receiveMSPresponse(buff) 
-            if self.debug:
-                print("out,idx,buff: ",out,idx,buff)
-            # Updating params based on the OUT Packet received from drone
-            self.updateParams(out,idx) 
-            # self.printParams()
             
-            # print(self.paramsReceived["currentCommand"],self.paramsReceived["commandStatus"])
-            
-            # variable to handle the reading frequency
-            # time.sleep(self.outLoopSleepTime)
-            # sum += time.time()-s
-            # # i+=1
-            # print("cur: ",time.time()-s,"\navg: ",sum/self.niter)
-            # s = time.time()
+            buff = self.receiveMSPresponse(buff) 
+            IMUQueue.put(self.paramsReceived)
+            self.printParams()
     
-    # function to print all the parameters
     def printParams(self):
-        print("ParamsSet: ",self.paramsSet)
+        """
+        Member Function to Print all the Parameters
+        """
         print("ParamsReceived: ",self.paramsReceived)
+        print(list(self.paramsReceived.values()))
     
-    # function to update the received parameters
     def updateParams(self,out,idx):
+        """
+        Member Function to update the received parameters
+        :param out: Decoded Values
+        :type out: List
+        :param idx: value of type of payload 
+        :type idx: int
+        """
+        self.paramsReceived["timeOfLastUpdate"] = time.time()
         if idx==self.outServices["MSP_ATTITUDE"]: #MSP_ATTITUDE
             self.paramsReceived["Roll"]=out[0]
             self.paramsReceived["Pitch"]=out[1]
@@ -293,8 +395,6 @@ class COMMS:
             self.paramsReceived["rcAUX2"]=out[5]
             self.paramsReceived["rcAUX3"]=out[6]
             self.paramsReceived["rcAUX4"]=out[7]         
-            if self.paramsReceived["rcThrottle"] == 1300:
-                print("time lag: ",time.time()-self.s)  
         elif idx==self.outServices["MSP_COMMAND"]:
             self.paramsReceived["currentCommand"] = out[0]
             self.paramsReceived["commandStatus"] = out[1]
@@ -302,23 +402,24 @@ class COMMS:
         if self.debug:
             self.printParams()
     
-    # Reads data and appends it at the end of buffer 
     def updateBuffer(self,buff):
-        # s = time.time()
+        """
+        Member Function to read data and appends it at the end of buffer 
+        """
         arr = self.mySocket.recv(self.outBufferSize)
-        # self.q += time.time()-s
-        # print("in recv function: ",time.time()-s,"\navg: ",self.q/self.niter)
         buff.extend(list(arr))
         if(self.debug):
             print("buff: ",buff)
         return buff
     
-    """
-    This function processes the current buffer and return the list of decoded values as out list, 
-    the OUT Packet payload corresponding to which the values are and the remaining buffer.
-    Returns empty out list and 0 as payload if buffer does not contain the full message
-    """
     def processBuffer(self,buff,funDebug = False):
+        """
+        This function processes the current buffer and return the list of decoded values as out list, 
+        the OUT Packet payload corresponding to which the values are and the remaining buffer.
+        Returns empty out list and 0 as payload if buffer does not contain the full message
+        
+        In case when garbage is received slice the buffer to the start of the next message by searching for header
+        """
         
         if self.debug or funDebug:
             print(buff)
@@ -340,7 +441,7 @@ class COMMS:
                 else:
                     index = -1
                     for i in range(len(buff)):
-                        if buff[i]==headerArrayOut[0]:
+                        if buff[i]==headerArrayOut[0] and i+1!=len(buff):
                             if buff[i+1]==headerArrayOut[1]:
                                 index = i
                     if index!=-1 :
@@ -348,8 +449,8 @@ class COMMS:
                         print("garbage received (even header does not match)..!! IGNORED",buff)
                         return [],0,buff
                     else:
-                        print("Error decoding buffer could not be resolved...!!!")
-                        return
+                        print("Error decoding buffer could not be resolved (direction does not make sense)...!!! IGNORED",buff)
+                        return [],0,buff
         
         msgLen = buff[3]
         # handling the case of empty message
@@ -366,16 +467,24 @@ class COMMS:
             out = []
             if idx==self.outServices["MSP_ATTITUDE"]:
                 for i in range(0,msgLen,2):
-                    out.append(getSignedDec(buff[i+5],buff[i+6],i/2))
+                    out.append(getSignedDec(buff[i+5],buff[i+6]))
+                out[0] /= 10
+                out[1] /= 10
+                if out[2]>180:
+                    out[2] = out[2]-360
             elif idx==self.outServices["MSP_ALTITUDE"]:
                 lsb16 = getDec(buff[5],buff[6])
                 msb16 = getDec(buff[7],buff[8])
                 # dividing by 100 to convert to meters and meter-per-second
                 out.append(getDec(lsb16,msb16,256*256)/100)
-                out.append(getSignedDec(buff[9],buff[10],0)/100)
+                out.append(getSignedDec(buff[9],buff[10])/100)
             elif idx==self.outServices["MSP_RAW_IMU"]:
                 for i in range(0,msgLen,2):
                     out.append(getSignedDec(buff[i+5],buff[i+6]))
+                for i in range(3,6):
+                    out[i] =out[i]/8
+                for i in range(6,9):
+                    out[i] = out[i]/3
             elif idx==self.outServices["MSP_ACC_TRIM"]:
                 out.append(getDec(buff[5],buff[6]))
                 out.append(getDec(buff[7],buff[8]))
@@ -407,20 +516,30 @@ class COMMS:
                     print("Error in decoding the buffer....!!!! -> IGNORED",buff)
                     return [],0,buff
                 else:
-                    print("Error decoding buffer could not be resolved...!!!")
-                    return
+                    print("Error decoding buffer could not be resolved (checksum does not match)...!!! IGNORED",buff)
+                    return [],0,buff
         else:
             # return buffer as it is if complete message is not present
             return [],0,buff
     
-    # function to receive data and process it to return decoded values and updated buffer
     def receiveMSPresponse(self,buff):        
-        # print("length of buff: ",len(buff))    
+        """
+        Member Function to receive data and process it to return decoded values and updated buffer
+        """
         buff = self.updateBuffer(buff)
-        return self.processBuffer(buff)
+        i=len(buff)//3
+        while len(buff)>5:    
+            i-=1
+            if i<0:
+                break
+            out,idx,buff = self.processBuffer(buff) 
+            self.updateParams(out,idx) 
+        return buff
 
-    # function to disconnect with the communication
     def disconnect(self):
+        """
+        Member Function to disconnect communication and stop read and writing loops
+        """
         self.readLoop = False
         self.writeLoop = False
         self.mySocket.close()
