@@ -1,0 +1,19 @@
+Symlinking /home/aditya/rotor_s/devel/lib/pkgconfig/rotors_hil_interface.pc
+Symlinking /home/aditya/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig-version.cmake
+Symlinking /home/aditya/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig.cmake
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/cmake.lock, /home/satyam/rotor_s/devel/./cmake.lock)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig.cmake, /home/satyam/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig.cmake)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig-version.cmake, /home/satyam/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig-version.cmake)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/lib/librotors_hil_interface.so, /home/satyam/rotor_s/devel/lib/librotors_hil_interface.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/lib/pkgconfig/rotors_hil_interface.pc, /home/satyam/rotor_s/devel/lib/pkgconfig/rotors_hil_interface.pc)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_hil_interface/lib/rotors_hil_interface/rotors_hil_interface_node, /home/satyam/rotor_s/devel/lib/rotors_hil_interface/rotors_hil_interface_node)
+Unlinking: /home/satyam/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig.cmake
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/share/rotors_hil_interface/cmake/rotors_hil_interfaceConfig-version.cmake
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_hil_interface.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/pkgconfig/rotors_hil_interface.pc
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/rotors_hil_interface/rotors_hil_interface_node
+Already unlinked: {}

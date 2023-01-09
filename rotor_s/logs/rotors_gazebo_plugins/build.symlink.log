@@ -1,0 +1,77 @@
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_wind_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_multirotor_base_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_motor_model.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_lidar_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/libLiftDragPlugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/libgazebo_geotagged_images_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_imu_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_bag_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_fw_dynamics_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_gps_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_odometry_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_pressure_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_controller_interface.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_noisydepth_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_ros_interface_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/librotors_gazebo_magnetometer_plugin.so
+Symlinking /home/aditya/rotor_s/devel/lib/pkgconfig/rotors_gazebo_plugins.pc
+Symlinking /home/aditya/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig-version.cmake
+Symlinking /home/aditya/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig.cmake
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/cmake.lock, /home/satyam/rotor_s/devel/./cmake.lock)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig-version.cmake, /home/satyam/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig-version.cmake)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig.cmake, /home/satyam/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig.cmake)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_motor_model.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_motor_model.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_magnetometer_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_magnetometer_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_gps_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_gps_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/libgazebo_geotagged_images_plugin.so, /home/satyam/rotor_s/devel/lib/libgazebo_geotagged_images_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_pressure_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_pressure_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_multirotor_base_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_multirotor_base_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_odometry_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_odometry_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_imu_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_imu_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/libLiftDragPlugin.so, /home/satyam/rotor_s/devel/lib/libLiftDragPlugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_ros_interface_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_ros_interface_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_controller_interface.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_controller_interface.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_noisydepth_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_noisydepth_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_lidar_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_lidar_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_bag_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_bag_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_fw_dynamics_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_fw_dynamics_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/librotors_gazebo_wind_plugin.so, /home/satyam/rotor_s/devel/lib/librotors_gazebo_wind_plugin.so)
+Cleaning: (/home/satyam/rotor_s/devel/.private/rotors_gazebo_plugins/lib/pkgconfig/rotors_gazebo_plugins.pc, /home/satyam/rotor_s/devel/lib/pkgconfig/rotors_gazebo_plugins.pc)
+Unlinking: /home/satyam/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig-version.cmake
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/share/rotors_gazebo_plugins/cmake/rotors_gazebo_pluginsConfig.cmake
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_motor_model.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_magnetometer_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_gps_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/libgazebo_geotagged_images_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_pressure_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_multirotor_base_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_odometry_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_imu_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/libLiftDragPlugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_ros_interface_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_controller_interface.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_noisydepth_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_lidar_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_bag_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_fw_dynamics_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/librotors_gazebo_wind_plugin.so
+Already unlinked: {}
+Unlinking: /home/satyam/rotor_s/devel/lib/pkgconfig/rotors_gazebo_plugins.pc
+Already unlinked: {}

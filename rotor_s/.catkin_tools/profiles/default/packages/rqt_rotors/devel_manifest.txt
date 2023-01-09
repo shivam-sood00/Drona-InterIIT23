@@ -1,0 +1,5 @@
+rotors_simulator/rqt_rotors
+/home/aditya/rotor_s/devel/.private/rqt_rotors/cmake.lock /home/aditya/rotor_s/devel/./cmake.lock
+/home/aditya/rotor_s/devel/.private/rqt_rotors/lib/pkgconfig/rqt_rotors.pc /home/aditya/rotor_s/devel/lib/pkgconfig/rqt_rotors.pc
+/home/aditya/rotor_s/devel/.private/rqt_rotors/share/rqt_rotors/cmake/rqt_rotorsConfig-version.cmake /home/aditya/rotor_s/devel/share/rqt_rotors/cmake/rqt_rotorsConfig-version.cmake
+/home/aditya/rotor_s/devel/.private/rqt_rotors/share/rqt_rotors/cmake/rqt_rotorsConfig.cmake /home/aditya/rotor_s/devel/share/rqt_rotors/cmake/rqt_rotorsConfig.cmake

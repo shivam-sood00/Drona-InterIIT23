@@ -1,0 +1,1 @@
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/share/rotors_gazebo/cmake/rotors_gazeboConfig-version.cmake

@@ -1,0 +1,11 @@
+rotors_simulator/rotors_control
+/home/aditya/rotor_s/devel/.private/rotors_control/cmake.lock /home/aditya/rotor_s/devel/./cmake.lock
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/libroll_pitch_yawrate_thrust_controller.so /home/aditya/rotor_s/devel/lib/libroll_pitch_yawrate_thrust_controller.so
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/liblee_position_controller.so /home/aditya/rotor_s/devel/lib/liblee_position_controller.so
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/pkgconfig/rotors_control.pc /home/aditya/rotor_s/devel/lib/pkgconfig/rotors_control.pc
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/rotors_control/lee_position_controller_node /home/aditya/rotor_s/devel/lib/rotors_control/lee_position_controller_node
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/rotors_control/pid_custom_node /home/aditya/rotor_s/devel/lib/rotors_control/pid_custom_node
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/rotors_control/roll_pitch_yawrate_thrust_controller_node /home/aditya/rotor_s/devel/lib/rotors_control/roll_pitch_yawrate_thrust_controller_node
+/home/aditya/rotor_s/devel/.private/rotors_control/lib/rotors_control/waypoint_node /home/aditya/rotor_s/devel/lib/rotors_control/waypoint_node
+/home/aditya/rotor_s/devel/.private/rotors_control/share/rotors_control/cmake/rotors_controlConfig-version.cmake /home/aditya/rotor_s/devel/share/rotors_control/cmake/rotors_controlConfig-version.cmake
+/home/aditya/rotor_s/devel/.private/rotors_control/share/rotors_control/cmake/rotors_controlConfig.cmake /home/aditya/rotor_s/devel/share/rotors_control/cmake/rotors_controlConfig.cmake

@@ -1,0 +1,8 @@
+rotors_simulator/rotors_gazebo
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/cmake.lock /home/aditya/rotor_s/devel/./cmake.lock
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/lib/pkgconfig/rotors_gazebo.pc /home/aditya/rotor_s/devel/lib/pkgconfig/rotors_gazebo.pc
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/lib/rotors_gazebo/waypoint_publisher /home/aditya/rotor_s/devel/lib/rotors_gazebo/waypoint_publisher
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/lib/rotors_gazebo/waypoint_publisher_file /home/aditya/rotor_s/devel/lib/rotors_gazebo/waypoint_publisher_file
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/lib/rotors_gazebo/hovering_example /home/aditya/rotor_s/devel/lib/rotors_gazebo/hovering_example
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/share/rotors_gazebo/cmake/rotors_gazeboConfig.cmake /home/aditya/rotor_s/devel/share/rotors_gazebo/cmake/rotors_gazeboConfig.cmake
+/home/aditya/rotor_s/devel/.private/rotors_gazebo/share/rotors_gazebo/cmake/rotors_gazeboConfig-version.cmake /home/aditya/rotor_s/devel/share/rotors_gazebo/cmake/rotors_gazeboConfig-version.cmake

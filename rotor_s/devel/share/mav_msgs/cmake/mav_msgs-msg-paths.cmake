@@ -1,0 +1,1 @@
+/home/aditya/rotor_s/devel/.private/mav_msgs/share/mav_msgs/cmake/mav_msgs-msg-paths.cmake
