@@ -29,6 +29,8 @@ class ROI():
         cv.polylines(frame,[pnt],True,(255,0,0),2)
         #cv.rectangle(frame,(ROI_list[0][0],ROI_list[0][1]),(ROI_list[1][0],ROI_list[1][1]),(255,0,0),2)
 
+    def get_ROI():
+        return ROI_list
 
 
 
