@@ -1,6 +1,0 @@
-devel_space: /home/aditya/rotor_s/devel
-install: false
-install_space: /home/aditya/rotor_s/install
-profile: default
-source_space: /home/aditya/rotor_s/src
-workspace: /home/aditya/rotor_s

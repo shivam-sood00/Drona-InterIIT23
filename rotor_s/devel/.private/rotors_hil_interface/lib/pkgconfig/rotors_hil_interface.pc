@@ -1,8 +1,0 @@
-prefix=/home/aditya/rotor_s/devel/.private/rotors_hil_interface
-
-Name: rotors_hil_interface
-Description: Description of rotors_hil_interface
-Version: 2.2.3
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

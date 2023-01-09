@@ -1,8 +1,0 @@
-prefix=/home/aditya/rotor_s/install
-
-Name: rqt_rotors
-Description: Description of rqt_rotors
-Version: 2.2.3
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

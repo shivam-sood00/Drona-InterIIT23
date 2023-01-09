@@ -1,8 +1,0 @@
-prefix=/home/aditya/rotor_s/devel/.private/rotors_gazebo_plugins
-
-Name: rotors_gazebo_plugins
-Description: Description of rotors_gazebo_plugins
-Version: 2.2.3
-Cflags: -I/home/aditya/rotor_s/src/rotors_simulator/rotors_gazebo_plugins/include -I/usr/include/eigen3 -I/usr/local/include/opencv4
-Libs: -L${prefix}/lib -lrotors_gazebo_motor_model -lrotors_gazebo_controller_interface /usr/local/lib/libopencv_calib3d.so.4.6.0 /usr/local/lib/libopencv_core.so.4.6.0 /usr/local/lib/libopencv_dnn.so.4.6.0 /usr/local/lib/libopencv_features2d.so.4.6.0 /usr/local/lib/libopencv_flann.so.4.6.0 /usr/local/lib/libopencv_gapi.so.4.6.0 /usr/local/lib/libopencv_highgui.so.4.6.0 /usr/local/lib/libopencv_imgcodecs.so.4.6.0 /usr/local/lib/libopencv_imgproc.so.4.6.0 /usr/local/lib/libopencv_ml.so.4.6.0 /usr/local/lib/libopencv_objdetect.so.4.6.0 /usr/local/lib/libopencv_photo.so.4.6.0 /usr/local/lib/libopencv_stitching.so.4.6.0 /usr/local/lib/libopencv_video.so.4.6.0 /usr/local/lib/libopencv_videoio.so.4.6.0
-Requires: cv_bridge geometry_msgs mav_msgs octomap_msgs octomap_ros rosbag roscpp gazebo_plugins rotors_comm rotors_control std_srvs tf
