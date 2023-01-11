@@ -29,7 +29,7 @@ class VisionPipeline():
 
         self.marker_size = marker_size
         self.marker_type = marker_type
-        self.marker_dict = aruco.Dictionary_get(self.marker_type)
+        self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
 
         self.required_marker_id = required_marker_id
         
@@ -50,7 +50,7 @@ class VisionPipeline():
 
         # rs.option.enable_auto_exposure
         rs.option.enable_motion_correction
-        print(colorSensor.get_info(rs.camera_info.name))
+        # print(colorSensor.get_info(rs.camera_info.name))
 
         colorSensor.set_option(rs.option.enable_auto_exposure, 0)
         colorSensor.set_option(rs.option.enable_auto_white_balance, 0)
@@ -235,7 +235,12 @@ class VisionPipeline():
         self.init_aruco_detector()
         
     def cam_process(self, cam_queue):
+        counter = 0
         while True:
+            print("cam##############################################################loop")
+            flag = 0
+            x_threshold = 0
+            y_threshold = 0
             aligned_frames = self.get_frames()    
             color_frame = self.extract_rgb(aligned_frames)
             depth_frame = self.extract_depth(aligned_frames)
@@ -257,8 +262,14 @@ class VisionPipeline():
             marker_corners = self.detect_marker(color_img)
             
             if marker_corners is None:
+                counter += 1
+                if counter >= 10:
+                    flag = 2
+                    cam_queue.put([flag])
+                    counter = 0
                 pass
             else:
+                counter = 0
                 aruco_pose = self.estimate_pose(marker_corners)
                 #dt = current_time - last_time
                 #last_time = current_time
@@ -273,8 +284,12 @@ class VisionPipeline():
 
                 z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
                 #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
-
-                cam_queue.append([current_time, aruco_pose, z_from_realsense])
+                if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
+                    flag = 1
+                    cam_queue.put([flag])
+                else:
+                    flag = 0
+                    cam_queue.append([current_time, aruco_pose, z_from_realsense])
 
                 # data  = [dt,current_time,z_from_realsense]
                 # data.extend(aruco_pose.T[0].tolist())

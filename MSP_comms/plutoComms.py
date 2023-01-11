@@ -182,6 +182,8 @@ class COMMS:
             print(msgToBeSent)
         self.mySocket.send(bytearray(msgToBeSent))
         while(self.writeLoop):
+            # print("writeloop")
+
             # Sending MSP_SET_RAW_RC type message
             msgLen = 16
             typeOfPayload = 200
@@ -229,7 +231,7 @@ class COMMS:
         # sum = 0
         # Always reading values and updating the buffer within the readThread utill readLoop is set to false
         while(self.readLoop):
-
+            # print("readloop")
             # Time out after 2 seconds of not getting data
             ready = select.select([self.mySocket],[],[],2) 
             if not ready[0]:
@@ -237,13 +239,14 @@ class COMMS:
             
             buff = self.receiveMSPresponse(buff) 
             IMUQueue.append(self.paramsReceived)
-            #self.printParams()
+            if self.debug:
+                self.printParams()
     
     # function to print all the parameters
     def printParams(self):
-        # print("ParamsSet: ",self.paramsSet)
-        # print("ParamsReceived: ",self.paramsReceived)
-        print(list(self.paramsReceived.values()))
+        print("ParamsSet: ",self.paramsSet)
+        print("ParamsReceived: ",self.paramsReceived)
+        # print(list(self.paramsReceived.values()))
     
     # function to update the received parameters
     def updateParams(self,out,idx):
@@ -260,7 +263,6 @@ class COMMS:
             self.paramsReceived["AccX"]=out[0]
             self.paramsReceived["AccY"]=out[1]
             self.paramsReceived["AccZ"]=out[2]
-            print(out[3:6])
             self.paramsReceived["GyroX"]=out[3]
             self.paramsReceived["GyroY"]=out[4]
             self.paramsReceived["GyroZ"]=out[5]
@@ -313,6 +315,7 @@ class COMMS:
             if buff[i]!=headerArrayOut[i]:
                 if i==2:
                     if buff[i]==33:
+                        # if self.debug:
                         print("Error sent in out packet....!!!!!",buff)
                         return
                     else:
@@ -326,10 +329,12 @@ class COMMS:
                                 index = i
                     if index!=-1 :
                         buff = buff[index:]
-                        print("garbage received (even header does not match)..!! IGNORED",buff)
+                        if self.debug:
+                            print("garbage received (even header does not match)..!! IGNORED",buff)
                         return [],0,buff
                     else:
-                        print("Error decoding buffer could not be resolved (direction does not make sense)...!!! IGNORED",buff)
+                        if self.debug:
+                            print("Error decoding buffer could not be resolved (direction does not make sense)...!!! IGNORED",buff)
                         return [],0,buff
         
         msgLen = buff[3]
@@ -393,10 +398,12 @@ class COMMS:
                             index = i
                 if index!=-1 :
                     buff = buff[index:]
-                    print("Error in decoding the buffer....!!!! -> IGNORED",buff)
+                    if self.debug:
+                        print("Error in decoding the buffer....!!!! -> IGNORED",buff)
                     return [],0,buff
                 else:
-                    print("Error decoding buffer could not be resolved (checksum does not match)...!!! IGNORED",buff)
+                    if self.debug:
+                        print("Error decoding buffer could not be resolved (checksum does not match)...!!! IGNORED",buff)
                     return [],0,buff
         else:
             # return buffer as it is if complete message is not present
