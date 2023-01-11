@@ -237,7 +237,7 @@ class VisionPipeline():
     def cam_process(self, cam_queue):
         counter = 0
         while True:
-            print("cam##############################################################loop")
+            # print("cam##############################################################loop")
             flag = 0
             x_threshold = 0
             y_threshold = 0
@@ -265,10 +265,12 @@ class VisionPipeline():
                 counter += 1
                 if counter >= 10:
                     flag = 2
-                    cam_queue.put([flag])
+                    cam_queue.append([flag])
                     counter = 0
+                # print("no aruco")
                 pass
             else:
+                # print("detected")
                 counter = 0
                 aruco_pose = self.estimate_pose(marker_corners)
                 #dt = current_time - last_time
@@ -286,9 +288,10 @@ class VisionPipeline():
                 #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
                 if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
                     flag = 1
-                    cam_queue.put([flag])
+                    cam_queue.append([flag])
                 else:
                     flag = 0
+                    # print("appending")
                     cam_queue.append([current_time, aruco_pose, z_from_realsense])
 
                 # data  = [dt,current_time,z_from_realsense]

@@ -13,11 +13,11 @@ class autoPluto:
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
-        self.currentState = []
+        self.currentState = [0,0,0]
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[1,0,2],[-1,0,2]]
         self.pid = PID()
-        self.poseStatus = 0
+        self.outOfBound = 0
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
@@ -30,7 +30,7 @@ class autoPluto:
     
     # updates queueXYZ
     def cameraFeed(self):
-        camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=1)
+        camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=1,debug=0)
         camera.cam_init()
         camera.cam_process(self.CamQueue)
     
@@ -40,7 +40,7 @@ class autoPluto:
             print(point)
             self.pid.set_target_pose(point=point)
             while(True):
-                print("runloop")
+                # print("runloop")
                 self.updateState()
                 self.updateAction()
                 self.takeAction()
@@ -60,7 +60,8 @@ class autoPluto:
                 if(len(data)==1):
                     self.outOfBound = data
             self.CamQueue.clear()
-            self.currentState = sensorData[1][:2] + sensorData[2]
+            # print(list(sensorData[1][:2,0]),[sensorData[2]])
+            self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
         self.IMUQueue.clear()
 
         # if self.debug:

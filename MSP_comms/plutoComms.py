@@ -15,6 +15,7 @@ class MSPPacket:
     def appendCRC(self):
         checksum = 0
         for i in range(3,len(self.msg),1):
+            print(type(self.msg[i]))
             checksum ^= self.msg[i]
         self.msg.append(checksum)
     
