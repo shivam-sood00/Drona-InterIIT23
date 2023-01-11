@@ -53,17 +53,17 @@ class PID():
 
     def set_thrust(self):
         self.thrust = np.sum(self.K_thrust * self.err_thrust)      #Elementwise multiplication
-        self.thrust = np.clip(self.thrust, 900, 1800)       #TODO tune (Import from config)
+        self.thrust = 1300 + np.clip(self.thrust, -399, 399)       #TODO tune (Import from config)
         return self.thrust
 
     def set_roll(self):
         self.roll = np.sum(self.K_roll * self.err_roll)
-        self.roll = np.clip(self.roll, 1400, 1600)           #TODO tuned 
+        self.roll = 1500 + np.clip(self.roll, -150, 150)           #TODO tuned 
         return self.roll
     
     def set_pitch(self):
         self.pitch = np.sum(self.K_pitch * self.err_pitch)
-        self.pitch = np.clip(self.pitch, 1400, 1600)         #TODO tuned
+        self.pitch = 1500 + np.clip(self.pitch, -150, 150)         #TODO tuned
         return self.pitch
 
 
