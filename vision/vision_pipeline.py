@@ -17,7 +17,8 @@ class VisionPipeline():
                  marker_type=aruco.DICT_4X4_50,
                  required_marker_id=0,
                  calib_file_path="../calib_data/MultiMatrix.npz",
-                 debug=0) -> None:
+                 debug=0,
+                 padding=100) -> None:
 
 
         self.depth_res = depth_res
@@ -34,6 +35,7 @@ class VisionPipeline():
         self.required_marker_id = required_marker_id
         
         self.DEBUG = debug
+        self.padding = padding
         pass
 
 
@@ -144,6 +146,11 @@ class VisionPipeline():
         for i, id_ in enumerate(marker_IDs):
             
             if id_ == self.required_marker_id:
+                
+                mid_point = np.sum(marker_corners[i], 0) / 4.0
+                if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
+                    return None
+
                 return marker_corners[i].astype(np.int32)
 
         return None
@@ -268,7 +275,11 @@ class VisionPipeline():
                     cam_queue.append([flag])
                     counter = 0
                 # print("no aruco")
+                else:
+                    flag=1
+                    cam_queue.append([flag])
                 pass
+                
             else:
                 # print("detected")
                 counter = 0
@@ -286,13 +297,14 @@ class VisionPipeline():
 
                 z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
                 #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
-                if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
-                    flag = 1
-                    cam_queue.append([flag])
-                else:
-                    flag = 0
+                # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
+                #     flag = 1
+                #     cam_queue.append([flag])
+                # else:
+                #     flag = 0
                     # print("appending")
-                    cam_queue.append([current_time, aruco_pose, z_from_realsense])
+                flag=0
+                cam_queue.append([current_time, aruco_pose, z_from_realsense])
 
                 # data  = [dt,current_time,z_from_realsense]
                 # data.extend(aruco_pose.T[0].tolist())
