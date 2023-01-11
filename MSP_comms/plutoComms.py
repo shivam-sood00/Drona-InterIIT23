@@ -1,6 +1,5 @@
 import socket,select,time
-from utils import *
-from queue import Queue
+from MSP_comms.utils import *
 
 """
 Module for MSP Packet
@@ -238,7 +237,7 @@ class COMMS:
             
             buff = self.receiveMSPresponse(buff) 
             IMUQueue.append(self.paramsReceived)
-            self.printParams()
+            #self.printParams()
     
     # function to print all the parameters
     def printParams(self):

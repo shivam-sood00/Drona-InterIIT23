@@ -5,6 +5,7 @@ from cv2 import aruco
 import time
 import os
 from scipy.spatial.transform import Rotation
+import csv
 
 class VisionPipeline():
 
@@ -181,11 +182,10 @@ class VisionPipeline():
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
-        print("RVec:",rVec,"Tvec:",tVec)
+        #print("RVec:",rVec,"Tvec:",tVec)
         tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])        
         tf = self.cam_tf @ tf
         return self.tf_to_outformat(tf)
-
 
 
     def make_tf_matrix(self, rvec, tvec):
@@ -229,3 +229,63 @@ class VisionPipeline():
             return (depths[int(num_values / 2.0)] + depths[int(num_values / 2.0) - 1]) / 2.0
         else:
             return depths[int(num_values / 2.0) - 1]
+
+    def cam_init(self):
+        self.init_realsense()
+        self.init_aruco_detector()
+        
+    def cam_process(self, cam_queue):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+
+            if not depth_frame or not color_frame:
+                continue
+
+            current_time = time.time()
+
+            color_img = self.to_image(color_frame)
+
+            # time when we finish processing for this frame
+            # new_frame_time = time.time()
+            # fps = 1/(new_frame_time-prev_frame_time)
+            # prev_frame_time = new_frame_time
+            # fps = int(fps)
+            # print(fps)
+            
+            marker_corners = self.detect_marker(color_img)
+            
+            if marker_corners is None:
+                pass
+            else:
+                aruco_pose = self.estimate_pose(marker_corners)
+                #dt = current_time - last_time
+                #last_time = current_time
+                #print(f"[{current_time}]: Aruco ESTIMATE: ", aruco_pose)
+
+                # kf.apply_system_dynamics(control_input, dt)
+                # print(f"[{current_time}]: System Dynamics ESTIMATE: ", kf.H @ kf.X)
+                # kf.update_measurement(aruco_pose, aruco_noise_bias, aruco_noise_cov)
+                # pose_estimate = (kf.H @ kf.X)
+
+                # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
+
+                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
+
+                cam_queue.append([current_time, aruco_pose, z_from_realsense])
+
+                # data  = [dt,current_time,z_from_realsense]
+                # data.extend(aruco_pose.T[0].tolist())
+            
+            cv2.imshow("RGB Image",color_img)
+                
+
+            key = cv2.waitKey(1)
+            if key & 0xFF == ord('q') or key == 27:
+                cv2.destroyAllWindows()
+                
+                break
+    
+    
