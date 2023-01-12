@@ -5,7 +5,7 @@ K_thrust:
 
 K_roll:
   - 75
-  - 25
+  - 75
   - 2
 
 K_pitch:
@@ -17,3 +17,5 @@ K_yaw:
   - 7.5
   - 0.5
   - 0
+
+yaw_setpoint: 78

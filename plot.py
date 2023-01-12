@@ -74,51 +74,62 @@ for each in file:
 
 import matplotlib.pyplot as plt
 
+from datetime import datetime
+from os.path import join
+from os import makedirs
+import yaml
 
 
-# print(roll)
+folder_name = datetime.now().strftime("%m-%d, %H:%M:%S")
+folder_name = join("graphs",folder_name)
+makedirs(folder_name)
+
+config = yaml.load(open("controls/config.yaml"), Loader=yaml.FullLoader)
+
+with open(join(folder_name,"config.yaml"),'w') as outfile:
+    yaml.dump(config,outfile,default_flow_style=False)
 
 plt.plot(roll)
-plt.savefig(f"graphs/roll{time.time()}.png")
+plt.savefig(f"{folder_name}/roll.png")
 plt.clf()
 
 plt.plot(pitch)
-plt.savefig(f"graphs/pitch{time.time()}.png")
+plt.savefig(f"{folder_name}/pitch.png")
 plt.clf()
 
 plt.plot(yaw)
-plt.savefig(f"graphs/yaw{time.time()}.png")
+plt.savefig(f"{folder_name}/yaw.png")
 plt.clf()
 
 plt.plot(throttle)
-plt.savefig(f"graphs/throttle{time.time()}.png")
+plt.savefig(f"{folder_name}/throttle.png")
 plt.clf()
 
 plt.plot(x)
-plt.savefig(f"graphs/x{time.time()}.png")
+plt.savefig(f"{folder_name}/x.png")
 plt.clf()
 
 plt.plot(y)
-plt.savefig(f"graphs/y{time.time()}.png")
+plt.savefig(f"{folder_name}/y.png")
 plt.clf()
 
 plt.plot(z)
-plt.savefig(f"graphs/z{time.time()}.png")
+plt.savefig(f"{folder_name}/z.png")
 plt.clf()
 
 
 plt.plot(errX)
-plt.savefig(f"graphs/errX{time.time()}.png")
+plt.savefig(f"{folder_name}/errX.png")
 plt.clf()
 
 plt.plot(errY)
-plt.savefig(f"graphs/errY{time.time()}.png")
+plt.savefig(f"{folder_name}/errY.png")
 plt.clf()
 
 plt.plot(errZ)
-plt.savefig(f"graphs/errZ{time.time()}.png")
+plt.savefig(f"{folder_name}/errZ.png")
 plt.clf()
 
 plt.plot(stateYaw)
-plt.savefig(f"graphs/stateYaw{time.time()}.png")
+plt.savefig(f"{folder_name}/stateYaw.png")
 plt.clf()

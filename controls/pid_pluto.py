@@ -44,7 +44,7 @@ class PID():
         self.prev_err[2] = self.err_pitch[0]
         self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
         
-        self.err_yaw[0] = 90 - self.cur_pose[3]
+        self.err_yaw[0] = self.config['yaw_setpoint'] - self.cur_pose[3]
         self.err_yaw[1] = self.err_yaw[0] - self.prev_err[3]
         self.prev_err[3] = self.err_yaw[0]
         self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
