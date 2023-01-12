@@ -261,6 +261,7 @@ class COMMS:
         """
         Member Function to set command as back flip
         """
+        self.paramsSet["Aux1"] = 1000
         self.paramsSet["currentCommand"] = 3
         time.sleep(self.waitTime)
     
