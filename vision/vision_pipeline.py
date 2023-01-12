@@ -293,6 +293,7 @@ class VisionPipeline():
                 # pose_estimate = (kf.H @ kf.X)
 
                 # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
+                #####################################################################
                 _intrisics = rs.intrinsics()
                 _intrisics.width = self.rgb_res[1]
                 _intrisics.height = self.rgb_res[0]
@@ -316,6 +317,7 @@ class VisionPipeline():
                 new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
                 new_tf = np.linalg.pinv(new_tf)
                 z_from_realsense = 2.82 + (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+                ##############################################################################
                 # print("Z: ", z_from_realsense)
                 
                 flag=0

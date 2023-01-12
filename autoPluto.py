@@ -46,7 +46,7 @@ class autoPluto:
                     continue
                 self.updateAction()
                 self.takeAction()
-                print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0])
+                print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3])
                 time.sleep(self.runLoopWaitTime)
     
     # update currentState
@@ -57,6 +57,7 @@ class autoPluto:
         # currentTime = time.time()
         # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
         # self.lastTime = currentTime
+        
         if len(self.CamQueue)>0:
             sensorData = self.CamQueue[-1]
             for data in self.CamQueue:
@@ -65,11 +66,29 @@ class autoPluto:
             self.CamQueue.clear()
             # print(sensorData)
             if self.outOfBound==0:
-                self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
+                if self.currentState is  None:
+                    self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
+                else:
+                    self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
         #     print("Pitch: ",self.IMUQueue[-1]["Pitch"])
-        self.IMUQueue.clear()
+        if len(self.IMUQueue)>0:
+            if self.currentState is None:
+                pass
+            elif len(self.currentState)==3:
+                self.currentState +=  [self.IMUQueue[-1]["Yaw"]]
+            else:
+                self.currentState[-1] =  self.IMUQueue[-1]["Yaw"]
+            self.IMUQueue.clear()
+
+        elif self.currentState is None:
+            pass        
+        
+        elif len(self.currentState) == 3:
+            self.currentState = None
+        
         # if self.debug:
         # print("updated state: ",self.currentState)
     
@@ -88,6 +107,7 @@ class autoPluto:
         self.action["Pitch"] = self.pid.set_pitch()
         self.action["Roll"] = self.pid.set_roll()
         self.action["Throttle"] = self.pid.set_thrust()
+        self.action["Yaw"] = self.pid.set_yaw()
         # print("action: ",self.action)
     
     def takeAction(self):
@@ -97,6 +117,7 @@ class autoPluto:
             self.comms.paramsSet["Roll"] = int(self.action["Roll"])
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
+            self.comms.paramsSet["Yaw"] = int(self.action["Yaw"])
             # print("sent")
         else:
             self.comms.paramsSet["currentCommand"] = 2

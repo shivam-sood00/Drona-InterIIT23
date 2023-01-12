@@ -13,6 +13,7 @@ roll=[]
 pitch=[]
 throttle=[]
 yaw=[]
+stateYaw=[]
 for each in file:
     if each[0]=="L":
         break
@@ -68,7 +69,8 @@ for each in file:
     errY.append(msg[7])
     errX.append(msg[8])
     errZ.append(msg[9])
-
+    
+    stateYaw.append(msg[10])
 
 import matplotlib.pyplot as plt
 
@@ -115,4 +117,8 @@ plt.clf()
 
 plt.plot(errZ)
 plt.savefig(f"graphs/errZ{time.time()}.png")
+plt.clf()
+
+plt.plot(stateYaw)
+plt.savefig(f"graphs/stateYaw{time.time()}.png")
 plt.clf()

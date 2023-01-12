@@ -13,7 +13,7 @@ class PID():
         self.K_roll = np.array(self.config['K_roll']).reshape(3,1)
         self.K_pitch = np.array(self.config['K_pitch']).reshape(3,1)
         self.K_yaw = np.array(self.config['K_yaw']).reshape(3,1)
-        self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1) 
+        self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1) # x,y,z,yaw
         self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
         self.reset()
@@ -44,7 +44,7 @@ class PID():
         self.prev_err[2] = self.err_pitch[0]
         self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
         
-        self.err_yaw[0] = 0 - self.cur_pose[3]
+        self.err_yaw[0] = 90 - self.cur_pose[3]
         self.err_yaw[1] = self.err_yaw[0] - self.prev_err[3]
         self.prev_err[3] = self.err_yaw[0]
         self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
