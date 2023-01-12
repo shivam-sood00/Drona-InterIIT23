@@ -15,7 +15,7 @@ class MSPPacket:
     def appendCRC(self):
         checksum = 0
         for i in range(3,len(self.msg),1):
-            print(type(self.msg[i]))
+            # print(type(self.msg[i]))
             checksum ^= self.msg[i]
         self.msg.append(checksum)
     
@@ -74,7 +74,7 @@ class COMMS:
         # variable to control buffer size of OUT loop 
         self.outBufferSize = 64
         # Dictionary of all the parameters we write to the pluto drone
-        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":0,"trimRoll":0}
+        self.paramsSet = {"Roll":1500,"Pitch":1500,"Throttle":1500,"Yaw":1500,"Aux1":1500,"Aux2":1500,"Aux3":1500,"Aux4":1000,"currentCommand":0,"trimPitch":-62,"trimRoll":-30}
         # Dictionary of all the parameters we read from the pluto drone
         self.paramsReceived = {"timeOfLastUpdate":-1,"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1,"rcRoll":-1,"rcPitch":-1, "rcYaw":-1, "rcThrottle" :-1, "rcAUX1":-1, "rcAUX2":-1, "rcAUX3":-1, "rcAUX4":-1,"currentCommand":-1,"commandStatus":-1 }
     
@@ -174,8 +174,8 @@ class COMMS:
         msgLen = 4
         typeOfPayload = 239
         msgData = []
-        msgData.extend(getBytes(self.paramsSet["trimPitch"]))
-        msgData.extend(getBytes(self.paramsSet["trimRoll"]))
+        msgData.extend(getBytes(toUnsigned(self.paramsSet["trimPitch"])))
+        msgData.extend(getBytes(toUnsigned(self.paramsSet["trimRoll"])))
         # self.paramsSet["trimRoll"] = 0
         # self.paramsSet["trimPitch"] = 0
         msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
@@ -199,7 +199,7 @@ class COMMS:
             msgData.extend(getBytes(self.paramsSet["Aux4"]))
             msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
             if self.debug :
-                print(msgToBeSent)
+                print("message: ",msgToBeSent)
             self.mySocket.send(bytearray(msgToBeSent))
             # Sending MSP_SET_COMMAND type message
             if self.paramsSet["currentCommand"]!=0:

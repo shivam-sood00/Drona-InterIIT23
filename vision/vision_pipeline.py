@@ -88,12 +88,11 @@ class VisionPipeline():
         cx = 631.432983398438
         fy = 639.533020019531
         cy = 409.294647216797
-        self.cam_matrix = np.array([[1360.2626953125, 0, 974.640075683594],[0, 1361.03882835938, 549.4236767578125],[0,0,1]]) #calib_data["camMatrix"]
-        self.dist_coef = np.zeros((5, 1))  #calib_data["distCoef"]
+        self.cam_matrix = np.array([[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]) #calib_data["camMatrix"]
+        self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
         """dist_coef = np.zeros((5, 1))"""
-        self.cam_rvec = np.array([-2.97019626, -0.3456304, 0.31979031]) #calib_data["rVector"] #
-        self.cam_tvec = np.array([31.5464837, -24.46613193, 277.88341232]) #calib_data["tVector"] #
-
+        self.cam_rvec = np.array([0.26238109, -3.30088755, -0.07543371]) #np.array([-2.97019626, -0.3456304, 0.31979031]) #calib_data["rVector"] #
+        self.cam_tvec = np.array([11.56079921, -13.0814128,  271.02415795])
 
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
@@ -146,10 +145,11 @@ class VisionPipeline():
         for i, id_ in enumerate(marker_IDs):
             
             if id_ == self.required_marker_id:
-                
-                mid_point = np.sum(marker_corners[i], 0) / 4.0
+                # print(marker_corners[i])
+                mid_point = np.sum(marker_corners[i][0], 0) / 4.0
+                # print(mid_point)
                 if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
-                    return None
+                    return "None"
 
                 return marker_corners[i].astype(np.int32)
 
@@ -192,7 +192,7 @@ class VisionPipeline():
         #print("RVec:",rVec,"Tvec:",tVec)
         tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])        
         tf = self.cam_tf @ tf
-        return self.tf_to_outformat(tf)
+        return self.tf_to_outformat(tf) / 100.0
 
 
     def make_tf_matrix(self, rvec, tvec):
@@ -270,16 +270,15 @@ class VisionPipeline():
             
             if marker_corners is None:
                 counter += 1
-                if counter >= 10:
+                if counter >= 15:
                     flag = 2
                     cam_queue.append([flag])
                     counter = 0
                 # print("no aruco")
-                else:
-                    flag=1
-                    cam_queue.append([flag])
                 pass
-                
+            elif type(marker_corners) == type("None"):
+                    flag = 1
+                    cam_queue.append([flag])
             else:
                 # print("detected")
                 counter = 0
@@ -294,8 +293,18 @@ class VisionPipeline():
                 # pose_estimate = (kf.H @ kf.X)
 
                 # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
+                _intrisics = rs.intrinsics()
+                _intrisics.width = self.rgb_res[1]
+                _intrisics.height = self.rgb_res[0]
+                _intrisics.ppx = self.cam_matrix[0][2]
+                _intrisics.ppy = self.cam_matrix[1][2]
+                _intrisics.fx = self.cam_matrix[0][0]
+                _intrisics.fy = self.cam_matrix[1][1]
 
                 z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+                
                 #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
                 # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
                 #     flag = 1
@@ -303,6 +312,12 @@ class VisionPipeline():
                 # else:
                 #     flag = 0
                     # print("appending")
+                point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+                new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+                new_tf = np.linalg.pinv(new_tf)
+                z_from_realsense = 2.82 + (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+                # print("Z: ", z_from_realsense)
+                
                 flag=0
                 cam_queue.append([current_time, aruco_pose, z_from_realsense])
 

@@ -22,3 +22,8 @@ def getCRC(arr,debug=False):
     for d in CRCArray:
         CRCValue= CRCValue^d
     return CRCValue
+
+def toUnsigned(val):
+    if val<0:
+        return 2**16 + val
+    return val

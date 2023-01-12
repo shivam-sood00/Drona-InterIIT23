@@ -1,9 +1,9 @@
 # Code for testing the communication with drone
 import socket
-import plutoComms
+from MSP_comms.plutoComms import COMMS
 import time
 import threading
 
-comms = plutoComms.COMMS(debug=False)
+comms = COMMS(debug=False)
 comms.disArm()
 comms.disconnect()

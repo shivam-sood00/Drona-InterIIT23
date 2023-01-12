@@ -8,7 +8,7 @@ import numpy as np
 from controls.pid_pluto import PID
 class autoPluto:
     def __init__(self,debug = False):
-        self.comms = COMMS()
+        # self.comms = COMMS()
         self.debug = debug
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
@@ -18,12 +18,12 @@ class autoPluto:
         self.trajectory = [[0,0,0.9]]
         self.pid = PID()
         self.outOfBound = 0
-        readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
-        writeThread = threading.Thread(target=self.comms.write)
+        # readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
+        # writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
-        writeThread.start()
-        self.lastTime = time.time()
-        readThread.start()
+        # writeThread.start()
+        # self.lastTime = time.time()
+        # readThread.start()
         cameraThread.start()
         # print("started all threads")
         
@@ -44,15 +44,14 @@ class autoPluto:
                 self.updateState()
                 if self.currentState is None:
                     continue
-                self.updateAction()
-                self.takeAction()
-                print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0])
+                # self.updateAction()
+                # self.takeAction()
+                # print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0])
                 time.sleep(self.runLoopWaitTime)
     
     # update currentState
     def updateState(self):
         # flag, sensorData = time_sync(self.IMUQueue,self.CamQueue)
-        
         # EKF = KalmanFilter(debug=False)
         # currentTime = time.time()
         # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
@@ -66,12 +65,14 @@ class autoPluto:
             # print(sensorData)
             if self.outOfBound==0:
                 self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
+            else:
+                self.outOfBound = 0
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
         #     print("Pitch: ",self.IMUQueue[-1]["Pitch"])
         self.IMUQueue.clear()
         # if self.debug:
-        # print("updated state: ",self.currentState)
+        print("updated state: ",self.currentState)
     
     # update action
     def updateAction(self):
@@ -101,3 +102,8 @@ class autoPluto:
         else:
             self.comms.paramsSet["currentCommand"] = 2
             print("Landing: ",self.outOfBound)
+
+
+if __name__=="__main__":
+    drone = autoPluto()
+    drone.run()
