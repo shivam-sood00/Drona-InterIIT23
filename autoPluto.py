@@ -25,6 +25,7 @@ class autoPluto:
         self.lastTime = time.time()
         readThread.start()
         cameraThread.start()
+        self.first = True
         # print("started all threads")
         
     
@@ -44,6 +45,9 @@ class autoPluto:
                 self.updateState()
                 if self.currentState is None:
                     continue
+                if self.first:
+                    self.pid.zero_yaw = self.currentState[-1]
+                    self.first = False
                 self.updateAction()
                 self.takeAction()
                 print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3])
@@ -104,8 +108,10 @@ class autoPluto:
         
         self.pid.update_pos(self.currentState)
         self.pid.calc_err()
-        self.action["Pitch"] = self.pid.set_pitch()
-        self.action["Roll"] = self.pid.set_roll()
+        # self.action["Pitch"] = self.pid.set_pitch()
+        # self.action["Roll"] = self.pid.set_roll()
+
+        self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
         self.action["Throttle"] = self.pid.set_thrust()
         self.action["Yaw"] = self.pid.set_yaw()
         # print("action: ",self.action)

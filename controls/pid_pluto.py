@@ -16,6 +16,7 @@ class PID():
         self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1) # x,y,z,yaw
         self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
+        self.zero_yaw = None
         self.reset()
     """
     e, e_dot, e_integral
@@ -44,7 +45,7 @@ class PID():
         self.prev_err[2] = self.err_pitch[0]
         self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
         
-        self.err_yaw[0] = self.config['yaw_setpoint'] - self.cur_pose[3]
+        self.err_yaw[0] = self.zero_yaw - self.cur_pose[3]
         self.err_yaw[1] = self.err_yaw[0] - self.prev_err[3]
         self.prev_err[3] = self.err_yaw[0]
         self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
@@ -63,18 +64,20 @@ class PID():
         self.thrust = 1550 + np.clip(self.thrust, -250, 250)       #TODO tune (Import from config)
         return self.thrust
 
-    def set_roll(self):
-        self.roll = np.sum(self.K_roll * self.err_roll)
-        self.roll = 1500 + np.clip(self.roll, -150, 150)           #TODO tuned 
-        return self.roll
     
-    def set_pitch(self):
-        self.pitch = np.sum(self.K_pitch * self.err_pitch)
-        if self.pitch < 0:
-            self.pitch *= self.backward_pitch_scale
-        self.pitch = np.clip(self.pitch, -200, 200)         #TODO tuned
-        self.pitch = 1500 - self.pitch
-        return self.pitch
+    def set_pitch_and_roll(self):
+        roll = np.sum(self.K_roll * self.err_roll)
+        pitch = np.sum(self.K_pitch * self.err_pitch)
+
+        self.pitch = pitch
+        self.roll= roll
+
+        # self.roll = roll*np.cos(self.cur_pose[3] - self.zero_yaw) - pitch*np.sin(self.cur_pose[3] - self.zero_yaw)
+        # self.pitch = pitch*np.cos(self.cur_pose[3] - self.zero_yaw) + roll*np.sin(self.cur_pose[3] - self.zero_yaw)
+
+        self.pitch = 1500 + np.clip(self.pitch, -150, 150) 
+        self.roll = 1500 - np.clip(self.roll, -150, 150)           #TODO tuned 
+        return self.pitch, self.roll  
     
     def set_yaw(self):
         self.yaw = np.sum(self.K_yaw * self.err_yaw)
