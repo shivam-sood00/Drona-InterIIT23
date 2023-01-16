@@ -6,33 +6,42 @@ from vision.vision_pipeline import VisionPipeline
 import time
 import numpy as np
 from controls.pid_pluto import PID
+import csv
+from configparser import ConfigParser
+
 class autoPluto:
-    def __init__(self,debug = False):
+    def __init__(self,droneNo=1,debug = False):
         self.comms = COMMS()
-        self.debug = debug
+        self.debug = debug        
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[0,0,0.9]]
-        self.pid = PID()
         self.outOfBound = 0
+        self.config = ConfigParser()
+        # if self.debug:
+        self.config.read('controls/droneData.ini')
+        # print(self.config.sections())
+        self.droneNo = self.config.sections()[droneNo]
+        self.pid = PID(config=self.config,droneNo=self.droneNo)
+        self.file = open('debug.csv', 'a+', newline ='')
+        with self.file:
+            self.write = csv.writer(self.file)
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
         writeThread.start()
-        self.lastTime = time.time()
         readThread.start()
         cameraThread.start()
         self.first = True
-        # print("started all threads")
-        
     
     # updates queueXYZ
     def cameraFeed(self):
-        camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=1,debug=0)
-        # camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=6,debug=0)
+        z = int(self.config.get(self.droneNo,"id"))
+        # print(z)
+        camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=0)
         camera.cam_init()
         camera.cam_process(self.CamQueue)
     
@@ -41,18 +50,27 @@ class autoPluto:
         for point in self.trajectory:
             # print(point)
             self.pid.set_target_pose(point=point)
-            while(True):
+            ret = 0
+            while(ret==0):
                 # print("runloop")
                 self.updateState()
                 if self.currentState is None:
                     continue
                 if self.first:
-                    self.pid.zero_yaw = self.currentState[-1]
+                    self.pid.zero_yaw = self.currentState[3]
                     self.first = False
                 self.updateAction()
-                self.takeAction()
-                print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3])
+                ret = self.takeAction()
+                data = [self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3]]
+                # if self.file:
+                #     self.write.writerows(np.array(data,dtype=np.float64))
+                print(data)
                 time.sleep(self.runLoopWaitTime)
+                # TODO: update target wavePoint when previous target reached
+                # if self.pid.isReached():
+                #     break
+                
+            time.sleep(2)
     
     # update currentState
     def updateState(self):
@@ -83,9 +101,9 @@ class autoPluto:
             if self.currentState is None:
                 pass
             elif len(self.currentState)==3:
-                self.currentState +=  [self.IMUQueue[-1]["Yaw"]]
+                self.currentState +=  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
             else:
-                self.currentState[-1] =  self.IMUQueue[-1]["Yaw"]
+                self.currentState[-3:] =  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
             self.IMUQueue.clear()
 
         elif self.currentState is None:
@@ -126,6 +144,8 @@ class autoPluto:
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
             self.comms.paramsSet["Yaw"] = int(self.action["Yaw"])
             # print("sent")
+            return 0
         else:
             self.comms.paramsSet["currentCommand"] = 2
             print("Landing: ",self.outOfBound)
+            return 1

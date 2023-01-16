@@ -1,5 +1,4 @@
 import numpy as np
-import yaml
 class PID():
     """
     Inputs -> current state (x, y, z)
@@ -7,17 +6,18 @@ class PID():
     [Kp, KD, KI] are the PID gains 
 
     """
-    def __init__(self):
-        self.config = yaml.load(open("controls/config.yaml",'r'),Loader=yaml.FullLoader)
-        self.K_thrust = np.array(self.config['K_thrust']).reshape(3,1)
-        self.K_roll = np.array(self.config['K_roll']).reshape(3,1)
-        self.K_pitch = np.array(self.config['K_pitch']).reshape(3,1)
-        self.K_yaw = np.array(self.config['K_yaw']).reshape(3,1)
-        self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1) # x,y,z,yaw
+    def __init__(self,config,droneNo):
+        self.K_thrust = np.array(config.get(droneNo,"K_pitch").split(','),dtype=np.float64).reshape(3,1)
+        self.K_roll = np.array(config.get(droneNo,"K_roll").split(','),dtype=np.float64).reshape(3,1)
+        self.K_pitch = np.array(config.get(droneNo,"K_thrust").split(','),dtype=np.float64).reshape(3,1)
+        self.K_yaw = np.array(config.get(droneNo,"K_yaw").split(','),dtype=np.float64).reshape(3,1)
+        self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1) # x,y,z,yaw
         self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+        self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
         self.zero_yaw = None
         self.reset()
+        
     """
     e, e_dot, e_integral
     """
@@ -29,12 +29,13 @@ class PID():
         self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
 
     def calc_err(self):
+        self.update_target_waypoint()
+        
         self.err_thrust[0] = self.target_pose[2] - self.cur_pose[2]
         self.err_thrust[1] = self.err_thrust[0] - self.prev_err[0]
         self.prev_err[0] = self.err_thrust[0]
         self.err_thrust[2] = np.clip(self.err_thrust[2] + self.err_thrust[0], -100, 100)
         
-
         self.err_roll[0] = self.target_pose[1] - self.cur_pose[1]
         self.err_roll[1] = self.err_roll[0] - self.prev_err[1]
         self.prev_err[1] = self.err_roll[0]
@@ -51,18 +52,23 @@ class PID():
         self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
 
     def update_pos(self,curPose):
-        self.cur_pose = np.array(curPose).reshape(4,1)
+        self.cur_pose = np.array(curPose).reshape(6,1)
 
     def set_target_pose(self,point):
         self.target_pose = np.array(point).reshape(3,1)                                           #TODO implement Carrot
 
-    def set_target_waypoint(self):
-        pass                                                #TODO Import wp from config
-
+    def update_target_waypoint(self):
+        dif = self.target_pose - self.cur_pose
+        mag = np.linalg.norm(dif)**0.5
+        if mag<0.5:
+            self.waypoint = self.target_pose                                                #TODO Import wp from config
+        else:
+            self.waypoint = self.cur_pose + 0.5*(dif/mag)
+    
     def set_thrust(self):
         self.thrust = np.sum(self.K_thrust * self.err_thrust)      #Elementwise multiplication
-        # scale = np.clip(1/(np.cos(np.radians(self.pitch))*np.cos(np.radians(self.roll))), 1, 1.2)
-        # self.thrust = scale*self.thrust
+        scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.2)
+        self.thrust = scale*self.thrust
         self.thrust = 1550 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
         return self.thrust
 
@@ -73,6 +79,8 @@ class PID():
         pass
     
     def set_pitch_and_roll(self):
+        print(type(self.K_roll),type(self.err_roll))
+        print(self.K_roll,self.err_roll)
         roll = np.sum(self.K_roll * self.err_roll)
         pitch = np.sum(self.K_pitch * self.err_pitch)
 
@@ -99,3 +107,8 @@ class PID():
 
     def aruco_not_detected(self):
         pass
+    
+    def isReached(self):
+        if np.linalg.norm(self.cur_pose[:3] - self.target_pose)<0.1:
+            return True
+        return False

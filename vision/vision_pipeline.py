@@ -59,7 +59,7 @@ class VisionPipeline():
 
         colorSensor.set_option(rs.option.sharpness, 100)
         colorSensor.set_option(rs.option.contrast, 50)
-        colorSensor.set_option(rs.option.gamma, 0)
+        # colorSensor.set_option(rs.option.gamma, 0)
         colorSensor.set_option(rs.option.brightness, 30)
 
         colorSensor.set_option(rs.option.exposure, 100)

@@ -16,22 +16,28 @@ stateYaw=[]
 for each in file:
     if each[0]=="L":
         break
+    elif each[0]>="A" and each[0]<="Z" or each[0]>="a" and each[0]<="z":
+        continue
     q=0
     msg=[]
     sign=0
     decimal = 0
     dig = 0
+    eva = 0
     for i in range(len(each)):
         if each[i]==" ":
             if decimal:
                 q = q/10**dig
             if sign:
                 q = -q
+            if eva!=0:
+                q = q/10**eva
             msg.append(q)
             q=0
             dig=0
             decimal=0
             sign=0
+            eva=0
         elif each[i]=="-":
             sign=1
         elif each[i]==".":
@@ -49,6 +55,9 @@ for each in file:
             sign=0
         elif each[i]=="[" or each[i]=="]":
             continue
+        elif each[i]=='e':
+            i = i+3
+            eva = int(each[i])
         else:
             q = q*10 + int(each[i])
             dig += 1
