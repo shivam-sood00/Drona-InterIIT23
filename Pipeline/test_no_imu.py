@@ -1,5 +1,6 @@
 from vision_pipeline import VisionPipeline
 #from kalman_filter import KalmanFilter
+import pyrealsense2 as rs
 
 import numpy as np
 import time
@@ -42,9 +43,9 @@ if __name__ == '__main__':
     depth_res=(720, 1280)
     rgb_res=(1080, 1920)
     align_to="rgb"
-    marker_size=3.6
+    marker_size=3.6#13.8 #3.6
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 1
+    required_marker_id = 1 #11 #1 #11
     calib_file_path="../calib_data/MultiMatrix.npz"
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG)
@@ -101,6 +102,7 @@ if __name__ == '__main__':
                 pass
             else:
                 aruco_pose = pipeline.estimate_pose(marker_corners)
+                aruco_pose[2][0] = aruco_pose[2][0] + 1.5 # Boards height
                 dt = current_time - last_time
                 last_time = current_time
                 print(f"[{current_time}]: Aruco ESTIMATE: ", aruco_pose)
@@ -111,11 +113,30 @@ if __name__ == '__main__':
                 # pose_estimate = (kf.H @ kf.X)
 
                 # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
+                _intrinsics = rs.intrinsics()
+                _intrinsics.width = 1920
+                _intrinsics.height = 1080
+                _intrinsics.ppx = 906.3662801147559
+                _intrinsics.ppy = 561.2820445300187
+                _intrinsics.fx = 1347.090250261588
+                _intrinsics.fy = 1332.103727995465
 
                 z_from_realsense = pipeline.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
-                print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
+                # print(f"[{current_time}]: Z from REALSENSE [without TF]: ", z_from_realsense)
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+                
+                point_from_rs = rs.rs2_deproject_pixel_to_point(_intrinsics, [mid_point[0], mid_point[1]], z_from_realsense)
+                new_tf = pipeline.make_tf_matrix(rvec=pipeline.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+                new_tf = np.linalg.pinv(new_tf)
+                z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]).reshape((4, 1)))[2] / 100.0
+                # print(f"[{current_time}]: Z from REALSENSE [After ROT]: ", z_from_realsense)
+                dist_z_from_realsense = z_from_realsense[0] + 2.77
+                print("aruco pose data:")
+                print(aruco_pose)
+                # print(f"[{current_time}]: Z from REALSENSE [After TF]: ", z_from_realsense)
 
-                data  = [dt,current_time,z_from_realsense]
+                data  = [dt,current_time,dist_z_from_realsense]
                 data.extend(aruco_pose.T[0].tolist())
                 writer.writerow(data)
 

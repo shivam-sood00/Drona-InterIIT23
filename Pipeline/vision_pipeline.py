@@ -56,11 +56,11 @@ class VisionPipeline():
 
         colorSensor.set_option(rs.option.sharpness, 100)
         colorSensor.set_option(rs.option.contrast, 50)
-        colorSensor.set_option(rs.option.gamma, 0)
+        #colorSensor.set_option(rs.option.gamma, 0)
         colorSensor.set_option(rs.option.brightness, 30)
 
         colorSensor.set_option(rs.option.exposure, 100)
-        colorSensor.set_option(rs.option.gain, 300)
+        #colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()
         self.depth_scale = self.depth_sensor.get_depth_scale()
@@ -81,15 +81,15 @@ class VisionPipeline():
         #     raise FileNotFoundError(f"File {self.calib_file_path} not found!")
 
         # calib_data = np.load(self.calib_file_path)
-        fx = 640.381164550781
-        cx = 631.432983398438
-        fy = 639.533020019531
-        cy = 409.294647216797
-        self.cam_matrix = np.array([[1360.2626953125, 0, 974.640075683594],[0, 1361.03882835938, 549.4236767578125],[0,0,1]]) #calib_data["camMatrix"]
+        fx = 1360.2626953125
+        cx = 974.640075683594
+        fy = 1361.03882835938
+        cy = 549.4236767578125
+        self.cam_matrix = np.array([[fx, 0, cx],[0, fy, cy],[0,0,1]]) #calib_data["camMatrix"]
         self.dist_coef = np.zeros((5, 1))  #calib_data["distCoef"]
         """dist_coef = np.zeros((5, 1))"""
-        self.cam_rvec = np.array([-2.97019626, -0.3456304, 0.31979031]) #calib_data["rVector"] #
-        self.cam_tvec = np.array([31.5464837, -24.46613193, 277.88341232]) #calib_data["tVector"] #
+        self.cam_rvec = np.array([-0.32217193,  3.04402382 ,-0.13015089]) #calib_data["rVector"] #
+        self.cam_tvec = np.array([ -4.20181187, -12.50268751, 277.8831719 ]) #calib_data["tVector"] #
 
 
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
