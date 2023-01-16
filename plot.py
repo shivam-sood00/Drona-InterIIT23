@@ -1,4 +1,3 @@
-
 # a file named "geek", will be opened with the reading mode.
 import time
 file = open('debug.txt', 'r')

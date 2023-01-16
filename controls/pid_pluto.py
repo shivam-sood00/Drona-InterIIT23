@@ -61,19 +61,28 @@ class PID():
 
     def set_thrust(self):
         self.thrust = np.sum(self.K_thrust * self.err_thrust)      #Elementwise multiplication
-        self.thrust = 1550 + np.clip(self.thrust, -250, 250)       #TODO tune (Import from config)
+        # scale = np.clip(1/(np.cos(np.radians(self.pitch))*np.cos(np.radians(self.roll))), 1, 1.2)
+        # self.thrust = scale*self.thrust
+        self.thrust = 1550 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
         return self.thrust
 
+    def set_thrust_using_dynamics(self):
+        """
+        Use roll, pitch angles to keep z stable while waypoint navigation
+        """
+        pass
     
     def set_pitch_and_roll(self):
         roll = np.sum(self.K_roll * self.err_roll)
         pitch = np.sum(self.K_pitch * self.err_pitch)
 
-        self.pitch = pitch
-        self.roll= roll
-
-        # self.roll = roll*np.cos(self.cur_pose[3] - self.zero_yaw) - pitch*np.sin(self.cur_pose[3] - self.zero_yaw)
-        # self.pitch = pitch*np.cos(self.cur_pose[3] - self.zero_yaw) + roll*np.sin(self.cur_pose[3] - self.zero_yaw)
+        # self.pitch = pitch
+        # self.roll= roll
+        yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
+        # print("YAW", self.cur_pose[3])
+        # print("CUR", self.cur_pose[3] , self.zero_yaw, "sin", np.sin(yaw_ref), "cos", np.cos(yaw_ref))
+        self.roll = roll*np.cos(yaw_ref) - pitch*np.sin(yaw_ref)
+        self.pitch = pitch*np.cos(yaw_ref) + roll*np.sin(yaw_ref)  #Coupled dynamics if yaw_ref changes
 
         self.pitch = 1500 + np.clip(self.pitch, -150, 150) 
         self.roll = 1500 - np.clip(self.roll, -150, 150)           #TODO tuned 

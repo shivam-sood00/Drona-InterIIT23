@@ -32,6 +32,7 @@ class autoPluto:
     # updates queueXYZ
     def cameraFeed(self):
         camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=1,debug=0)
+        # camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=6,debug=0)
         camera.cam_init()
         camera.cam_process(self.CamQueue)
     
