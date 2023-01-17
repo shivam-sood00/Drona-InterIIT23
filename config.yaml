@@ -1,0 +1,61 @@
+scale_angle: 1.0
+scale_u2: 1.0
+Kp_pos:
+  - 1.5
+  - 1.2
+  - 1.2
+# Kd_pos:
+#   - 50.0
+#   - 50.0
+#   - 500.0
+Kd_pos:
+  - 1.2
+  - 1.2
+  - 0.8
+Ki_pos:
+  - 0.0
+  - 0.0
+  - 0.3
+Kp_ang: 
+  - 10.0 #0.0001
+  - 10.0
+  - 1.0
+Kd_ang:
+  - 100.0
+  - 100.0
+  - 1.0
+Ki_ang:
+  - 1.0
+  - 1.0
+  - 0.1
+state_num: 3
+
+state_0:
+  - 3.0
+  - 1.0
+  - 2.0
+state_1:
+  - 0.0
+  - 2.0
+  - 3.0
+state_2:
+  - 2.0
+  - 2.0
+  - 3.0
+MAX_RES: 0.5
+# MAX_INT: #integral windup
+#   - 0.02
+#   - 0.04
+#   - 0.1
+#   - 0.005 #for angular
+#   - 0.02
+#   - 0.0003
+MAX_INT: #integral windup
+  - 0.1
+  - 0.1
+  - 0.1
+  - 0.01 #for angular
+  - 0.02
+  - 0.03
+ERR_THRESH: 0.05
+ERR_VEL_THRESH: 0.1

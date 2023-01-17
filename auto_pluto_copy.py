@@ -1,3 +1,5 @@
+# this file contain a copy of the original autoPluto code before integration of the new pid controller
+
 from MSP_comms.plutoComms import COMMS
 import threading
 from approximatetimesync import time_sync
@@ -5,8 +7,7 @@ from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
 import time
 import numpy as np
-# from controls.pid_pluto import PID
-import pluto_pid_controller as PID
+from controls.pid_pluto import PID
 class autoPluto:
     def __init__(self,debug = False):
         self.comms = COMMS()
@@ -17,7 +18,7 @@ class autoPluto:
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[0,0,0.9]]
-        self.pid = PID
+        self.pid = PID()
         self.outOfBound = 0
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
@@ -41,14 +42,14 @@ class autoPluto:
     def run(self):
         for point in self.trajectory:
             # print(point)
-            # self.pid.set_target_pose(point=point)
+            self.pid.set_target_pose(point=point)
             while(True):
                 # print("runloop")
                 self.updateState()
                 if self.currentState is None:
                     continue
                 if self.first:
-                    self.pid.des_state.euler_angle[2] = self.currentState[-1]
+                    self.pid.zero_yaw = self.currentState[-1]
                     self.first = False
                 self.updateAction()
                 self.takeAction()
@@ -108,10 +109,8 @@ class autoPluto:
         #     self.action[2] = temp["rcYaw"]
         #     self.action[3] = temp["rcThrottle"]   
         
-        self.pid.odometry_callback(self.currentState)
-        self.pid.main()
-        # self.pid.update_pos(self.currentState)
-        # self.pid.calc_err()
+        self.pid.update_pos(self.currentState)
+        self.pid.calc_err()
         # self.action["Pitch"] = self.pid.set_pitch()
         # self.action["Roll"] = self.pid.set_roll()
 
