@@ -13,6 +13,8 @@ pitch=[]
 throttle=[]
 yaw=[]
 stateYaw=[]
+statePitch=[]
+stateRoll=[]
 for each in file:
     if each[0]=="L":
         break
@@ -79,23 +81,31 @@ for each in file:
     errZ.append(msg[9])
     
     stateYaw.append(msg[10])
+    stateRoll.append(msg[11])
+    statePitch.append(msg[12])
 
 import matplotlib.pyplot as plt
 
 from datetime import datetime
 from os.path import join
+from configparser import ConfigParser
 from os import makedirs
-import yaml
+# import yaml
 
 
 folder_name = datetime.now().strftime("%m-%d, %H:%M:%S")
 folder_name = join("graphs",folder_name)
 makedirs(folder_name)
 
-config = yaml.load(open("controls/config.yaml"), Loader=yaml.FullLoader)
+# config = yaml.load(open("controls/config.yaml"), Loader=yaml.FullLoader)
 
-with open(join(folder_name,"config.yaml"),'w') as outfile:
-    yaml.dump(config,outfile,default_flow_style=False)
+# with open(join(folder_name,"config.yaml"),'w') as outfile:
+#     yaml.dump(config,outfile,default_flow_style=False)
+config = ConfigParser()
+config.read("controls/droneData.ini")
+with open(join(folder_name,"DroneData.ini"), 'w') as configfile:
+    config.write(configfile)
+
 
 plt.plot(roll)
 plt.savefig(f"{folder_name}/roll.png")
@@ -140,4 +150,12 @@ plt.clf()
 
 plt.plot(stateYaw)
 plt.savefig(f"{folder_name}/stateYaw.png")
+plt.clf()
+
+plt.plot(stateRoll)
+plt.savefig(f"{folder_name}/stateRoll.png")
+plt.clf()
+
+plt.plot(statePitch)
+plt.savefig(f"{folder_name}/statePitch.png")
 plt.clf()

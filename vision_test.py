@@ -16,7 +16,7 @@ class autoPluto:
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[0,0,0.9]]
-        self.pid = PID()
+        self.pid =None
         self.outOfBound = 0
         # readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         # writeThread = threading.Thread(target=self.comms.write)

@@ -4,3 +4,6 @@ MSP_comms/__pycache__/
 vision/__pycache__/
 
 **/graphs/**
+
+dronePass.py
+debug.txt

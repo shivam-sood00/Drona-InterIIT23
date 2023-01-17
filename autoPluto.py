@@ -13,7 +13,7 @@ from configparser import ConfigParser
 
 
 class autoPluto:
-    def __init__(self,droneNo=1,debug = False):
+    def __init__(self,debug = False):
         self.comms = COMMS()
         self.debug = debug        
         self.runLoopWaitTime = 0.04
@@ -21,24 +21,28 @@ class autoPluto:
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        self.trajectory = [[0,0,0.9]]
+        self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.4,0],[-0.5,0,0]]
         self.outOfBound = 0
         self.config = ConfigParser()
         # if self.debug:
         self.config.read('controls/droneData.ini')
         # print(self.config.sections())
-        self.droneNo = self.config.sections()[droneNo]
+        droneNumber = self.config.getint("Drone Number","droneNumber")
+        # print(droneNumber)
+        self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
-        self.file = open('debug.csv', 'a+', newline ='')
-        with self.file:
-            self.write = csv.writer(self.file)
+        
+        self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
+        self.comms.paramsSet["trimPicth"] = self.config.getint(self.droneNo,"trimPitch")
+        # self.file = open('debug.csv', 'a+', newline ='')
+        # with self.file:
+        #     self.write = csv.writer(self.file)
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
         writeThread.start()
         readThread.start()
         cameraThread.start()
-        self.first = True
     
     # updates queueXYZ
     def cameraFeed(self):
@@ -50,30 +54,46 @@ class autoPluto:
     
 # 
     def run(self):
-        for point in self.trajectory:
-            # print(point)
-            self.pid.set_target_pose(point=point)
-            ret = 0
-            while(ret==0):
-                # print("runloop")
-                self.updateState()
-                if self.currentState is None:
-                    continue
-                if self.first:
+        ret = 0
+        i = 0
+        first=True
+        yawUpdateFlag = True
+        while(ret==0):
+            # print("runloop")
+            self.updateState()
+            if self.currentState is None:
+                continue
+            if first:
+                if i>=len(self.trajectory):
+                    self.outOfBound = 3
+                else:
+                    point = self.trajectory[i]
+                point[0] += self.currentState[0]
+                point[1] += self.currentState[1]
+                point[2] += self.currentState[2]
+                i+=1
+                self.pid.set_target_pose(point=point)
+                # print(self.pid.target_pose)
+                if yawUpdateFlag:
+                    yawUpdateFlag = False
                     self.pid.zero_yaw = self.currentState[3]
-                    self.first = False
-                self.updateAction()
-                ret = self.takeAction()
-                data = [self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3]]
-                # if self.file:
-                #     self.write.writerows(np.array(data,dtype=np.float64))
-                print(data)
-                time.sleep(self.runLoopWaitTime)
-                # TODO: update target wavePoint when previous target reached
-                # if self.pid.isReached():
-                #     break
-                
-            time.sleep(2)
+                first = False
+            self.updateAction()
+            ret = self.takeAction()
+            # data = [self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3]]
+            # if self.file:
+            #     self.write.writerows(np.array(data,dtype=np.float64))
+            # print("ok")
+            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5])
+            # print("not")
+            time.sleep(self.runLoopWaitTime)
+            # TODO: update target wavePoint when previous target reached
+            if self.pid.isReached():
+                first = True
+                print("IS Reached True")
+                # break
+            
+        time.sleep(2)
     
     # update currentState
     def updateState(self):
