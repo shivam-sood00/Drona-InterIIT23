@@ -3,11 +3,14 @@ import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
+from vision.integrator import get_velocity,get_angle_rate
 import time
 import numpy as np
 from controls.pid_pluto import PID
 import csv
 from configparser import ConfigParser
+
+
 
 class autoPluto:
     def __init__(self,droneNo=1,debug = False):
@@ -83,11 +86,13 @@ class autoPluto:
         
         if len(self.CamQueue)>0:
             sensorData = self.CamQueue[-1]
+
             for data in self.CamQueue:
                 if(len(data)==1):
                     self.outOfBound = data
             self.CamQueue.clear()
             # print(sensorData)
+            
             if self.outOfBound==0:
                 if self.currentState is  None:
                     self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
