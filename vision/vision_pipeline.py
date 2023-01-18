@@ -18,7 +18,7 @@ class VisionPipeline():
                  required_marker_id=0,
                  calib_file_path="../calib_data/MultiMatrix.npz",
                  debug=0,
-                 padding=100) -> None:
+                 padding=50) -> None:
 
 
         self.depth_res = depth_res
