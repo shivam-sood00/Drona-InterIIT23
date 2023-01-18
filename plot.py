@@ -16,15 +16,20 @@ stateYaw=[]
 statePitch=[]
 stateRoll=[]
 
-data_fr_ma[:,0:5] = self.data_fr_ma[:,1:6]
-data_fr_ma[0,4] = sensorData[1][0,0]
-data_fr_ma[1,4] = sensorData[1][1,0]   
-currentState[:2] = np.average(self.data_fr_ma,axis=1)
+stateCont = 3
 
 for each in file:
+    if stateCont<3:
+        stateCont-=1
+        if stateCont==0:
+            stateCont==3
+        continue
     if each[0]=="L":
         break
     elif each[0]>="A" and each[0]<="Z" or each[0]>="a" and each[0]<="z":
+        continue
+    elif each[0]=='[' and each[1]=='[':
+        stateCont -=1
         continue
     q=0
     msg=[]

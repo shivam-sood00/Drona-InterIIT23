@@ -20,7 +20,8 @@ class autoPluto:
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
+        self.trajectory = [[0,0,0.9]]
+        # self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
         self.outOfBound = 0
         self.config = ConfigParser()
         # if self.debug:
@@ -32,11 +33,12 @@ class autoPluto:
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
         self.horizon  = 5
-        self.data_fr_ma = np.zeros((2,self.horizon))
+        self.data_fr_ma = np.zeros((3,self.horizon))
         self.counter = 0
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
-        self.comms.paramsSet["trimPicth"] = self.config.getint(self.droneNo,"trimPitch")
+        self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
+        # print(self.comms.paramsSet)
         # self.file = open('debug.csv', 'a+', newline ='')
         # with self.file:
         #     self.write = csv.writer(self.file)
@@ -77,6 +79,8 @@ class autoPluto:
                 point[1] += self.currentState[1]
                 point[2] += self.currentState[2]
                 i+=1
+                if i!=1:
+                    self.pid.useWay=True
                 self.pid.set_target_pose(point=point)
                 # print(self.pid.target_pose)
                 if yawUpdateFlag:
@@ -126,19 +130,6 @@ class autoPluto:
                     self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
                 else:
                     self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
-        
-        # Apply Moving Average on sensor data x y
-        self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-        self.data_fr_ma[0,self.horizon-1] = float(sensorData[1][0,0])
-        self.data_fr_ma[1,self.horizon-1] = float(sensorData[1][1,0])   
-        estimated = np.average(self.data_fr_ma, axis=1)     
-        
-        if self.counter < self.horizon:
-            self.counter += 1
-        else:
-            self.currentState[0] = estimated[0]
-            self.currentState[1] = estimated[1]
-
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
@@ -159,9 +150,22 @@ class autoPluto:
             self.currentState = None
         
         
-
+        if self.currentState is not None:
+            
+            # Apply Moving Average on sensor data x y
+            self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
+            self.data_fr_ma[0,self.horizon-1] = self.currentState[0]
+            self.data_fr_ma[1,self.horizon-1] = self.currentState[1]  
+            self.data_fr_ma[2,self.horizon-1] = self.currentState[2]   
+            estimated = np.average(self.data_fr_ma, axis=1)     
+            
+            if self.counter < self.horizon:
+                self.counter += 1
+            else:
+                self.currentState[0] = estimated[0]
+                self.currentState[1] = estimated[1]
+                self.currentState[2] = estimated[2]
         
-
         
         # if self.debug:
         # print("updated state: ",self.currentState)

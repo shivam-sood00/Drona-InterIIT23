@@ -11,6 +11,7 @@ class PID():
         self.K_roll_hover = np.array(config.get(droneNo,"K_roll_hover").split(','),dtype=np.float64).reshape(3,1)
         self.K_pitch_hover = np.array(config.get(droneNo,"K_pitch_hover").split(','),dtype=np.float64).reshape(3,1)
         self.K_yaw_hover = np.array(config.get(droneNo,"K_yaw_hover").split(','),dtype=np.float64).reshape(3,1)
+        
         self.K_thrust_way = np.array(config.get(droneNo,"K_thrust_way").split(','),dtype=np.float64).reshape(3,1)
         self.K_roll_way = np.array(config.get(droneNo,"K_roll_way").split(','),dtype=np.float64).reshape(3,1)
         self.K_pitch_way = np.array(config.get(droneNo,"K_pitch_way").split(','),dtype=np.float64).reshape(3,1)
@@ -19,10 +20,13 @@ class PID():
         self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1) # x,y,z,yaw
         self.prev_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1)
         self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+        self.horizon  = 100
+        self.data_fr_ma = np.zeros((1,self.horizon))
+        self.counter = 0
         self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
         self.zero_yaw = None
-        self.useWay = None
+        self.useWay = False
         self.reset()
         
     """
@@ -36,20 +40,28 @@ class PID():
         self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
 
     def calc_err(self):
-        self.update_target_waypoint()
+        # self.update_target_waypoint()
         # print(self.waypoint)
         
-        self.err_thrust[0] = self.waypoint[2] - self.cur_pose[2]
+        self.err_thrust[0] = self.target_pose[2] - self.cur_pose[2]
         self.err_thrust[1] = self.err_thrust[0] - self.prev_err[0]
         self.prev_err[0] = self.err_thrust[0]
         self.err_thrust[2] = np.clip(self.err_thrust[2] + self.err_thrust[0], -100, 100)
         
-        self.err_roll[0] = self.waypoint[1] - self.cur_pose[1]
+        self.err_roll[0] = self.target_pose[1] - self.cur_pose[1]
         self.err_roll[1] = self.err_roll[0] - self.prev_err[1]
         self.prev_err[1] = self.err_roll[0]
-        self.err_roll[2] = np.clip(self.err_roll[2] + self.err_roll[0], -30, 30)
+        
+        self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
+        self.data_fr_ma[0,self.horizon-1] = self.err_roll[0]
+        estimated = np.sum(self.data_fr_ma, axis=1)     
+        
+        if self.counter < self.horizon:
+            self.counter += 1
+        else:
+            self.err_roll[2] = estimated[0]
 
-        self.err_pitch[0] = self.waypoint[0] - self.cur_pose[0]
+        self.err_pitch[0] = self.target_pose[0] - self.cur_pose[0]
         self.err_pitch[1] = self.err_pitch[0] - self.prev_err[2]
         self.prev_err[2] = self.err_pitch[0]
         self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
@@ -66,22 +78,23 @@ class PID():
     def set_target_pose(self,point):
         self.target_pose = np.array(point).reshape(3,1)                                           #TODO implement Carrot
 
-    def update_target_waypoint(self):
-        dif = self.target_pose - self.cur_pose[:3]
-        mag = np.linalg.norm(dif)**0.5
-        distanceForWayPoint = 0.2
-        self.useWay = distanceForWayPoint>mag
-        if self.useWay:
-            self.waypoint = self.target_pose                                                #TODO Import wp from config
-        else:
-            self.waypoint = self.cur_pose[:3] + distanceForWayPoint*(dif/mag)
-        self.waypoint[2] = self.target_pose[2]
+    # def update_target_waypoint(self):
+    #     dif = self.target_pose - self.cur_pose[:3]
+    #     mag = np.linalg.norm(dif)**0.5
+    #     distanceForWayPoint = 0.2
+    #     self.useWay = distanceForWayPoint>mag
+    #     if self.useWay:
+    #         self.waypoint = self.target_pose                                                #TODO Import wp from config
+    #     else:
+    #         self.waypoint = self.cur_pose[:3] + distanceForWayPoint*(dif/mag)
+    #     self.waypoint[2] = self.target_pose[2]
     
     def set_thrust(self):
         self.thrust = np.sum(self.K_thrust_hover * self.err_thrust)      #Elementwise multiplication
         if self.useWay:
             self.thrust = np.sum(self.K_thrust_way * self.err_thrust)
-        scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.2)
+        
+        scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.1)
         self.thrust = scale*self.thrust
         self.thrust = 1550 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
         return self.thrust
