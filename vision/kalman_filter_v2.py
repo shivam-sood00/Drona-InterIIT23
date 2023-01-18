@@ -34,7 +34,7 @@ class KalmanFilter():
         self.drone = QuadrotorDynamics()
 
         self.imu_H = np.array([
-            [ 0, 0, 0, 1.0, 0, 0 ],
+            [ 0, 0, 0, 1.0, 0, 0],
             [ 0, 0, 0, 0, 1, 0 ],
             [ 0, 0, 0, 0, 0, 1 ]],dtype=np.float32)
 
@@ -98,10 +98,12 @@ class KalmanFilter():
         return self.X, self.P
 
     def getRPY(self,sensorObs):
+        
         imu_data = []
         imu_data.append(sensorObs["Roll"])  
         imu_data.append(sensorObs["Pitch"]) 
         imu_data.append(sensorObs["Yaw"])
+        
         return np.array(imu_data)
     
     def getXYZ(self,sensorObs):
@@ -109,6 +111,7 @@ class KalmanFilter():
         camera_data[0] = sensorObs[1][0]/100
         camera_data[1] = sensorObs[1][1]/100
         camera_data[2] = sensorObs[2]
+        
         return np.array(camera_data)
     
     def debugPrint(self,imu_data,cam_data):
@@ -118,7 +121,6 @@ class KalmanFilter():
 
     def estimate_pose(self, control_input, sensor_obs, flag, dt):
         imu_data = []
-        
         camera_data = []
 
         temp = control_input[3]
@@ -149,6 +151,7 @@ class KalmanFilter():
             # Both
             imu_data = self.getRPY(sensor_obs["imu"])
             camera_data = self.getXYZ(sensor_obs["camera"])
+
             self.apply_system_dynamics(control_input, dt)
             self.update_measurement(self.imu_H, imu_data, self.imu_noise_bias, self.imu_noise_cov)
             self.update_measurement(self.aruco_H, camera_data, self.aruco_noise_bias, self.aruco_noise_cov)

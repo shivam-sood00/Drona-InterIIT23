@@ -7,7 +7,6 @@ from vision.integrator import get_velocity,get_angle_rate
 import time
 import numpy as np
 from controls.pid_pluto import PID
-import csv
 from configparser import ConfigParser
 
 
@@ -31,7 +30,10 @@ class autoPluto:
         # print(droneNumber)
         self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
-        
+        ##########
+        self.horizon  = 5
+        data_fr_ma = np.zeros((2,self.horizon))
+        ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPicth"] = self.config.getint(self.droneNo,"trimPitch")
         # self.file = open('debug.csv', 'a+', newline ='')
@@ -41,6 +43,7 @@ class autoPluto:
         writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
         writeThread.start()
+        self.lastTime = time.time()
         readThread.start()
         cameraThread.start()
     
@@ -102,10 +105,13 @@ class autoPluto:
         # EKF = KalmanFilter(debug=False)
         # currentTime = time.time()
         # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
+        
         # self.lastTime = currentTime
+
+        
         
         if len(self.CamQueue)>0:
-            sensorData = self.CamQueue[-1]
+            sensorData = self.CamQueue[-1] # current_time, aruco_pose, z_from_realsense
 
             for data in self.CamQueue:
                 if(len(data)==1):
@@ -118,6 +124,17 @@ class autoPluto:
                     self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
                 else:
                     self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
+        
+        # Apply Moving Average on sensor data x y
+        self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
+        self.data_fr_ma[0,self.horizon-1] = float(sensorData[1][0,0])
+        self.data_fr_ma[1,self.horizon-1] = float(sensorData[1][1,0])   
+        estimated = np.average(self.data_fr_ma, axis=1)      
+
+        
+        self.currentState[0] = estimated[0]
+        self.currentState[1] = estimated[1]
+
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
@@ -136,6 +153,11 @@ class autoPluto:
         
         elif len(self.currentState) == 3:
             self.currentState = None
+        
+        
+
+        
+
         
         # if self.debug:
         # print("updated state: ",self.currentState)

@@ -6,8 +6,6 @@ def get_velocity(currentState, imuData, dt):
     phi = imuData["Roll"]
     theta = imuData["Pitch"]
     psi = imuData["Yaw"]
-    
-    velocity = {}
 
     a =  np.cos(psi) * np.cos(theta)
     b = -np.cos(phi) * np.sin(psi) + np.cos(psi) * np.sin(phi) * np.sin(theta)
@@ -27,16 +25,15 @@ def get_velocity(currentState, imuData, dt):
     current_body_vel += np.array([imuData["AccX"],imuData["AccY"],imuData["AccZ"]]) * dt
     current_vel = R @ current_body_vel
 
-    velocity["x"]  = current_vel[0]
-    velocity["y"]  = current_vel[1]
-    velocity["z"]  = current_vel[2]
+    velocity_x  = current_vel[0]
+    velocity_y  = current_vel[1]
+    velocity_z  = current_vel[2]
 
-    return velocity
+    return velocity_x,velocity_y,velocity_z
 
-def get_angle_rate(imuData, angles):
-    phi = angles[0]
-    theta = angles[1]
-    angle_rate ={}
+def get_angle_rate(imuData):
+    phi = imuData["Roll"]
+    theta = imuData["Pitch"]
 
     a =  np.sin(phi) * np.tan(theta)
     b =  np.cos(phi) * np.tan(theta)
@@ -51,9 +48,8 @@ def get_angle_rate(imuData, angles):
     
     currentAngleRate =  R @ np.array([imuData["GyroX"],imuData["GyroY"],imuData["GyroZ"]])
 
-    angle_rate["phi"] = currentAngleRate[0] 
-    angle_rate["theta"] = currentAngleRate[1]
-    angle_rate["psi"] = currentAngleRate[2]
+    roll_rate = currentAngleRate[0] 
+    pitch_rate = currentAngleRate[1]
+    yaw_rate = currentAngleRate[2]
 
-    return angle_rate
-
+    return roll_rate,pitch_rate,yaw_rate

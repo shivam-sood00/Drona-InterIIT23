@@ -15,6 +15,12 @@ yaw=[]
 stateYaw=[]
 statePitch=[]
 stateRoll=[]
+
+data_fr_ma[:,0:5] = self.data_fr_ma[:,1:6]
+data_fr_ma[0,4] = sensorData[1][0,0]
+data_fr_ma[1,4] = sensorData[1][1,0]   
+currentState[:2] = np.average(self.data_fr_ma,axis=1)
+
 for each in file:
     if each[0]=="L":
         break

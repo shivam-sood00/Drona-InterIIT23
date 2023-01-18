@@ -8,8 +8,9 @@ class QuadrotorDynamics():
         self.I_y = I_y
         self.I_z = I_z
 
-    def getA(self,state):
-        A = np.array([[ 0, 0, 0, 1, 0, 0 ], #x
+    def getA(self):
+        
+        A = np.array([[ 0, 0, 0, 1.0, 0, 0 ], #x
                       [ 0, 0, 0, 0, 1, 0 ], #y
                       [ 0, 0, 0, 0, 0, 1 ], #z
                       [ 0, 0, 0, 0, 0, 0 ], #x_dot
@@ -18,13 +19,30 @@ class QuadrotorDynamics():
         return A
 
     def getB(self,state):
-        B = np.array([[ 0, 0, 0 ],
-                      [ 0, 0, 0 ],
-                      [ 0, 0, 0 ],
-                      [ 0,-g, 0 ],
-                      [ 0, 0, 0 ],
-                      [ 0, 0, 1 ]])
+        
+        phi = state["Roll"]
+        theta = state["Pitch"]
+        psi = state["Yaw"]
+
+        a =(np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.sin(theta))/self.m
+        b =(-np.sin(phi)*np.cos(psi) + np.cos(phi)*np.sin(psi)*np.sin(theta))/self.m
+        c =(np.cos(phi)*np.cos(theta))/self.m
+        B = np.array([[ 0 ],
+                      [ 0 ],
+                      [ 0 ],
+                      [ a ],
+                      [ b ],
+                      [ c ]])
         return B
+    
+    def getC(self):
+        C = np.array([[ 0 ],
+                      [ 0 ],
+                      [ 0 ],
+                      [ 0 ],
+                      [ 0 ],
+                      [ -self.g ]])
+        return C
 
     # def getA(self,state):
 
