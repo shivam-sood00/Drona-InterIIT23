@@ -7,10 +7,14 @@ class PID():
 
     """
     def __init__(self,config,droneNo):
-        self.K_thrust = np.array(config.get(droneNo,"K_thrust").split(','),dtype=np.float64).reshape(3,1)
-        self.K_roll = np.array(config.get(droneNo,"K_roll").split(','),dtype=np.float64).reshape(3,1)
-        self.K_pitch = np.array(config.get(droneNo,"K_pitch").split(','),dtype=np.float64).reshape(3,1)
-        self.K_yaw = np.array(config.get(droneNo,"K_yaw").split(','),dtype=np.float64).reshape(3,1)
+        self.K_thrust_hover = np.array(config.get(droneNo,"K_thrust_hover").split(','),dtype=np.float64).reshape(3,1)
+        self.K_roll_hover = np.array(config.get(droneNo,"K_roll_hover").split(','),dtype=np.float64).reshape(3,1)
+        self.K_pitch_hover = np.array(config.get(droneNo,"K_pitch_hover").split(','),dtype=np.float64).reshape(3,1)
+        self.K_yaw_hover = np.array(config.get(droneNo,"K_yaw_hover").split(','),dtype=np.float64).reshape(3,1)
+        self.K_thrust_way = np.array(config.get(droneNo,"K_thrust_way").split(','),dtype=np.float64).reshape(3,1)
+        self.K_roll_way = np.array(config.get(droneNo,"K_roll_way").split(','),dtype=np.float64).reshape(3,1)
+        self.K_pitch_way = np.array(config.get(droneNo,"K_pitch_way").split(','),dtype=np.float64).reshape(3,1)
+        self.K_yaw_way = np.array(config.get(droneNo,"K_yaw_way").split(','),dtype=np.float64).reshape(3,1)
         # print(self.K_pitch,self.K_roll,self.K_pitch,self.K_yaw)
         self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1) # x,y,z,yaw
         self.prev_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1)
@@ -18,6 +22,7 @@ class PID():
         self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
         self.zero_yaw = None
+        self.useWay = None
         self.reset()
         
     """
@@ -32,6 +37,7 @@ class PID():
 
     def calc_err(self):
         self.update_target_waypoint()
+        # print(self.waypoint)
         
         self.err_thrust[0] = self.waypoint[2] - self.cur_pose[2]
         self.err_thrust[1] = self.err_thrust[0] - self.prev_err[0]
@@ -64,13 +70,17 @@ class PID():
         dif = self.target_pose - self.cur_pose[:3]
         mag = np.linalg.norm(dif)**0.5
         distanceForWayPoint = 0.2
-        if mag<distanceForWayPoint:
+        self.useWay = distanceForWayPoint>mag
+        if self.useWay:
             self.waypoint = self.target_pose                                                #TODO Import wp from config
         else:
             self.waypoint = self.cur_pose[:3] + distanceForWayPoint*(dif/mag)
+        self.waypoint[2] = self.target_pose[2]
     
     def set_thrust(self):
-        self.thrust = np.sum(self.K_thrust * self.err_thrust)      #Elementwise multiplication
+        self.thrust = np.sum(self.K_thrust_hover * self.err_thrust)      #Elementwise multiplication
+        if self.useWay:
+            self.thrust = np.sum(self.K_thrust_way * self.err_thrust)
         scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.2)
         self.thrust = scale*self.thrust
         self.thrust = 1550 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
@@ -85,8 +95,11 @@ class PID():
     def set_pitch_and_roll(self):
         # print(type(self.K_roll),type(self.err_roll))
         # print(self.K_roll,self.err_roll)
-        roll = np.sum(self.K_roll * self.err_roll)
-        pitch = np.sum(self.K_pitch * self.err_pitch)
+        roll = np.sum(self.K_roll_hover * self.err_roll)
+        pitch = np.sum(self.K_pitch_hover * self.err_pitch)
+        if self.useWay:
+            roll = np.sum(self.K_roll_way * self.err_roll)
+            pitch = np.sum(self.K_pitch_way * self.err_pitch)
 
         # self.pitch = pitch
         # self.roll= roll
@@ -103,7 +116,9 @@ class PID():
         return self.pitch, self.roll  
     
     def set_yaw(self):
-        self.yaw = np.sum(self.K_yaw * self.err_yaw)
+        self.yaw = np.sum(self.K_yaw_hover * self.err_yaw)
+        if self.useWay:
+            self.yaw = np.sum(self.K_yaw_way * self.err_yaw)
         self.yaw = 1500 + np.clip(self.yaw, -150, 150)           #TODO tuned 
         return self.yaw
 

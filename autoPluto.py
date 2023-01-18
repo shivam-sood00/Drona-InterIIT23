@@ -20,7 +20,7 @@ class autoPluto:
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.4,0],[-0.5,0,0]]
+        self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
         self.outOfBound = 0
         self.config = ConfigParser()
         # if self.debug:
@@ -68,6 +68,7 @@ class autoPluto:
                 continue
             if first:
                 if i>=len(self.trajectory):
+                    print("done..!!")
                     self.outOfBound = 3
                 else:
                     point = self.trajectory[i]
