@@ -32,7 +32,8 @@ class autoPluto:
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
         self.horizon  = 5
-        data_fr_ma = np.zeros((2,self.horizon))
+        self.data_fr_ma = np.zeros((2,self.horizon))
+        self.counter = 0
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPicth"] = self.config.getint(self.droneNo,"trimPitch")
@@ -130,11 +131,13 @@ class autoPluto:
         self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
         self.data_fr_ma[0,self.horizon-1] = float(sensorData[1][0,0])
         self.data_fr_ma[1,self.horizon-1] = float(sensorData[1][1,0])   
-        estimated = np.average(self.data_fr_ma, axis=1)      
-
+        estimated = np.average(self.data_fr_ma, axis=1)     
         
-        self.currentState[0] = estimated[0]
-        self.currentState[1] = estimated[1]
+        if self.counter < self.horizon:
+            self.counter += 1
+        else:
+            self.currentState[0] = estimated[0]
+            self.currentState[1] = estimated[1]
 
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
