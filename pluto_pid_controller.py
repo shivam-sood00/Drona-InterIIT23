@@ -245,18 +245,18 @@ def pid():
 def mapped_actuator_commands(U):
     temp=U
     config= yaml.load(open('config.yaml','r'), Loader=yaml.FullLoader)
-    U[0]=temp[0]*(1500)/(mav.parameters.mass*abs_gravity_z)
-    U[1]=temp[1]*(180/PI)*config['MAP_RP'] +1500#need to map these out
-    U[2]=temp[2]*(180/PI)*config['MAP_RP'] +1500
+    U[0]=max(1200,min(1800,temp[0]*(1500)/(mav.parameters.mass*abs_gravity_z)))
+    U[1]=max(1350,min(1650,temp[1]*(180/PI)*config['MAP_RP'] +1500))#need to map these out
+    U[2]=max(1350,min(1650,temp[2]*(180/PI)*config['MAP_RP'] +1500))
     temp[3]*=(180/PI)
     if(temp[3]>=0 and temp[3]<41.79213684):
-        U[3]=temp[3]*config['MAP_YR_1'] +1500
+        U[3]=max(1350,min(1650,temp[3]*config['MAP_YR_1'] +1500))
     elif(temp[3]>=41.79213684):
-        U[3]=temp[3]*config['MAP_YR_2'] +1500
+        U[3]=max(1350,min(1650,temp[3]*config['MAP_YR_2'] +1500))
     elif(temp[3]<0 and temp[3]>=-41.79213684):
-        U[3]=-temp[3]*config['MAP_YR_1'] +1500
+        U[3]=max(1350,min(1650,-temp[3]*config['MAP_YR_1'] +1500))
     elif(temp[3]<-41.79213684):
-        U[3]=-temp[3]*config['MAP_YR_2'] +1500
+        U[3]=max(1350,min(1650,-temp[3]*config['MAP_YR_2'] +1500))
     return U
 
 
