@@ -166,7 +166,7 @@ def u2theta(U):
     final_out[0]=U[0]
     final_out[1]= curr_state.euler_angle[0] + (dt*omega[0])
     final_out[2]= curr_state.euler_angle[1] + (dt*omega[1])
-    final_out[3]= curr_state.euler_angle[2] + (dt*omega[2])
+    final_out[3]= omega[2]
 
     return final_out
 

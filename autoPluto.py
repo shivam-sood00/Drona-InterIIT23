@@ -23,9 +23,9 @@ class autoPluto:
         self.outOfBound = 0
         ##########
         self.xyz_movingAverage = movingAverage(3,5)
-        self.imu_movingAverage = movingAverage(6,5)
+        self.0imu_movingAverage = movingAverage(6,5)
 
-        self.velocity = [0,0,0]
+        self.velocity = [0.,0.,0.]
         self.angleRate = None
         ##########
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
