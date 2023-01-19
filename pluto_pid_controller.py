@@ -33,6 +33,7 @@ prev_err_ang = np.array([0.0, 0.0, 0.00]).reshape(3,1)
 prev_euler_angle = np.array([0.0, 0.0, 0.00]).reshape(3,1)
 rotor_speed = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)
 
+final_out=np.array([0.0,0.0,0.0,0.0])
 final_state = None
 
 global r_inp
@@ -107,6 +108,18 @@ def calc_error_all_angles(err_angle,prev_err_ang):
     for i in range(3):
         result[i] = getShortestYawDistance(err_angle[i],prev_err_ang[i])
     return result
+
+def u2theta(U):
+    global dt,curr_state,final_out
+    acc=np.array([U[1]/mav.parameters.inertia.xx,U[2]/mav.parameters.inertia.yy,U[3]/mav.parameters.inertia.zz])
+    omega=curr_state.angular_velocity + (dt*acc)
+    final_out[0]=U[0]
+    final_out[1]= curr_state.euler_angle[0] + (dt*omega[0])
+    final_out[2]= curr_state.euler_angle[1] + (dt*omega[1])
+    final_out[3]= curr_state.euler_angle[2] + (dt*omega[2])
+
+    return final_out
+
 
 def pid():
     # print("pid called")
@@ -221,7 +234,7 @@ def pid():
     I = np.array([[mav.parameters.inertia.xx, 0, 0],
                   [0, mav.parameters.inertia.yy, 0],
                   [0, 0, mav.parameters.inertia.zz]])
-    u2 = I.dot(ang_dd)
+    u2 = np.matmul(I,ang_dd)
     u2*=config['scale_u2']
 
     U_temp = np.array([u1,-u2[0],-u2[1],u2[2]]) #inverted u2_x
@@ -231,13 +244,20 @@ def pid():
 
 def mapped_actuator_commands(U):
     temp=U
+    config= yaml.load(open('config.yaml','r'), Loader=yaml.FullLoader)
     U[0]=temp[0]*(1500)/(mav.parameters.mass*abs_gravity_z)
-    U[1]=temp[1] #need to map these out
-    U[2]=temp[2]
-    U[3]=temp[3]
-
+    U[1]=temp[1]*(180/PI)*config['MAP_RP'] +1500#need to map these out
+    U[2]=temp[2]*(180/PI)*config['MAP_RP'] +1500
+    temp[3]*=(180/PI)
+    if(temp[3]>=0 and temp[3]<41.79213684):
+        U[3]=temp[3]*config['MAP_YR_1'] +1500
+    elif(temp[3]>=41.79213684):
+        U[3]=temp[3]*config['MAP_YR_2'] +1500
+    elif(temp[3]<0 and temp[3]>=-41.79213684):
+        U[3]=-temp[3]*config['MAP_YR_1'] +1500
+    elif(temp[3]<-41.79213684):
+        U[3]=-temp[3]*config['MAP_YR_2'] +1500
     return U
-
 
 
 def main():
@@ -263,6 +283,7 @@ def main():
     prev_state.position[2] = 1.0
 
     input_u = pid()
+    input_u=u2theta(input_u)
     U=mapped_actuator_commands(input_u)
 
     # rs = InputToRotorSpeed(input_u)
