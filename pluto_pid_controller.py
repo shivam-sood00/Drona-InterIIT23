@@ -15,7 +15,6 @@ odom = Odometry()
 mav = Mav()
 curr_state = State()
 des_state = State()
-prev_state = State()
 
 Kp_pos = None
 Kd_pos = None
@@ -44,6 +43,7 @@ global count
 count =0
 
 def reset_waypoint():
+
     global int_position, int_angle, prev_err_pos, prev_err_ang, prev_euler_angle, rotor_speed
     prev_err_pos = np.array([0.0, 0.0, 0.00]).reshape(3,1)
     prev_err_ang = np.array([0.0, 0.0, 0.00]).reshape(3,1)
@@ -51,6 +51,14 @@ def reset_waypoint():
     rotor_speed = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)
 
 def get_euler_angles_from_quaternion(quaternion_msg):
+    """
+    Converts a quaternion to euler angles
+    param
+    quaternion_msg: Quaternion message
+    return:
+    Euler angles in radians
+
+    """
     rpy  = tf.transformations.euler_from_quaternion(quaternion_msg)
     roll = rpy[0]
     pitch = rpy[1]
@@ -59,6 +67,15 @@ def get_euler_angles_from_quaternion(quaternion_msg):
     return np.array([roll, pitch, yaw]).reshape(3,1)
 
 def fix_euler(cur_ang,prev_ang):
+    """
+    This function is used to fix the euler angle discontinuity
+    param
+    cur_ang: current euler angle
+    prev_ang: previous euler angle
+    return:
+    fixed euler angle
+    
+    """
     result = np.zeros((3,1))
     for i in range(3):
         if cur_ang[i] * prev_ang[i] <0 and getShortestYawDistance(cur_ang[i],prev_ang[i]) != (cur_ang[i] - prev_ang[i]):
@@ -70,6 +87,13 @@ def fix_euler(cur_ang,prev_ang):
     return result
 
 def odometry_callback(msg):
+    """
+    This function is used to update the current state of the drone
+    param
+    msg: Current state of the drone from the vision pipeline
+    return:
+    None
+    """
     global curr_state
     global mav
     global wRb
@@ -95,6 +119,15 @@ def odometry_callback(msg):
     curr_state.angular_velocity = omg_b
 
 def getShortestYawDistance(yaw1, yaw2):
+    """
+    This function is used to calculate the shortest yaw distance between two angles and fix the discontinuity
+    param
+    yaw1: first angle; current parameters
+    yaw2: second angle; previous parameters
+    return:
+    shortest yaw distance
+
+    """
     yaw_mod = math.fmod(yaw1 - yaw2, 2*math.pi)
     if yaw_mod < -math.pi:
       yaw_mod += 2 * math.pi
@@ -104,12 +137,29 @@ def getShortestYawDistance(yaw1, yaw2):
     return yaw_mod
 
 def calc_error_all_angles(err_angle,prev_err_ang):
+    """
+    This function is used to calculate the error in all the angles
+    param
+    err_angle: current error in angles
+    prev_err_ang: previous error in angles
+    return:
+    error in all the angles
+    
+    """
     result = np.array([0,0,0],dtype = np.float64).reshape((3, 1))
     for i in range(3):
         result[i] = getShortestYawDistance(err_angle[i],prev_err_ang[i])
     return result
 
 def u2theta(U):
+    """
+    This function is used to convert the control input apart from throttle, i.e. angular acceleration in x,y,z to the euler angles by integration
+    param
+    U: control input
+    return:
+    desired euler angles
+
+    """
     global dt,curr_state,final_out
     acc=np.array([U[1]/mav.parameters.inertia.xx,U[2]/mav.parameters.inertia.yy,U[3]/mav.parameters.inertia.zz])
     omega=curr_state.angular_velocity + (dt*acc)
@@ -122,6 +172,14 @@ def u2theta(U):
 
 
 def pid():
+    """
+    This function is used to implement the PID controller
+    param
+    None`
+    return:
+    U_temp: control input
+
+    """
     # print("pid called")
     global curr_state, des_state,dt
     
@@ -243,6 +301,14 @@ def pid():
     return U_temp
 
 def mapped_actuator_commands(U):
+    """
+    Maps the actuator commands to the range of 1350 to 1650 for the roll, pitch and yaw and 1200 to 1800 for the thrust
+    param
+    U: control input
+    return
+    U: mapped control input
+
+    """
     temp=U
     config= yaml.load(open('config.yaml','r'), Loader=yaml.FullLoader)
     U[0]=max(1200,min(1800,temp[0]*(1500)/(mav.parameters.mass*abs_gravity_z)))
@@ -261,6 +327,14 @@ def mapped_actuator_commands(U):
 
 
 def main():
+    """
+    Main function
+    param
+    None
+    return
+    U: RC commands
+    
+    """
     global final_state
     global Kp_pos, Kd_pos, Ki_pos, Kp_ang, Kd_ang, Ki_ang
 
