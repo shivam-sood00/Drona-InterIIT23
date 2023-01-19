@@ -138,17 +138,18 @@ class autoPluto:
         #     self.action[1] = temp["rcPitch"]
         #     self.action[2] = temp["rcYaw"]
         #     self.action[3] = temp["rcThrottle"]   
-        
+        U=np.zeros(4)
         self.pid.odometry_callback(self.currentState)
-        self.pid.main()
+        U=self.pid.main()
         # self.pid.update_pos(self.currentState)
         # self.pid.calc_err()
         # self.action["Pitch"] = self.pid.set_pitch()
         # self.action["Roll"] = self.pid.set_roll()
 
-        self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
-        self.action["Throttle"] = self.pid.set_thrust()
-        self.action["Yaw"] = self.pid.set_yaw()
+        self.action["Throttle"] = U[0]
+        self.action['Roll'] = U[1]
+        self.action["Pitch"]=U[2]
+        self.action["Yaw"] = U[3]
         # print("action: ",self.action)
     
     def takeAction(self):

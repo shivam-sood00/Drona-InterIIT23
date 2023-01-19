@@ -261,7 +261,7 @@ def mapped_actuator_commands(U):
 
 
 def main():
-    global prev_state,final_state
+    global final_state
     global Kp_pos, Kd_pos, Ki_pos, Kp_ang, Kd_ang, Ki_ang
 
     initialise_params(abs_gravity_z)
@@ -279,8 +279,6 @@ def main():
     Kp_ang = np.array(config['Kp_ang']).reshape(3,1)
     Kd_ang = np.array(config['Kd_ang']).reshape(3,1)
     Ki_ang = np.array(config['Ki_ang']).reshape(3,1)
-
-    prev_state.position[2] = 1.0
 
     input_u = pid()
     input_u=u2theta(input_u)
