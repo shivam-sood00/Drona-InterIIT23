@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def get_velocity(currentState, imuData, dt):
+def get_velocity(currentStateRates, imuData, dt):
 
     phi = imuData["Roll"]
     theta = imuData["Pitch"]
@@ -21,7 +21,7 @@ def get_velocity(currentState, imuData, dt):
                     [d,  e,  f ],          
                     [g,  h,  i ])
 
-    current_body_vel = R.T @ np.array([currentState["x_dot"],currentState["y_dot"],currentState["z_dot"]])
+    current_body_vel = R.T @ np.array([currentStateRates[0],currentStateRates[1],currentStateRates[2]])
     current_body_vel += np.array([imuData["AccX"],imuData["AccY"],imuData["AccZ"]]) * dt
     current_vel = R @ current_body_vel
 
@@ -29,7 +29,7 @@ def get_velocity(currentState, imuData, dt):
     velocity_y  = current_vel[1]
     velocity_z  = current_vel[2]
 
-    return velocity_x,velocity_y,velocity_z
+    return [velocity_x,velocity_y,velocity_z]
 
 def get_angle_rate(imuData):
     phi = imuData["Roll"]
@@ -52,4 +52,4 @@ def get_angle_rate(imuData):
     pitch_rate = currentAngleRate[1]
     yaw_rate = currentAngleRate[2]
 
-    return roll_rate,pitch_rate,yaw_rate
+    return [roll_rate,pitch_rate,yaw_rate]

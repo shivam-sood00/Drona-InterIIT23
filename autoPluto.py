@@ -3,6 +3,7 @@ import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
+from vision.integrator import get_angle_rate,get_velocity
 import time
 import numpy as np
 # from controls.pid_pluto import PID
@@ -19,6 +20,13 @@ class autoPluto:
         self.trajectory = [[0,0,0.9]]
         self.pid = PID
         self.outOfBound = 0
+        ##########
+        self.horizon  = 5
+        self.data_fr_ma = np.zeros((9,self.horizon))
+        self.counter = 0
+        self.velocity = [0,0,0]
+        self.angleRate = None
+        ##########
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
         cameraThread = threading.Thread(target=self.cameraFeed)
@@ -80,13 +88,19 @@ class autoPluto:
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
         #     print("Pitch: ",self.IMUQueue[-1]["Pitch"])
+        currentTime = time.time()
+        dt = currentTime - self.lastTime
         if len(self.IMUQueue)>0:
+            
+            self.velocity = get_velocity(self.velocity,self.IMUQueue[-1],dt)
+            self.angleRate = get_angle_rate(self.IMUQueue[-1],dt)
+
             if self.currentState is None:
                 pass
             elif len(self.currentState)==3:
-                self.currentState +=  [self.IMUQueue[-1]["Yaw"]]
+                self.currentState +=  [self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"],self.IMUQueue[-1]["Yaw"]] + self.velocity + self.angleRate 
             else:
-                self.currentState[-1] =  self.IMUQueue[-1]["Yaw"]
+                self.currentState[3:] = [self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"],self.IMUQueue[-1]["Yaw"]] + self.velocity + self.angleRate
             self.IMUQueue.clear()
 
         elif self.currentState is None:
@@ -95,6 +109,23 @@ class autoPluto:
         elif len(self.currentState) == 3:
             self.currentState = None
         
+        if self.currentState is not None:
+            
+            # Apply Moving Average on sensor data x y
+            self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
+
+            for i in range(3):
+                self.data_fr_ma[i,self.horizon-1] = self.currentState[i]
+            
+            estimated = np.average(self.data_fr_ma, axis=1)     
+            
+            if self.counter < self.horizon:
+                self.counter += 1
+            else:
+                for i in range(3):
+                    self.currentState[i] = estimated[i]
+        
+        self.lastTime = currentTime
         # if self.debug:
         # print("updated state: ",self.currentState)
     
