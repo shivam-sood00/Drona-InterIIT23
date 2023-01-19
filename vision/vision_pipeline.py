@@ -5,7 +5,6 @@ from cv2 import aruco
 import time
 import os
 from scipy.spatial.transform import Rotation
-import csv
 
 class VisionPipeline():
 
