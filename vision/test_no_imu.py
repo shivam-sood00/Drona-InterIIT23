@@ -40,11 +40,11 @@ DEBUG = 1
 if __name__ == '__main__':
 
     depth_res=(720, 1280)
-    rgb_res=(1080, 1920)
+    rgb_res=(720, 1280)
     align_to="rgb"
-    marker_size=3.6
+    marker_size=13.85
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 1
+    required_marker_id = 11
     calib_file_path="../calib_data/MultiMatrix.npz"
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG)
@@ -87,6 +87,8 @@ if __name__ == '__main__':
             depth_img = pipeline.to_image(depth_frame)
             color_img = pipeline.to_image(color_frame)
 
+            # color_img = cv2.resize(color_img, (1920, 1080), interpolation=4)
+
             result.write(color_img)
             # time when we finish processing for this frame
             new_frame_time = time.time()
@@ -98,6 +100,8 @@ if __name__ == '__main__':
             marker_corners = pipeline.detect_marker(color_img)
             
             if marker_corners is None:
+                pass
+            elif type(marker_corners) is str:
                 pass
             else:
                 aruco_pose = pipeline.estimate_pose(marker_corners)
