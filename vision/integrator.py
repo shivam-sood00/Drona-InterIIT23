@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def get_velocity(currentStateRates, imuData, filt_imuData, dt):
+def get_velocity(currentStateRates, imuData, filt_accData, dt):
 
     phi = imuData["Roll"]
     theta = imuData["Pitch"]
@@ -22,7 +22,7 @@ def get_velocity(currentStateRates, imuData, filt_imuData, dt):
                     [g,  h,  i ])
 
     current_body_vel = R.T @ np.array([currentStateRates[0],currentStateRates[1],currentStateRates[2]])
-    current_body_vel += np.array([filt_imuData[0],filt_imuData[1],filt_imuData[2]]) * dt
+    current_body_vel += np.array([filt_accData[0],filt_accData[1],filt_accData[2]]) * dt
     current_vel = R @ current_body_vel
 
     velocity_x  = current_vel[0]
