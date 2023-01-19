@@ -4,6 +4,7 @@ from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
 from vision.integrator import get_angle_rate,get_velocity
+from vision.movingAverage import movingAverage
 import time
 import numpy as np
 # from controls.pid_pluto import PID
@@ -21,9 +22,9 @@ class autoPluto:
         self.pid = PID
         self.outOfBound = 0
         ##########
-        self.horizon  = 5
-        self.data_fr_ma = np.zeros((9,self.horizon))
-        self.counter = 0
+        self.xyz_movingAverage = movingAverage(3,5)
+        self.imu_movingAverage = movingAverage(6,5)
+
         self.velocity = [0,0,0]
         self.angleRate = None
         ##########
@@ -92,8 +93,10 @@ class autoPluto:
         dt = currentTime - self.lastTime
         if len(self.IMUQueue)>0:
             
-            self.velocity = get_velocity(self.velocity,self.IMUQueue[-1],dt)
-            self.angleRate = get_angle_rate(self.IMUQueue[-1],dt)
+            filt_imuData = self.imu_movingAverage([self.IMUQueue[-1]["AccX"],self.IMUQueue[-1]["AccY"],self.IMUQueue[-1]["AccZ"],
+                                                  self.IMUQueue[-1]["GyroX"],self.IMUQueue[-1]["GyroY"],self.IMUQueue[-1]["GyroZ"]])
+            self.velocity = get_velocity(self.velocity,self.IMUQueue[-1],filt_imuData[:3],dt)
+            self.angleRate = get_angle_rate(self.IMUQueue[-1],filt_imuData[3:],dt)
 
             if self.currentState is None:
                 pass
@@ -110,20 +113,7 @@ class autoPluto:
             self.currentState = None
         
         if self.currentState is not None:
-            
-            # Apply Moving Average on sensor data x y
-            self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-
-            for i in range(3):
-                self.data_fr_ma[i,self.horizon-1] = self.currentState[i]
-            
-            estimated = np.average(self.data_fr_ma, axis=1)     
-            
-            if self.counter < self.horizon:
-                self.counter += 1
-            else:
-                for i in range(3):
-                    self.currentState[i] = estimated[i]
+            self.currentState[:3] = self.xyz_movingAverage.getAverage(self.currentState[:3])
         
         self.lastTime = currentTime
         # if self.debug:
