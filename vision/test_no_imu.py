@@ -1,4 +1,5 @@
 from vision_pipeline import VisionPipeline
+import pyrealsense2 as rs
 #from kalman_filter import KalmanFilter
 
 import numpy as np
@@ -40,11 +41,11 @@ DEBUG = 1
 if __name__ == '__main__':
 
     depth_res=(720, 1280)
-    rgb_res=(720, 1280)
+    rgb_res=(1080, 1920)
     align_to="rgb"
-    marker_size=13.85
+    marker_size=3.62 #13.8
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 11
+    required_marker_id = 0
     calib_file_path="../calib_data/MultiMatrix.npz"
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG)
@@ -86,7 +87,7 @@ if __name__ == '__main__':
 
             depth_img = pipeline.to_image(depth_frame)
             color_img = pipeline.to_image(color_frame)
-
+            print(color_img.shape)
             # color_img = cv2.resize(color_img, (1920, 1080), interpolation=4)
 
             result.write(color_img)
@@ -117,6 +118,31 @@ if __name__ == '__main__':
                 # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
 
                 z_from_realsense = pipeline.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                _intrisics = rs.intrinsics()
+                _intrisics.width = pipeline.rgb_res[1]
+                _intrisics.height = pipeline.rgb_res[0]
+                _intrisics.ppx = pipeline.cam_matrix[0][2]
+                _intrisics.ppy = pipeline.cam_matrix[1][2]
+                _intrisics.fx = pipeline.cam_matrix[0][0]
+                _intrisics.fy = pipeline.cam_matrix[1][1]
+
+                z_from_realsense = pipeline.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+
+                # print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
+                # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
+                #     flag = 1
+                #     cam_queue.append([flag])
+                # else:
+                #     flag = 0
+                # print("appending")
+                point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]],
+                                                                z_from_realsense)
+                new_tf = pipeline.make_tf_matrix(rvec=pipeline.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+                new_tf = np.linalg.pinv(new_tf)
+                z_from_realsense = 2.82+ (new_tf @ np.array(
+                    [point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
                 print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
 
                 data  = [dt,current_time,z_from_realsense]
