@@ -5,9 +5,19 @@
 Our report can be found [here](). To learn more about our API, check out our [documentation]().
 
 ## Overview
+The world around is evolving rapidly, and in this stride forward, “the sky is the limit”. A part in this evolution is being played by the advent of drones in various applications ranging from commercial deliveries to recreation. With a new emerging market, a projected worldwide industry of $42.8 billion by 2025, where India is anticipated to be the world’s third largest drone market [Drone Industry Insights Report 2020] in the same timeframe, it is evident that this sector would attract new talent and investments.
+
+To help build the talent needed to support this vision, an early exposure is the need of the hour. With a plethora of complicated algorithms, softwares and a whole lot of time to set up your own drone, the ability to tinker and program your own drone that too with the most popular programming language “Python”, would be the right step towards an easy and accelerated learning curve and help the new entrants develop their own solutions to real world problems.
+
+Drona Aviation is building an ecosystem to support this skill development, and this is being done through Pluto - India’s only developer drone platform supporting the only Indian Nano-Drone. Drona Aviation is primarily based on four fundamental principles, complementing one-another. The team has worked hard to provide an open source implementation and learning content. This served as the basis of building upon their work, which is exactly what the intention of the company was, helping young talents explore and incorporate their own ideas.
+
+The report is based on the team's attempt at solving the “Pluto Drone Swarm Challenge” Task 01.
 
 
 ## Problem Statement
+The first task requires implementation of a python wrapper to control the Pluto Drone.
+
+This is to be achieved by using socket communication, where the socket provides a bidirectional First in First Out Communication facility over the network to connect with the Drone. The commands are to be encoded in the MultiWii Serial Protocol (MSP) packets, a popular communication protocol for flight controllers. With the socket sending and receiving these MSP Packets, the end goal is to control the drone using a windows or a linux machine by implementing multiple different commands - Take-Off, Land, Pitch Forward, Roll Left etc based on Drona Firmware in the flight-controller and Pluto ROS Package.
 
 
 ## Table of Contents
@@ -21,7 +31,7 @@ Our report can be found [here](). To learn more about our API, check out our [do
 
 # Installation
 
-This repository is built in PyTorch 1.8.1 and tested on Ubuntu 20.04 environment (Python3.7, CUDA11.3.1). Follow these intructions
+This repository is built using Python 3.9.6 and tested on Ubuntu 22.04 LTS and Ubuntu 20.04 LTS environment. Follow these intructions
 
 1. Clone the repository  
 
