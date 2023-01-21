@@ -73,6 +73,7 @@ class PID():
 
     def update_pos(self,curPose):
         self.prev_pose = self.cur_pose
+        list_curPose = list(curPose.values())
         self.cur_pose = np.array(curPose).reshape(6,1)
 
     def set_target_pose(self,point):

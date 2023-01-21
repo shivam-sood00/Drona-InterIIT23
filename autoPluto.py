@@ -38,6 +38,9 @@ class autoPluto:
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
+        self.visionTime = None
+        self.controlTime = None
+        self.imuTime = None
         # print(self.comms.paramsSet)
         # self.file = open('debug.csv', 'a+', newline ='')
         # with self.file:
@@ -75,9 +78,9 @@ class autoPluto:
                     self.outOfBound = 3
                 else:
                     point = self.trajectory[i]
-                point[0] += self.currentState[0]
-                point[1] += self.currentState[1]
-                point[2] += self.currentState[2]
+                point[0] += self.currentState['x']
+                point[1] += self.currentState['y']
+                point[2] += self.currentState['z']
                 i+=1
                 if i!=1:
                     self.pid.useWay=True
@@ -85,7 +88,7 @@ class autoPluto:
                 # print(self.pid.target_pose)
                 if yawUpdateFlag:
                     yawUpdateFlag = False
-                    self.pid.zero_yaw = self.currentState[3]
+                    self.pid.zero_yaw = self.currentState['Yaw']
                 first = False
             self.updateAction()
             ret = self.takeAction()
@@ -93,7 +96,7 @@ class autoPluto:
             # if self.file:
             #     self.write.writerows(np.array(data,dtype=np.float64))
             # print("ok")
-            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5])
+            print(self.currentState['x'],self.currentState['y'],self.currentState['z'],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState['Yaw'],self.currentState['Roll'],self.currentState['Pitch'])
             # print("not")
             time.sleep(self.runLoopWaitTime)
             # TODO: update target wavePoint when previous target reached
@@ -127,9 +130,15 @@ class autoPluto:
             
             if self.outOfBound==0:
                 if self.currentState is  None:
-                    self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    self.currentState = dict({'x':sensorData[1][0,0], 'y':sensorData[1][1,0], 'z':sensorData[2]})
+                    self.visionTime = sensorData[0]
+                    #self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
                 else:
-                    self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    self.currentState['x'] = sensorData[1][0,0]
+                    self.currentState['y'] = sensorData[1][1,0]
+                    self.currentState['z'] = sensorData[2]
+                    self.visionTime = sensorData[0]
+                    #self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
@@ -137,10 +146,15 @@ class autoPluto:
         if len(self.IMUQueue)>0:
             if self.currentState is None:
                 pass
-            elif len(self.currentState)==3:
-                self.currentState +=  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
+            # elif len(self.currentState)==3:
+            #     self.currentState["Roll"] =  self.IMUQueue[-1]["Yaw"]
+            #     self.currentState["Pitch"] = self.IMUQueue[-1]["Roll"]
+            #     self.currentState["Yaw"] = self.IMUQueue[-1]["Pitch"]
             else:
-                self.currentState[-3:] =  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
+                self.currentState["Roll"] =  self.IMUQueue[-1]["Yaw"]
+                self.currentState["Pitch"] = self.IMUQueue[-1]["Roll"]
+                self.currentState["Yaw"] = self.IMUQueue[-1]["Pitch"]
+                self.imuTime = self.IMUQueue[-1]["timeOfLastUpdate"]
             self.IMUQueue.clear()
 
         elif self.currentState is None:
@@ -154,19 +168,17 @@ class autoPluto:
             
             # Apply Moving Average on sensor data x y
             self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-            self.data_fr_ma[0,self.horizon-1] = self.currentState[0]
-            self.data_fr_ma[1,self.horizon-1] = self.currentState[1]  
-            self.data_fr_ma[2,self.horizon-1] = self.currentState[2]   
+            self.data_fr_ma[0,self.horizon-1] = self.currentState['x']
+            self.data_fr_ma[1,self.horizon-1] = self.currentState['y']  
+            self.data_fr_ma[2,self.horizon-1] = self.currentState['z']   
             estimated = np.average(self.data_fr_ma, axis=1)     
             
             if self.counter < self.horizon:
                 self.counter += 1
             else:
-                self.currentState[0] = estimated[0]
-                self.currentState[1] = estimated[1]
-                self.currentState[2] = estimated[2]
-        
-        
+                self.currentState['x'] = estimated[0]
+                self.currentState['y'] = estimated[1]
+                self.currentState['z'] = estimated[2]
         # if self.debug:
         # print("updated state: ",self.currentState)
     
@@ -188,12 +200,14 @@ class autoPluto:
         self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
         self.action["Throttle"] = self.pid.set_thrust()
         self.action["Yaw"] = self.pid.set_yaw()
+        self.controlTime = time.time()
         # print("action: ",self.action)
     
     def takeAction(self):
         if self.outOfBound==0:
             # print("sending action")
             # converting to integer as we can only send integral values via MSP Packets
+            print("imu latency: ",self.controlTime-self.imuTime,"vision latency: ",self.controlTime-self.imuTime)
             self.comms.paramsSet["Roll"] = int(self.action["Roll"])
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
