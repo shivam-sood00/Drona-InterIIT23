@@ -18,7 +18,7 @@ class autoPluto:
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
-        self.currentState = None
+        self.currentState = {"lastVisionUpdate":-1,"lastImuUpdate":-1,"x":-1,"y":-1,"z":-1,"Roll":-1,"Pitch":-1,"Yaw":-1}
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[0,0,0.9]]
         # self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
@@ -70,7 +70,7 @@ class autoPluto:
         while(ret==0):
             # print("runloop")
             self.updateState()
-            if self.currentState is None:
+            if self.currentState["lastVisionUpdate"]==-1 or self.currentState["lastImuUpdate"]==-1:
                 continue
             if first:
                 if i>=len(self.trajectory):
@@ -90,6 +90,7 @@ class autoPluto:
                     yawUpdateFlag = False
                     self.pid.zero_yaw = self.currentState['Yaw']
                 first = False
+            print(self.currentState)
             self.updateAction()
             ret = self.takeAction()
             # data = [self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3]]
@@ -129,15 +130,10 @@ class autoPluto:
             # print(sensorData)
             
             if self.outOfBound==0:
-                if self.currentState is  None:
-                    self.currentState = dict({'x':sensorData[1][0,0], 'y':sensorData[1][1,0], 'z':sensorData[2]})
-                    self.visionTime = sensorData[0]
-                    #self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
-                else:
                     self.currentState['x'] = sensorData[1][0,0]
                     self.currentState['y'] = sensorData[1][1,0]
                     self.currentState['z'] = sensorData[2]
-                    self.visionTime = sensorData[0]
+                    self.currentState["lastVisionUpdate"] = sensorData[0]
                     #self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
@@ -151,20 +147,15 @@ class autoPluto:
             #     self.currentState["Pitch"] = self.IMUQueue[-1]["Roll"]
             #     self.currentState["Yaw"] = self.IMUQueue[-1]["Pitch"]
             else:
-                self.currentState["Roll"] =  self.IMUQueue[-1]["Yaw"]
-                self.currentState["Pitch"] = self.IMUQueue[-1]["Roll"]
-                self.currentState["Yaw"] = self.IMUQueue[-1]["Pitch"]
-                self.imuTime = self.IMUQueue[-1]["timeOfLastUpdate"]
-            self.IMUQueue.clear()
-
-        elif self.currentState is None:
-            pass        
-        
-        elif len(self.currentState) == 3:
-            self.currentState = None
+                self.currentState["Roll"] =  self.IMUQueue[-1]["Roll"]
+                self.currentState["Pitch"] = self.IMUQueue[-1]["Pitch"]
+                self.currentState["Yaw"] = self.IMUQueue[-1]["Yaw"]
+                self.currentState["lastImuUpdate"] = self.IMUQueue[-1]["timeOfLastUpdate"]
+            self.IMUQueue.clear() 
         
         
-        if self.currentState is not None:
+        
+        if self.currentState["lastVisionUpdate"] != -1:
             
             # Apply Moving Average on sensor data x y
             self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
@@ -207,7 +198,7 @@ class autoPluto:
         if self.outOfBound==0:
             # print("sending action")
             # converting to integer as we can only send integral values via MSP Packets
-            print("imu latency: ",self.controlTime-self.imuTime,"vision latency: ",self.controlTime-self.imuTime)
+            # print("imu latency: ",self.controlTime-self.currentState["lastImuUpdate"],"\tvision latency: ",self.controlTime-self.currentState["lastVisionUpdate"])
             self.comms.paramsSet["Roll"] = int(self.action["Roll"])
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
