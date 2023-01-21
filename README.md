@@ -12,8 +12,9 @@ STEPS TO RUN:
 6. Execute "python -m venv venv" to create virtual enviornment
 7. Activate virtual enviornment using "venv\Scripts\activate"
 8. Execute "pip install -r requirements.txt" in CMD to install all packages of python
-9. In same CMD change dir to MSP_comms using "cd MSP_comms"
-10. Execute "python server.py" in CMD to start FLASK Server
-11. Goto "drona_desktop_react_app" folder
-12. Open CMD
-13. Execute "npm run dev" to start GUI
+9. Connect to drone, then proceed to further steps
+10. In same CMD change dir to MSP_comms using "cd MSP_comms"
+11. Execute "python server.py" in CMD to start FLASK Server
+12. Goto "drona_desktop_react_app" folder
+13. Open CMD
+14. Execute "npm run dev" to start GUI
