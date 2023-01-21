@@ -1,0 +1,332 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>plutoComms module &#8212; plutoComms  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-plutoComms">
+<span id="plutocomms-module"></span><h1>plutoComms module<a class="headerlink" href="#module-plutoComms" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="plutoComms.COMMS">
+<em class="property">class </em><code class="descclassname">plutoComms.</code><code class="descname">COMMS</code><span class="sig-paren">(</span><em>IP='192.168.4.1'</em>, <em>Port=23</em>, <em>debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This is the class for all communication with the pluto drone</p>
+<p>It has two threads running in parallel
+1) The write Thread: which sends data to the drone based on the values of parameter to be set and requests to be made
+2) The read Thread: which reads data from the drone and updates the parameters received based on the requests sent</p>
+<dl class="docutils">
+<dt>Attribute:</dt>
+<dd>TCP_IP: IP address of drone
+Port: Port of the drone
+debug: a flag to enable prints in code for debugging
+mySocket: refers to the instance of socket connected to the drone at the specified IP and Port
+waitTime: variable to control sleep time after every command, so as to ensure that it is sent to the drone in the write thread
+inLoopSleepTime: variable to control sleep time in write thread, thus controlling publishing frequency
+outLoopSleepTime: variable to control sleep time in read thread, thus controlling subscribing frequency
+writeLoop: variable to control writing loop i,e, if we want to write data or not
+readLoop: variable to control reading loop i.e. if we want to read data or not
+outServices: Dictionary of all the out packets we request for with their type of payload values
+requestMSPPackets: List of MSP requests for Out Packets 
+paramSet: Dictionary of parameter to be set based on their values through IN Packets
+paramReceived: Dictionary of parameters received from the OUT Packets</dd>
+</dl>
+<dl class="method">
+<dt id="plutoComms.COMMS.arm">
+<code class="descname">arm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.arm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to Arm the drone</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.backFlip">
+<code class="descname">backFlip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.backFlip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to set command as back flip</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.backward">
+<code class="descname">backward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.backward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member function to decrease pitch so that the drone moves backward</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.boxArm">
+<code class="descname">boxArm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.boxArm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to BoxArm the drone</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.decreaseHeight">
+<code class="descname">decreaseHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.decreaseHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to decrease throttle so that height of drone is decreased</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.disArm">
+<code class="descname">disArm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.disArm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to disArm the drone</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.disconnect">
+<code class="descname">disconnect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to disconnect communication and stop read and writing loops</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to increase pitch so that the drone moves forward</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.getAllRequestMsgs">
+<code class="descname">getAllRequestMsgs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.getAllRequestMsgs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to generate MSP Packets for all Out Packets mentioned in OUT services</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.increaseHeight">
+<code class="descname">increaseHeight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.increaseHeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to increase throttle so that height of drone is increased</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.land">
+<code class="descname">land</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.land" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to set command as land</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.left">
+<code class="descname">left</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to decrease roll so that the drone moves towards left</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.leftYaw">
+<code class="descname">leftYaw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.leftYaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to decrease yaw so that the drone rotates toward left</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.lowThrottle">
+<code class="descname">lowThrottle</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.lowThrottle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to provide a low throttle, generally used for hardware testing</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.printParams">
+<code class="descname">printParams</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.printParams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to Print all the Parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.processBuffer">
+<code class="descname">processBuffer</code><span class="sig-paren">(</span><em>buff</em>, <em>funDebug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.processBuffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function processes the current buffer and return the list of decoded values as out list, 
+the OUT Packet payload corresponding to which the values are and the remaining buffer.
+Returns empty out list and 0 as payload if buffer does not contain the full message</p>
+<p>In case when garbage is received slice the buffer to the start of the next message by searching for header</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.read">
+<code class="descname">read</code><span class="sig-paren">(</span><em>IMUQueue</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function which is target function to the Reading Thread
+All the data sent by the drone is received in this function</p>
+<p>In the loop we wait for 2 seconds max, if we do not receive any data on the socket then we break out of the loop
+While receiving we append that message at the end of the currently existing buffer
+After this the current buffer is again and again processed and the parameter received are updated untill the buffer can no longer be processed</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.receiveMSPresponse">
+<code class="descname">receiveMSPresponse</code><span class="sig-paren">(</span><em>buff</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.receiveMSPresponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to receive data and process it to return decoded values and updated buffer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Functioon to set all parameters to set to default values.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.right">
+<code class="descname">right</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.right" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to increase roll so that the drone moves towards right</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.rightYaw">
+<code class="descname">rightYaw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.rightYaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to increase yaw so that the drone rotates toward right</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.takeOff">
+<code class="descname">takeOff</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.takeOff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to set command as takeOff</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.updateBuffer">
+<code class="descname">updateBuffer</code><span class="sig-paren">(</span><em>buff</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.updateBuffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to read data and appends it at the end of buffer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.updateParams">
+<code class="descname">updateParams</code><span class="sig-paren">(</span><em>out</em>, <em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.updateParams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function to update the received parameters
+:param out: Decoded Values
+:type out: List
+:param idx: value of type of payload 
+:type idx: int</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.COMMS.write">
+<code class="descname">write</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.COMMS.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Member Function which is the target of the Writing Thread
+ALl writing to drone takes place in this function untill we set sendData to False</p>
+<p>Before entering the loop we set the ROll and Pitch Trim, as it is to be done only once in the starting
+In the loop we keep sending the SET_RAW_RC commands, we check if SET_COMMAND is not 0 this we send that also
+In every iteration, we also request for all the messages we want as OUT Packets</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="plutoComms.MSPPacket">
+<em class="property">class </em><code class="descclassname">plutoComms.</code><code class="descname">MSPPacket</code><span class="sig-paren">(</span><em>debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.MSPPacket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This is a class for MSP Packets</p>
+<dl class="docutils">
+<dt>Attributes:</dt>
+<dd>header: a list containing the header of the MSP Packet i.e. [36, 77]
+direction: a dictionart to store the value mapped to in and out direction of MSGS
+msg: a list to store the full message
+debug: a flag to enable prints in code for debugging</dd>
+</dl>
+<dl class="method">
+<dt id="plutoComms.MSPPacket.appendCRC">
+<code class="descname">appendCRC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.MSPPacket.appendCRC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a member function to appends CRC at the end of message
+This is to check the integrity of the packet</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.MSPPacket.getInMsgRequest">
+<code class="descname">getInMsgRequest</code><span class="sig-paren">(</span><em>msgLen</em>, <em>typeOfPayload</em>, <em>msgData</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.MSPPacket.getInMsgRequest" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a member function to returns MSP Packet of in direction for given message length, type of payload and data</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>msgLen: length of message
+typeOfPayload: stores value assigned to that type of payload
+msgData: stores the data to be sent</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="plutoComms.MSPPacket.getOutMsgRequest">
+<code class="descname">getOutMsgRequest</code><span class="sig-paren">(</span><em>msgLen</em>, <em>typeOfPayload</em>, <em>msgData</em><span class="sig-paren">)</span><a class="headerlink" href="#plutoComms.MSPPacket.getOutMsgRequest" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a member function to returns MSP Packet of in direction for given message length, type of payload and data</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>msgLen: length of message
+typeOfPayload: stores value assigned to that type of payload
+msgData: stores the data to be sent</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">plutoComms</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, -.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/plutoComms.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
