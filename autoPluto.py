@@ -20,7 +20,9 @@ class autoPluto:
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        self.trajectory = [[0,0,0.9]]
+        # self.trajectory = [[0,0,0.9]]
+        self.trajectory = [[0,0,0.9],[0.5,0.0,0.9],[0.5,-0.3,0.9],[0,-0.3,0.9]]
+
         # self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
         self.outOfBound = 0
         self.config = ConfigParser()
@@ -75,14 +77,17 @@ class autoPluto:
                     self.outOfBound = 3
                 else:
                     point = self.trajectory[i]
-                point[0] += self.currentState[0]
-                point[1] += self.currentState[1]
-                point[2] += self.currentState[2]
+                    if i == 0:
+                        point[0] += self.currentState[0]
+                        point[1] += self.currentState[1]
+                        point[2] += self.currentState[2]
+                    # else:
+                    #     point = 
                 i+=1
                 if i!=1:
                     self.pid.useWay=True
                 self.pid.set_target_pose(point=point)
-                # print(self.pid.target_pose)
+                print("Target: ")
                 if yawUpdateFlag:
                     yawUpdateFlag = False
                     self.pid.zero_yaw = self.currentState[3]

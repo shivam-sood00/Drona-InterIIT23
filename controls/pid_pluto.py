@@ -27,6 +27,7 @@ class PID():
         self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
         self.zero_yaw = None
         self.useWay = False
+        self.moving_win_len = int(config.get(droneNo,"moving_win_len"))
         self.reset()
         
     """
@@ -38,6 +39,7 @@ class PID():
         self.err_pitch = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.err_yaw = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
+        self.int_err_list = [[],[],[],[]] #thrust, roll, pitch, yaw
 
     def calc_err(self):
         # self.update_target_waypoint()
@@ -46,30 +48,41 @@ class PID():
         self.err_thrust[0] = self.target_pose[2] - self.cur_pose[2]
         self.err_thrust[1] = self.err_thrust[0] - self.prev_err[0]
         self.prev_err[0] = self.err_thrust[0]
-        self.err_thrust[2] = np.clip(self.err_thrust[2] + self.err_thrust[0], -100, 100)
+        self.int_err_list[0].append(self.err_thrust[0])
+        self.int_err_list[0] = self.int_err_list[0][-self.moving_win_len:]
+        self.err_thrust[2] = np.clip(sum(self.int_err_list[0]), -100, 100)
         
         self.err_roll[0] = self.target_pose[1] - self.cur_pose[1]
         self.err_roll[1] = self.err_roll[0] - self.prev_err[1]
         self.prev_err[1] = self.err_roll[0]
+        self.int_err_list[1].append(self.err_roll[0])
+        self.int_err_list[1] = self.int_err_list[1][-self.moving_win_len:]
+        self.err_roll[2] = np.clip(sum(self.int_err_list[1]), -30, 30)
         
-        self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-        self.data_fr_ma[0,self.horizon-1] = self.err_roll[0]
-        estimated = np.sum(self.data_fr_ma, axis=1)     
+        # self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
+        # self.data_fr_ma[0,self.horizon-1] = self.err_roll[0]
+        # estimated = np.sum(self.data_fr_ma, axis=1)     
         
-        if self.counter < self.horizon:
-            self.counter += 1
-        else:
-            self.err_roll[2] = estimated[0]
+        # if self.counter < self.horizon:
+        #     self.counter += 1
+        # else:
+        #     self.err_roll[2] = estimated[0]
 
         self.err_pitch[0] = self.target_pose[0] - self.cur_pose[0]
         self.err_pitch[1] = self.err_pitch[0] - self.prev_err[2]
         self.prev_err[2] = self.err_pitch[0]
-        self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
+        self.int_err_list[2].append(self.err_pitch[0])
+        self.int_err_list[2] = self.int_err_list[2][-self.moving_win_len:]
+        self.err_pitch[2] = np.clip(sum(self.int_err_list[2]), -30, 30)
+        # self.err_pitch[2] = np.clip(self.err_pitch[2] + self.err_pitch[0], -30, 30)
         
         self.err_yaw[0] = self.zero_yaw - self.cur_pose[3]
         self.err_yaw[1] = self.err_yaw[0] - self.prev_err[3]
         self.prev_err[3] = self.err_yaw[0]
-        self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
+        self.int_err_list[3].append(self.err_yaw[0])
+        self.int_err_list[3] = self.int_err_list[3][-self.moving_win_len:]
+        self.err_yaw[2] = np.clip(sum(self.int_err_list[3]), -30, 30)
+        # self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
 
     def update_pos(self,curPose):
         self.prev_pose = self.cur_pose
@@ -145,7 +158,7 @@ class PID():
     def isReached(self):
         distCond = (np.linalg.norm(self.cur_pose[:2] - self.target_pose[:2]))**0.5 
         velCond = (np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3]))**0.5 
-        # print("distCond, velCond, z_err",distCond,velCond,self.cur_pose[2]-self.target_pose[2])
-        if distCond < 0.2 and velCond < 0.1 and abs(self.cur_pose[2]-self.target_pose[2])<0.1:
+        print("distCond, velCond, z_err",distCond,velCond,self.cur_pose[2]-self.target_pose[2])
+        if distCond < 0.3 and velCond < 0.1 and abs(self.cur_pose[2]-self.target_pose[2])<0.2:
             return True
         return False
