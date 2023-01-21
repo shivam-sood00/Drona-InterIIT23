@@ -3,7 +3,7 @@ import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
-from vision.integrator import get_velocity,get_angle_rate
+from vision.movingAverage import movingAverage
 import time
 import numpy as np
 from controls.pid_pluto import PID
@@ -32,9 +32,8 @@ class autoPluto:
         self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
-        self.horizon  = 5
-        self.data_fr_ma = np.zeros((3,self.horizon))
-        self.counter = 0
+        self.w_dot__movingAverage = movingAverage(1,5)
+        self.EKF = KalmanFilter()
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
@@ -111,17 +110,13 @@ class autoPluto:
     # update currentState
     def updateState(self):
         # flag, sensorData = time_sync(self.IMUQueue,self.CamQueue)
-        
-        # EKF = KalmanFilter(debug=False)
-        # currentTime = time.time()
-        # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
-        
-        # self.lastTime = currentTime
-
-        
-        
+        currentTime = time.time()
         if len(self.CamQueue)>0:
             sensorData = self.CamQueue[-1] # current_time, aruco_pose, z_from_realsense
+            
+            bias = 0
+            sensorData["imu"]["AccZ"] -= bias
+            sensorData["imu"]["AccZ"] = self.w_dot__movingAverage.getAverage(sensorData["imu"]["AccZ"])[0]
 
             for data in self.CamQueue:
                 if(len(data)==1):
@@ -154,22 +149,11 @@ class autoPluto:
             self.IMUQueue.clear() 
         
         
+        if self.currentState["lastVisionUpdate"] != -1:    
+            EstimatedStates = self.EKF.estimate_pose(self.currentState, sensorData, dt = currentTime - self.lastTime)
+        self.lastTime = currentTime
+
         
-        if self.currentState["lastVisionUpdate"] != -1:
-            
-            # Apply Moving Average on sensor data x y
-            self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-            self.data_fr_ma[0,self.horizon-1] = self.currentState['x']
-            self.data_fr_ma[1,self.horizon-1] = self.currentState['y']  
-            self.data_fr_ma[2,self.horizon-1] = self.currentState['z']   
-            estimated = np.average(self.data_fr_ma, axis=1)     
-            
-            if self.counter < self.horizon:
-                self.counter += 1
-            else:
-                self.currentState['x'] = estimated[0]
-                self.currentState['y'] = estimated[1]
-                self.currentState['z'] = estimated[2]
         # if self.debug:
         # print("updated state: ",self.currentState)
     

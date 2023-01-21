@@ -10,12 +10,12 @@ class QuadrotorDynamics():
 
     def getA(self):
         
-        A = np.array([[ 0, 0, 0, 1.0, 0, 0 ], #x
-                      [ 0, 0, 0, 0, 1, 0 ], #y
-                      [ 0, 0, 0, 0, 0, 1 ], #z
-                      [ 0, 0, 0, 0, 0, 0 ], #x_dot
-                      [ 0, 0, 0, 0, 0, 0 ], #y_dot
-                      [ 0, 0, 0, 0, 0, 0 ]]) #z_dot
+        A = np.array([[ 0., 0., 0., 1., 0., 0. ], #x
+                      [ 0., 0., 0., 0., 1., 0. ], #y
+                      [ 0., 0., 0., 0., 0., 1. ], #z
+                      [ 0., 0., 0., 0., 0., 0. ], #x_dot
+                      [ 0., 0., 0., 0., 0., 0. ], #y_dot
+                      [ 0., 0., 0., 0., 0., 0. ]]) #z_dot
         return A
 
     def getB(self,state):
@@ -24,24 +24,30 @@ class QuadrotorDynamics():
         theta = state["Pitch"]
         psi = state["Yaw"]
 
-        a =(np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.sin(theta))/self.m
-        b =(-np.sin(phi)*np.cos(psi) + np.cos(phi)*np.sin(psi)*np.sin(theta))/self.m
-        c =(np.cos(phi)*np.cos(theta))/self.m
-        B = np.array([[ 0 ],
-                      [ 0 ],
-                      [ 0 ],
+        a = np.sin(phi) * np.sin(psi) + np.cos(phi) * np.cos(psi) * np.sin(theta)
+        b =-np.cos(psi) * np.sin(phi) + np.cos(phi) * np.sin(psi) * np.sin(theta)
+        c = np.cos(phi) * np.cos(theta)
+        B = np.array([[ 0. ],
+                      [ 0. ],
+                      [ 0. ],
                       [ a ],
                       [ b ],
                       [ c ]])
         return B
     
-    def getC(self):
-        C = np.array([[ 0 ],
-                      [ 0 ],
-                      [ 0 ],
-                      [ 0 ],
-                      [ 0 ],
-                      [ -self.g ]])
+    def getC(self,state):
+        phi = state["Roll"]
+        theta = state["Pitch"]
+        psi = state["Yaw"]
+        a = np.sin(phi) * np.sin(psi) + np.cos(phi) * np.cos(psi) * np.sin(theta)
+        b =-np.cos(psi) * np.sin(phi) + np.cos(phi) * np.sin(psi) * np.sin(theta)
+        c = np.cos(phi) * np.cos(theta)
+        B = np.array([[ 0. ],
+                      [ 0. ],
+                      [ 0. ],
+                      [ self.g*a/c ],
+                      [ self.g*b/c ],
+                      [ 0.         ]])
         return C
 
     # def getA(self,state):
