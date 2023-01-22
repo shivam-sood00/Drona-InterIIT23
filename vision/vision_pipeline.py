@@ -13,7 +13,7 @@ class VisionPipeline():
                  depth_res=(720, 1280),
                  rgb_res=(720, 1280),
                  align_to="rgb",
-                 marker_size=3.75,
+                 marker_size=[3.62,4.00],#3.75
                  marker_type=aruco.DICT_4X4_50,
                  required_marker_id=0,
                  calib_file_path="../calib_data/MultiMatrix.npz",
@@ -185,14 +185,15 @@ class VisionPipeline():
         #print(marker_corners)
         #print(self.cam_matrix)
         #print(self.dist_coef)
-        
-        rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
-                [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
-            )
+        tf = []
+        for i in enumerate(self.marker_size):
+            rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
+                    [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
+                )
         #print("RVec:",rVec,"Tvec:",tVec)
-        tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])        
-        tf = self.cam_tf @ tf
-        return self.tf_to_outformat(tf) / 100.0
+            tf.append(self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :]))       
+            tf.append(self.cam_tf @ tf)
+        return self.tf_to_outformat(tf[0]) / 100.0, self.tf_to_outformat(tf[1]) / 100.0
 
 
     def make_tf_matrix(self, rvec, tvec):
@@ -282,7 +283,7 @@ class VisionPipeline():
             else:
                 # print("detected")
                 counter = 0
-                aruco_pose = self.estimate_pose(marker_corners)
+                aruco_pose_xy, aruco_pose_z = self.estimate_pose(marker_corners)
                 #dt = current_time - last_time
                 #last_time = current_time
                 #print(f"[{current_time}]: Aruco ESTIMATE: ", aruco_pose)
@@ -319,7 +320,8 @@ class VisionPipeline():
                 z_from_realsense = 2.82 + (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
                 ##############################################################################
                 # print("Z: ", z_from_realsense)
-                
+                aruco_pose = aruco_pose_xy
+                aruco_pose[2] = aruco_pose_z[2]
                 flag=0
                 cam_queue.append([current_time, aruco_pose, z_from_realsense])
 
