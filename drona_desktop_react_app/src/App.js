@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import logo from "./logo.svg";
 import "./App.css";
-import takeOffButton from "./Assets/Images/take_off_cropped.png";
-import armButton from "./Assets/Images/arm_cropped.png";
+import takeOffButton from "./Assets/Images/takeOff.png";
+import landButton from "./Assets/Images/land.png";
+import armButton from "./Assets/Images/arm.png";
 import trapezium from "./Assets/Images/trapezium.png";
 import aButton from "./Assets/Images/a.png";
 import dButton from "./Assets/Images/d.png";
@@ -53,7 +54,7 @@ function App() {
   const [pitch, setPitch] = useState(-1); // Instantaneous Pitch of the drone
   const [yaw, setYaw] = useState(-1); // Instantaneous Yaw of the drone
   const [graphToggle, setGraphToggle] = useState(true);
-
+  const [landTakeOff, setLandTakeOff] = useState(true);
   // data1 => (xData1, yData1, zData1) = (YAW, ROLL, PITCH)
 
   const [xData1, setXData1] = useState([]);
@@ -72,6 +73,7 @@ function App() {
     let requestURL = url + "controller/" + e;
 
     if (e == "disArm") setThrottle((prev) => 0); // Setting throttle to 0 at disArm
+    if (e == "takeOff") setLandTakeOff((prev) => !prev);
     axios.get(requestURL).then((res) => {
       setResponse(res);
     });
@@ -405,7 +407,7 @@ function App() {
                 ></button>
                 <img
                   className="mx-auto h-full"
-                  src={takeOffButton}
+                  src={landTakeOff ? landButton : takeOffButton}
                   alt="takeOffButton"
                 />
               </div>
