@@ -13,7 +13,7 @@ class VisionPipeline():
                  depth_res=(720, 1280),
                  rgb_res=(720, 1280),
                  align_to="rgb",
-                 marker_size=3.62,
+                 marker_size=3.75,
                  marker_type=aruco.DICT_4X4_50,
                  required_marker_id=0,
                  calib_file_path="../calib_data/MultiMatrix.npz",
@@ -59,11 +59,11 @@ class VisionPipeline():
 
         colorSensor.set_option(rs.option.sharpness, 100)
         colorSensor.set_option(rs.option.contrast, 50)
-        colorSensor.set_option(rs.option.gamma, 10)
+        # colorSensor.set_option(rs.option.gamma, 0)
         colorSensor.set_option(rs.option.brightness, 30)
 
         colorSensor.set_option(rs.option.exposure, 100)
-        colorSensor.set_option(rs.option.gain, 100)
+        colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()
         self.depth_scale = self.depth_sensor.get_depth_scale()
@@ -84,55 +84,22 @@ class VisionPipeline():
         #     raise FileNotFoundError(f"File {self.calib_file_path} not found!")
 
         # calib_data = np.load(self.calib_file_path)
-        PPX = 631.432983398438
-        PPY = 369.294647216797
-        Fx = 639.510131835938
-        Fy = 638.663208007812
-
+        fx = 640.381164550781
+        cx = 631.432983398438
+        fy = 639.533020019531
+        cy = 409.294647216797
         self.cam_matrix = np.array([[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]) #calib_data["camMatrix"]
-        # self.cam_matrix = np.array([[Fx, 0, PPX],[0, Fy, PPY],[0,0,1]]) #calib_data["camMatrix"]
-        # self.cam_matrix = np.array(        [[671.20128407 ,  0. ,        622.89788119],
-        #  [0.,         673.12174541, 350.66939199],
-        # [0,
-        # 0,
-        # 1]]) #calib_data["camMatrix"]
-
-        # [[671.20128407   0.         622.89788119]
-        #  [0.         673.12174541 350.66939199]
-        # [0.
-        # 0.
-        # 1.]]
-
         self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
-        # -0.01537895 - 0.00629571 - 0.00462646 - 0.00262661
-        # 0.00930224
-        # self.dist_coef = np.array(([0, 0, 0, 0, 0])) #np.array([-0.0563891045749187, 0.0661624521017075, 9.07330249901861e-05, 6.26308901701123e-05, -0.0209800880402327]) #np.zeros((5, 1))  #calib_data["distCoef"]
-
         """dist_coef = np.zeros((5, 1))"""
-        # self.cam_rvec = np.array([0.19631208, -3.09790361,  0.45218248]) #np.array([2.39186155, -2.1673783,   0.18843832]) #np.array([-0.19321318,  2.73739701, -0.03509624]) #np.array([0.12747728, -3.03007291, -0.31749833]) #np.array([1.63839208 ,-1.83514309, -0.16816304]) #np.array([0.26238109, -3.30088755, -0.07543371]) #np.array([-2.97019626, -0.3456304, 0.31979031]) #calib_data["rVector"] #
-        # self.cam_tvec = np.array([31.16208461,  11.43735015, 288.08493828]) #np.array([31.95401385,  11.09677812, 289.2188145]) #np.array([27.30823905, 4.2448156, 277.09033646]) #np.array([80.50181036, 54.45316379, 286.19400413]) #np.array([11.56079921, -13.0814128,  271.02415795])
-
-        # self.cam_rvec = np.array([2.39186155, -2.1673783,   0.18843832]) #np.array([-0.19321318,  2.73739701, -0.03509624]) #np.array([0.12747728, -3.03007291, -0.31749833]) #np.array([1.63839208 ,-1.83514309, -0.16816304]) #np.array([0.26238109, -3.30088755, -0.07543371]) #np.array([-2.97019626, -0.3456304, 0.31979031]) #calib_data["rVector"] #
-        # self.cam_tvec = np.array([31.95401385,  11.09677812, 289.2188145])
-
-        # self.cam_rvec = np.array([[ 0.,         0.,        0.0959931]])
-        # self.cam_rvec = np.array([0.34884334, -0.01523084, -0.08637838])
-        # self.cam_rvec = np.array([[0., 0., 0]])
-        # self.cam_tvec = np.array([31.95401385,  11.09677812, 289.2188145])
 
         self.cam_rvec = np.array([0.19871563,-2.77587892,  0.01353023])
         self.cam_tvec = np.array([45.3696582, 2.74554166, 273.25319103])
-
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
 
         self.param_markers = aruco.DetectorParameters_create()
-        # self.param_markers.adaptiveThreshWinSizeMin = 1
-        # self.param_markers.minSideLengthCanonicalImg = 1
-        # self.param_markers.aprilTagQuadDecimate = 10.0
-        # self.param_markers.minMarkerPerimeterRate = 0.02
-        # self.param_markers.errorCorrectionRate = 4.0
-        # self.param_markers.minOtsuStdDev = 30.0
+        
+
     def stop(self):
         self.pipeline.stop()
 
@@ -163,8 +130,6 @@ class VisionPipeline():
         marker_corners, marker_IDs, reject = aruco.detectMarkers(
             gray_frame, self.marker_dict, parameters=self.param_markers
         )
-
-
 
         if self.DEBUG:
             frame = self.plot_markers(frame, marker_corners, marker_IDs)
@@ -224,9 +189,8 @@ class VisionPipeline():
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
-        print("RVec:",rVec,"Tvec:",tVec)
-        # tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])
-        tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
+        #print("RVec:",rVec,"Tvec:",tVec)
+        tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])        
         tf = self.cam_tf @ tf
         return self.tf_to_outformat(tf) / 100.0
 
@@ -240,7 +204,6 @@ class VisionPipeline():
 
     
     def tf_to_outformat(self, tf):
-        print("OUTPUT TF: ", tf)
         out_vec = np.zeros((6, 1))
         out_vec[3:, 0] = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
         out_vec[:3, 0] = tf[:3, 3]
@@ -366,7 +329,7 @@ class VisionPipeline():
             cv2.imshow("RGB Image",color_img)
                 
 
-            key = cv2.waitKey(0)
+            key = cv2.waitKey(1)
             if key & 0xFF == ord('q') or key == 27:
                 cv2.destroyAllWindows()
                 

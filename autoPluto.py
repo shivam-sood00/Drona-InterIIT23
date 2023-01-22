@@ -3,7 +3,7 @@ import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline import VisionPipeline
-from vision.integrator import get_velocity,get_angle_rate
+from vision.movingAverage import movingAverage
 import time
 import numpy as np
 from controls.pid_pluto import PID
@@ -18,7 +18,7 @@ class autoPluto:
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
-        self.currentState = None
+        self.currentState = {"lastVisionUpdate":-1,"lastImuUpdate":-1,"x":-1,"y":-1,"z":-1,"Roll":-1,"Pitch":-1,"Yaw":-1}
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.trajectory = [[0,0,0.9]]
         # self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
@@ -32,12 +32,14 @@ class autoPluto:
         self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
-        self.horizon  = 5
-        self.data_fr_ma = np.zeros((3,self.horizon))
-        self.counter = 0
+        self.w_dot__movingAverage = movingAverage(1,5)
+        self.EKF = KalmanFilter()
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
+        self.visionTime = None
+        self.controlTime = None
+        self.imuTime = None
         # print(self.comms.paramsSet)
         # self.file = open('debug.csv', 'a+', newline ='')
         # with self.file:
@@ -67,7 +69,7 @@ class autoPluto:
         while(ret==0):
             # print("runloop")
             self.updateState()
-            if self.currentState is None:
+            if self.currentState["lastVisionUpdate"]==-1 or self.currentState["lastImuUpdate"]==-1:
                 continue
             if first:
                 if i>=len(self.trajectory):
@@ -75,9 +77,9 @@ class autoPluto:
                     self.outOfBound = 3
                 else:
                     point = self.trajectory[i]
-                point[0] += self.currentState[0]
-                point[1] += self.currentState[1]
-                point[2] += self.currentState[2]
+                point[0] += self.currentState['x']
+                point[1] += self.currentState['y']
+                point[2] += self.currentState['z']
                 i+=1
                 if i!=1:
                     self.pid.useWay=True
@@ -85,15 +87,16 @@ class autoPluto:
                 # print(self.pid.target_pose)
                 if yawUpdateFlag:
                     yawUpdateFlag = False
-                    self.pid.zero_yaw = self.currentState[3]
+                    self.pid.zero_yaw = self.currentState['Yaw']
                 first = False
+            print(self.currentState)
             self.updateAction()
             ret = self.takeAction()
             # data = [self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3]]
             # if self.file:
             #     self.write.writerows(np.array(data,dtype=np.float64))
             # print("ok")
-            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5])
+            print(self.currentState['x'],self.currentState['y'],self.currentState['z'],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState['Yaw'],self.currentState['Roll'],self.currentState['Pitch'])
             # print("not")
             time.sleep(self.runLoopWaitTime)
             # TODO: update target wavePoint when previous target reached
@@ -107,17 +110,13 @@ class autoPluto:
     # update currentState
     def updateState(self):
         # flag, sensorData = time_sync(self.IMUQueue,self.CamQueue)
-        
-        # EKF = KalmanFilter(debug=False)
-        # currentTime = time.time()
-        # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
-        
-        # self.lastTime = currentTime
-
-        
-        
+        currentTime = time.time()
         if len(self.CamQueue)>0:
             sensorData = self.CamQueue[-1] # current_time, aruco_pose, z_from_realsense
+            
+            bias = 0
+            sensorData["imu"]["AccZ"] -= bias
+            sensorData["imu"]["AccZ"] = self.w_dot__movingAverage.getAverage(sensorData["imu"]["AccZ"])[0]
 
             for data in self.CamQueue:
                 if(len(data)==1):
@@ -126,10 +125,11 @@ class autoPluto:
             # print(sensorData)
             
             if self.outOfBound==0:
-                if self.currentState is  None:
-                    self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
-                else:
-                    self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    self.currentState['x'] = sensorData[1][0,0]
+                    self.currentState['y'] = sensorData[1][1,0]
+                    self.currentState['z'] = sensorData[2]
+                    self.currentState["lastVisionUpdate"] = sensorData[0]
+                    #self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
                     
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
@@ -137,35 +137,22 @@ class autoPluto:
         if len(self.IMUQueue)>0:
             if self.currentState is None:
                 pass
-            elif len(self.currentState)==3:
-                self.currentState +=  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
+            # elif len(self.currentState)==3:
+            #     self.currentState["Roll"] =  self.IMUQueue[-1]["Yaw"]
+            #     self.currentState["Pitch"] = self.IMUQueue[-1]["Roll"]
+            #     self.currentState["Yaw"] = self.IMUQueue[-1]["Pitch"]
             else:
-                self.currentState[-3:] =  [self.IMUQueue[-1]["Yaw"],self.IMUQueue[-1]["Roll"],self.IMUQueue[-1]["Pitch"]]
-            self.IMUQueue.clear()
+                self.currentState["Roll"] =  self.IMUQueue[-1]["Roll"]
+                self.currentState["Pitch"] = self.IMUQueue[-1]["Pitch"]
+                self.currentState["Yaw"] = self.IMUQueue[-1]["Yaw"]
+                self.currentState["lastImuUpdate"] = self.IMUQueue[-1]["timeOfLastUpdate"]
+            self.IMUQueue.clear() 
+        
+        
+        if self.currentState["lastVisionUpdate"] != -1:    
+            EstimatedStates = self.EKF.estimate_pose(self.currentState, sensorData, dt = currentTime - self.lastTime)
+        self.lastTime = currentTime
 
-        elif self.currentState is None:
-            pass        
-        
-        elif len(self.currentState) == 3:
-            self.currentState = None
-        
-        
-        if self.currentState is not None:
-            
-            # Apply Moving Average on sensor data x y
-            self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]
-            self.data_fr_ma[0,self.horizon-1] = self.currentState[0]
-            self.data_fr_ma[1,self.horizon-1] = self.currentState[1]  
-            self.data_fr_ma[2,self.horizon-1] = self.currentState[2]   
-            estimated = np.average(self.data_fr_ma, axis=1)     
-            
-            if self.counter < self.horizon:
-                self.counter += 1
-            else:
-                self.currentState[0] = estimated[0]
-                self.currentState[1] = estimated[1]
-                self.currentState[2] = estimated[2]
-        
         
         # if self.debug:
         # print("updated state: ",self.currentState)
@@ -188,12 +175,14 @@ class autoPluto:
         self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
         self.action["Throttle"] = self.pid.set_thrust()
         self.action["Yaw"] = self.pid.set_yaw()
+        self.controlTime = time.time()
         # print("action: ",self.action)
     
     def takeAction(self):
         if self.outOfBound==0:
             # print("sending action")
             # converting to integer as we can only send integral values via MSP Packets
+            # print("imu latency: ",self.controlTime-self.currentState["lastImuUpdate"],"\tvision latency: ",self.controlTime-self.currentState["lastVisionUpdate"])
             self.comms.paramsSet["Roll"] = int(self.action["Roll"])
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])

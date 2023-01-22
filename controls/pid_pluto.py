@@ -94,7 +94,13 @@ class PID():
             Updating the current pose of the quadrotor.
         """
         self.prev_pose = self.cur_pose
-        self.cur_pose = np.array(curPose).reshape(6,1)
+        # list_curPose = list(curPose.values())
+        self.cur_pose[0] = curPose['x']
+        self.cur_pose[1] = curPose['y']
+        self.cur_pose[2] = curPose['z']
+        self.cur_pose[3] = curPose['Yaw']
+        self.cur_pose[4] = curPose['Roll']
+        self.cur_pose[5] = curPose['Pitch']
 
     def set_target_pose(self,point):
         """
