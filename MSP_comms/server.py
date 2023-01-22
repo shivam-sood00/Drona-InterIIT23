@@ -34,15 +34,15 @@ def droneParameters():
     params = c.paramsReceived
     # print(c.paramsReceived)
     data = {}
-    data["rcThrottle"] = params["rcThrottle"]
-    data["Roll"] = params["Roll"]
-    data["Pitch"] = params["Pitch"]
-    data["Yaw"] = params["Yaw"]
+    # data["rcThrottle"] = params["rcThrottle"]
+    # data["Roll"] = params["Roll"]
+    # data["Pitch"] = params["Pitch"]
+    # data["Yaw"] = params["Yaw"]
 
-    # data["rcThrottle"] = randint(-18, 18)
-    # data["Roll"] = randint(-18, 18)
-    # data["Pitch"] = randint(-18, 18)
-    # data["Yaw"] = randint(-18, 18)
+    data["rcThrottle"] = randint(-50, 50)
+    data["Roll"] = randint(-18, 18)
+    data["Pitch"] = randint(-18, 18)
+    data["Yaw"] = randint(-18, 18)
 
     # printing data on terminal
     # print("droneParameter " + str(data))

@@ -169,8 +169,8 @@ function App() {
         fill: false,
         backgroundColor: "rgba(75,192,192,0.2)",
         borderColor: "#ffde59",
-        lineTension: 0.4,
-        radius: 6,
+        // lineTension: 0.4,
+        // radius: 6,
       },
     ],
   });
