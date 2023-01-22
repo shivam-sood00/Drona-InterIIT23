@@ -119,7 +119,7 @@ class COMMS:
         self.Port = Port
         self.debug = debug
         self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.mySocket.connect((self.TCP_IP, self.Port))
+        self.mySocket.connect((self.TCP_IP, self.Port))
         self.waitTime = 0.17
         if self.debug:
             print("Socket Connected")
@@ -191,7 +191,6 @@ class COMMS:
         """
         Member Function to Arm the drone
         """
-        print("Arm Executing")
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1000
@@ -202,7 +201,6 @@ class COMMS:
         """
         Member Function to BoxArm the drone
         """
-        print("boxArm Executing")
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1500
@@ -213,7 +211,6 @@ class COMMS:
         """
         Member Function to disArm the drone
         """
-        print("disArm Executing")
         self.paramsSet["Throttle"] = 1300
         self.paramsSet["Aux4"] = 1000
         time.sleep(self.waitTime)
@@ -222,7 +219,6 @@ class COMMS:
         """
         Member Function to increase pitch so that the drone moves forward
         """
-        print("forward Executing")
         self.paramsSet["Pitch"] = 1600
         time.sleep(self.waitTime)
 
@@ -230,7 +226,6 @@ class COMMS:
         """
         Member function to decrease pitch so that the drone moves backward
         """
-        print("backward Executing")
         self.paramsSet["Pitch"] = 1400
         time.sleep(self.waitTime)
 
@@ -238,7 +233,6 @@ class COMMS:
         """
         Member Function to decrease roll so that the drone moves towards left
         """
-        print("left Executing")
         self.paramsSet["Roll"] = 1400
         time.sleep(self.waitTime)
 
@@ -246,7 +240,6 @@ class COMMS:
         """
         Member Function to increase roll so that the drone moves towards right
         """
-        print("right Executing")
         self.paramsSet["Roll"] = 1600
         time.sleep(self.waitTime)
 
@@ -254,7 +247,6 @@ class COMMS:
         """
         Member Function to decrease yaw so that the drone rotates toward left
         """
-        print("leftYaw Executing")
         self.paramsSet["Yaw"] = 1200
         time.sleep(self.waitTime)
 
@@ -262,7 +254,6 @@ class COMMS:
         """
         Member Function to increase yaw so that the drone rotates toward right
         """
-        print("rightYaw Executing")
         self.paramsSet["Yaw"] = 1800
         time.sleep(self.waitTime)
 
@@ -270,7 +261,6 @@ class COMMS:
         """
         Member Functioon to set all parameters to set to default values.
         """
-        print("reset Executing")
         self.paramsSet["Roll"] = 1500
         self.paramsSet["Pitch"] = 1500
         self.paramsSet["Throttle"] = 1500
@@ -282,7 +272,6 @@ class COMMS:
         """
         Member Function to increase throttle so that height of drone is increased
         """
-        print("increaseHeight Executing")
         self.paramsSet["Throttle"] = 1800
         time.sleep(self.waitTime)
 
@@ -290,7 +279,6 @@ class COMMS:
         """
         Member Function to provide a low throttle, generally used for hardware testing
         """
-        print("lowThrottle Executing")
         self.paramsSet["Throttle"] = 901
         time.sleep(self.waitTime)
 
@@ -298,7 +286,6 @@ class COMMS:
         """
         Member Function to decrease throttle so that height of drone is decreased
         """
-        print("decreaseHeight Executing")
         self.paramsSet["Throttle"] = 1300
         time.sleep(self.waitTime)
 
@@ -306,7 +293,6 @@ class COMMS:
         """
         Member Function to set command as takeOff
         """
-        print("takeOff Executing")
         self.disArm()
         self.boxArm()
         self.paramsSet["currentCommand"] = 1
@@ -316,7 +302,6 @@ class COMMS:
         """
         Member Function to set command as land
         """
-        print("land Executing")
         self.reset()
         self.paramsSet["currentCommand"] = 2
         # Giving extra 2 seconds to land
@@ -327,7 +312,6 @@ class COMMS:
         """
         Member Function to set command as back flip
         """
-        print("backflip Executing")
         self.paramsSet["currentCommand"] = 3
         time.sleep(self.waitTime)
 
@@ -360,7 +344,6 @@ class COMMS:
         # self.mySocket.send(bytearray(msgToBeSent))
         while self.writeLoop:
             # Sending MSP_SET_RAW_RC type message
-            # print("inside while for write")
             msgLen = 16
             typeOfPayload = 200
             msgData = []
@@ -417,7 +400,6 @@ class COMMS:
 
             buff = self.receiveMSPresponse(buff)
             # print(self.paramsReceived['Yaw'])
-            # print(self.paramsReceived)
             if self.debug:
                 self.printParams()
 
@@ -477,8 +459,7 @@ class COMMS:
         """
         Member Function to read data and appends it at the end of buffer
         """
-        arr = []
-        # arr = self.mySocket.recv(self.outBufferSize)
+        arr = self.mySocket.recv(self.outBufferSize)
         buff.extend(list(arr))
         if self.debug:
             print("buff: ", buff)
@@ -568,7 +549,7 @@ class COMMS:
                 out.append(getDec(buff[7], buff[8]))
             elif idx == self.outServices["MSP_RC"]:
                 for i in range(0, msgLen, 2):
-                    out.append(getSignedDec(buff[i + 5], buff[i + 6]))
+                    out.append(getSignedDec(buff[i + 5], buff[i + 6]) * 10)
             elif idx == self.outServices["MSP_COMMAND"]:
                 out.append(getDec(buff[5], buff[6]))
                 out.append(buff[7])
