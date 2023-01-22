@@ -21,6 +21,7 @@ stateRoll=[]
 
 errX_with_sse=[]
 errY_with_sse=[]
+errZ_with_sse=[]
 
 
 stateCont = 3
@@ -104,6 +105,8 @@ for each in file:
     
     errX_with_sse.append(msg[13])
     errY_with_sse.append(msg[14])
+    errZ_with_sse.append(msg[15])
+
 
 import matplotlib.pyplot as plt
 
@@ -187,4 +190,12 @@ plt.clf()
 
 plt.plot(errY_with_sse)
 plt.savefig(f"{folder_name}/errY_with_sse.png")
+plt.clf()
+
+plt.plot(errZ_with_sse)
+plt.savefig(f"{folder_name}/errZ_with_sse.png")
+plt.clf()
+
+plt.plot(x,y)
+plt.savefig(f"{folder_name}/x vs y.png")
 plt.clf()

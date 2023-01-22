@@ -6,6 +6,7 @@ import time
 import os
 from scipy.spatial.transform import Rotation
 import csv
+import math
 
 class VisionPipeline():
 
@@ -18,7 +19,8 @@ class VisionPipeline():
                  required_marker_id=0,
                  calib_file_path="../calib_data/MultiMatrix.npz",
                  debug=0,
-                 padding=50) -> None:
+                 padding=50,
+                 do_tracking=True) -> None:
 
 
         self.depth_res = depth_res
@@ -36,6 +38,12 @@ class VisionPipeline():
         
         self.DEBUG = debug
         self.padding = padding
+
+        self.do_tracking = do_tracking
+        self.last_detected_marker = None
+        self.tracking_area_th = 60
+        self.tracking_point_th = 12
+        
         pass
 
 
@@ -121,6 +129,13 @@ class VisionPipeline():
 
     def to_image(self, frame):
         return np.asarray(frame.get_data())
+    
+    
+    def find_area(self, corners):
+        corners = corners[0]
+        area = (corners[0][0] * corners[1][1] + corners[1][0] * corners[2][1] + corners[2][0] * corners[3][1] + corners[3][0] * corners[0][1])
+        area = area - (corners[1][0] * corners[0][1] + corners[2][0] * corners[1][1] + corners[3][0] * corners[2][1] + corners[0][0] * corners[3][1])
+        return area
 
     
     def detect_marker(self, frame):
@@ -133,14 +148,67 @@ class VisionPipeline():
 
         if self.DEBUG:
             frame = self.plot_markers(frame, marker_corners, marker_IDs)
-            frame = self.plot_rej_markers(frame, reject)
-            cv2.imwrite(f"frames/{time.time()}.jpg", frame)
-            self.show_frame(frame)
+            # frame = self.plot_rej_markers(frame, reject)
+            # cv2.imwrite(f"frames/{time.time()}.jpg", frame)
+            # self.show_frame(frame)
 
         if marker_IDs is None:
-            if self.DEBUG:
-                print("NO marker detected")
-            return None
+            
+            if (self.do_tracking == True):
+                
+                if (reject is None) or (self.last_detected_marker is None):
+                    if self.DEBUG:
+                        frame = self.plot_rej_markers(frame, reject)
+                        self.show_frame(frame)
+                        print("NO marker detected")
+                    return None
+                
+                else:
+                    last_area = self.find_area(self.last_detected_marker)
+                    last_center = np.mean(self.last_detected_marker[0], 0) / 4.0
+                    
+                    for i, reject_corners in enumerate(reject):
+                        new_center = np.mean(reject_corners[0], 0) / 4.0
+                        new_area = self.find_area(reject_corners)
+                        
+                        if((abs(new_area - last_area) <= self.tracking_area_th) and (math.sqrt(np.sum((new_center - last_center) ** 2)) <= self.tracking_point_th)):
+                            self.last_detected_marker = reject_corners.copy()
+                            
+                            if self.DEBUG:
+                                frame = cv2.polylines(frame, [reject_corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
+                                self.show_frame(frame)
+                                
+                            return reject_corners.astype(np.int32)
+                        
+                        else:
+                            
+                            if self.DEBUG:
+                                print("NO TRACKING: ", new_area, new_center)
+                                print("LAST: ", last_area, last_center)
+
+
+                    if self.DEBUG:
+                        frame = self.plot_rej_markers(frame, reject)
+                        print("NO marker detected")
+                        self.show_frame(frame)
+                    
+                    self.last_detected_marker = None
+                    return None
+            
+            else:
+                if (reject is None):
+                    if self.DEBUG:
+                        frame = self.plot_rej_markers(frame, reject)
+                        self.show_frame(frame)
+                        print("NO marker detected")
+                    return None
+                        # print(reject_corners.shape)
+                    
+        
+        if self.DEBUG:
+            frame = self.plot_rej_markers(frame, reject)
+            self.show_frame(frame)            
+                    
 
         for i, id_ in enumerate(marker_IDs):
             
@@ -151,6 +219,7 @@ class VisionPipeline():
                 if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
                     return "None"
 
+                self.last_detected_marker = marker_corners[i].copy()
                 return marker_corners[i].astype(np.int32)
 
         return None
