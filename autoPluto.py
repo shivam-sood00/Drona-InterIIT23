@@ -14,20 +14,18 @@ from configparser import ConfigParser
 class autoPluto:
     def __init__(self,debug = False):
         self.comms = COMMS()
-        self.debug = debug        
+        self.debug = debug      
+        self.config = ConfigParser()
+        # if self.debug:
+        self.config.read('controls/droneData.ini')  
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        # self.trajectory = [[0,0,0.9]]
-        self.trajectory = [[0,0,0.9],[0.5,0.0,0.9],[0.5,-0.3,0.9],[0,-0.3,0.9]]
-
-        # self.trajectory = [[0,0,0.9],[0.5,0,0],[0,-0.3,0],[-0.5,0,0]]
+        self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
+        self.trajectory = []
         self.outOfBound = 0
-        self.config = ConfigParser()
-        # if self.debug:
-        self.config.read('controls/droneData.ini')
         # print(self.config.sections())
         droneNumber = self.config.getint("Drone Number","droneNumber")
         # print(droneNumber)
@@ -60,37 +58,46 @@ class autoPluto:
         camera.cam_init()
         camera.cam_process(self.CamQueue)
     
-# 
     def run(self):
         ret = 0
         i = 0
         first=True
-        yawUpdateFlag = True
+        # yawUpdateFlag = True
         while(ret==0):
             # print("runloop")
             self.updateState()
             if self.currentState is None:
+                # print("here")
                 continue
             if first:
-                if i>=len(self.trajectory):
-                    print("done..!!")
-                    self.outOfBound = 3
-                else:
-                    point = self.trajectory[i]
-                    if i == 0:
-                        point[0] += self.currentState[0]
-                        point[1] += self.currentState[1]
-                        point[2] += self.currentState[2]
-                    # else:
-                    #     point = 
-                i+=1
-                if i!=1:
-                    self.pid.useWay=True
-                self.pid.set_target_pose(point=point)
-                print("Target: ")
-                if yawUpdateFlag:
-                    yawUpdateFlag = False
-                    self.pid.zero_yaw = self.currentState[3]
+                # if yawUpdateFlag:
+                #     yawUpdateFlag = False
+                self.pid.zero_yaw = self.currentState[3]
+                self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
+                self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1],  self.rectangle[2]])
+                self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
+                self.trajectory.append([self.currentState[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
+                self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
+                
+                self.pid.set_target_pose(self.trajectory[i])
+                
+                # if i>=len(self.trajectory):
+                #     print("done..!!")
+                #     self.outOfBound = 3
+                # else:
+                #     point = self.trajectory[i]
+                #     if i == 0:
+                #         point[0] += self.currentState[0]
+                #         point[1] += self.currentState[1]
+                #         point[2] += self.currentState[2]
+                #     # else:
+                #     #     point = 
+                # i+=1
+                # if i!=1:
+                #     self.pid.useWay = True
+                # self.pid.set_target_pose(point=point)
+                # print("Target: ")
+                
                 first = False
             self.updateAction()
             ret = self.takeAction()
@@ -98,13 +105,18 @@ class autoPluto:
             # if self.file:
             #     self.write.writerows(np.array(data,dtype=np.float64))
             # print("ok")
-            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5])
+            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5],self.pid.err_pitch_with_sse[0],self.pid.err_roll_with_sse[0])
             # print("not")
             time.sleep(self.runLoopWaitTime)
-            # TODO: update target wavePoint when previous target reached
             if self.pid.isReached():
-                first = True
+                i += 1
+                self.pid.useWay = True
+                self.pid.set_target_pose(self.trajectory[i])
                 print("IS Reached True")
+                
+                if i == len(self.trajectory):
+                    print("jai mata di")
+                    self.outOfBound = 3
                 # break
             
         time.sleep(2)
@@ -118,7 +130,6 @@ class autoPluto:
         # self.currentState = EKF.estimate_pose(self.action,sensorData,flag,dt =currentTime-self.lastTime)
         
         # self.lastTime = currentTime
-
         
         
         if len(self.CamQueue)>0:

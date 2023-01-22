@@ -92,8 +92,8 @@ class VisionPipeline():
         self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
         """dist_coef = np.zeros((5, 1))"""
 
-        self.cam_rvec = np.array([0.19871563,-2.77587892,  0.01353023])
-        self.cam_tvec = np.array([45.3696582, 2.74554166, 273.25319103])
+        self.cam_rvec = np.array([0.10357627, -2.8488926,  -0.55131484])
+        self.cam_tvec = np.array([46.22983901,   1.60285046, 278.0799618])
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
 
@@ -181,7 +181,7 @@ class VisionPipeline():
 
 
 
-    def estimate_pose(self, marker_corners):
+    def estimate_pose(self, marker_corners, frame_of_ref="camera"):
         #print(marker_corners)
         #print(self.cam_matrix)
         #print(self.dist_coef)
@@ -189,9 +189,19 @@ class VisionPipeline():
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
-        #print("RVec:",rVec,"Tvec:",tVec)
-        tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])        
-        tf = self.cam_tf @ tf
+        # print("RVec:",rVec,"Tvec:",tVec)
+        tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
+        if frame_of_ref == "camera":
+            
+            correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+            tf = correction_tf @ tf
+            
+            translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
+            translation_tf = np.linalg.pinv(translation_tf)
+            tf = translation_tf @ tf
+            pass
+        else:        
+            tf = self.cam_tf @ tf
         return self.tf_to_outformat(tf) / 100.0
 
 
@@ -313,12 +323,17 @@ class VisionPipeline():
                 # else:
                 #     flag = 0
                     # print("appending")
+                new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+                
                 point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-                new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
-                new_tf = np.linalg.pinv(new_tf)
-                z_from_realsense = 2.82 + (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+                # new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+                # new_tf = np.linalg.pinv(new_tf)
+                z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+                z_from_realsense = -z_from_realsense + 2.858
                 ##############################################################################
                 # print("Z: ", z_from_realsense)
+                
+                aruco_pose[0] = -aruco_pose[0]
                 
                 flag=0
                 cam_queue.append([current_time, aruco_pose, z_from_realsense])

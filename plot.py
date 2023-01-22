@@ -5,16 +5,23 @@ file = open('debug.txt', 'r')
 x=[]
 y=[]
 z=[]
+
 errX=[]
 errY=[]
 errZ=[]
+
 roll=[]
 pitch=[]
 throttle=[]
 yaw=[]
+
 stateYaw=[]
 statePitch=[]
 stateRoll=[]
+
+errX_with_sse=[]
+errY_with_sse=[]
+
 
 stateCont = 3
 
@@ -94,6 +101,9 @@ for each in file:
     stateYaw.append(msg[10])
     stateRoll.append(msg[11])
     statePitch.append(msg[12])
+    
+    errX_with_sse.append(msg[13])
+    errY_with_sse.append(msg[14])
 
 import matplotlib.pyplot as plt
 
@@ -169,4 +179,12 @@ plt.clf()
 
 plt.plot(statePitch)
 plt.savefig(f"{folder_name}/statePitch.png")
+plt.clf()
+
+plt.plot(errX_with_sse)
+plt.savefig(f"{folder_name}/errX_with_sse.png")
+plt.clf()
+
+plt.plot(errY_with_sse)
+plt.savefig(f"{folder_name}/errY_with_sse.png")
 plt.clf()
