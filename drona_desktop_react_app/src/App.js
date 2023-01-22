@@ -5,6 +5,7 @@ import "./App.css";
 import takeOffButton from "./Assets/Images/takeOff.png";
 import landButton from "./Assets/Images/land.png";
 import armButton from "./Assets/Images/arm.png";
+import disArmButton from "./Assets/Images/disArm.png";
 import trapezium from "./Assets/Images/trapezium.png";
 import aButton from "./Assets/Images/a.png";
 import dButton from "./Assets/Images/d.png";
@@ -14,8 +15,8 @@ import leftButton from "./Assets/Images/left.png";
 import downButton from "./Assets/Images/down.png";
 import rightButton from "./Assets/Images/right.png";
 import upButton from "./Assets/Images/up.png";
-import wasd from "./Assets/Images/wasd.png";
-import UpRightDownLeft from "./Assets/Images/UpRightDownLeft.png";
+import wasd from "./Assets/Images/wasd_new.png";
+import UpRightDownLeft from "./Assets/Images/UpRightDownLeft_new.png";
 import graphNameBg from "./Assets/Images/graph_name_bg.png";
 import graphLegendBg from "./Assets/Images/graph_legend_bg.png";
 import graph_group_name_active_bg from "./Assets/Images/graph_group_name_active_bg.png";
@@ -55,6 +56,7 @@ function App() {
   const [yaw, setYaw] = useState(-1); // Instantaneous Yaw of the drone
   const [graphToggle, setGraphToggle] = useState(true);
   const [landTakeOff, setLandTakeOff] = useState(true);
+  const [armDisArm, setArmDisArm] = useState(true);
   // data1 => (xData1, yData1, zData1) = (YAW, ROLL, PITCH)
 
   const [xData1, setXData1] = useState([]);
@@ -65,15 +67,18 @@ function App() {
   const [xData2, setXData2] = useState([]);
 
   // labelData => seconds passed
-  const [labelData1, setLabelData1] = useState([0, 1, 2, 3, 4, 5, 6]);
-  const [labelData2, setLabelData2] = useState([0, 1, 2, 3, 4, 5, 6]);
+  const [labelData1, setLabelData1] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const [labelData2, setLabelData2] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
   // API to control drone
   const callYourAPI = (e) => {
     let requestURL = url + "controller/" + e;
 
     if (e == "disArm") setThrottle((prev) => 0); // Setting throttle to 0 at disArm
-    if (e == "takeOff") setLandTakeOff((prev) => !prev);
+    if (e === "takeOff" || e === "land") setLandTakeOff((prev) => !prev);
+    if (e === "arm" || e === "disArm") setArmDisArm((prev) => !prev);
+
+    console.log(e);
     axios.get(requestURL).then((res) => {
       setResponse(res);
     });
@@ -108,6 +113,12 @@ function App() {
         },
       },
       y: {
+        ticks: {
+          min: -180,
+          max: 180,
+          suggestedMin: -180,
+          suggedtedMax: 180,
+        },
         grid: {
           display: true,
           color: "#949494",
@@ -125,8 +136,8 @@ function App() {
         fill: false,
         backgroundColor: "rgba(75,192,192,0.2)",
         borderColor: "#ffde59",
-        lineTension: 0.4,
-        radius: 6,
+        // lineTension: 0.4,
+        // radius: 6,
       },
       {
         label: "ROLL",
@@ -134,8 +145,8 @@ function App() {
         fill: false,
         backgroundColor: "rgba(75,192,192,0.2)",
         borderColor: "#5ce1e6",
-        lineTension: 0.4,
-        radius: 6,
+        // lineTension: 0.4,
+        // radius: 6,
       },
       {
         label: "PITCH",
@@ -143,8 +154,8 @@ function App() {
         fill: false,
         backgroundColor: "rgba(75,192,192,0.2)",
         borderColor: "#ffa7e3",
-        lineTension: 0.4,
-        radius: 6,
+        // lineTension: 0.4,
+        // radius: 6,
       },
     ],
   });
@@ -172,9 +183,7 @@ function App() {
 
     removeData(xData2, setXData2, throttle);
 
-    // Updating seconds
-    removeLabel(labelData1, setLabelData1);
-    removeLabel(labelData2, setLabelData2);
+    console.log(yaw, " ", xData1);
 
     setData1((prev) => ({
       labels: labelData1,
@@ -248,14 +257,11 @@ function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       droneParameterAPI();
-      removeLabel(labelData1, setLabelData1);
-      removeLabel(labelData2, setLabelData2);
       updateChart();
-      setTime(new Date());
     }, 20);
 
     return () => clearInterval(interval);
-  }, [xData1, yData1, zData1, xData2, labelData1, labelData2]);
+  }, [xData1, yData1, zData1, xData2, yaw, pitch, roll, throttle]);
 
   // Event Listeners to controll using Keyboard
   useEffect(() => {
@@ -268,10 +274,9 @@ function App() {
       else if (event.keyCode == 37) callYourAPI("left");
       else if (event.keyCode == 40) callYourAPI("backward");
       else if (event.keyCode == 39) callYourAPI("right");
-      else if (event.keyCode == 81) callYourAPI("takeOff");
-      else if (event.keyCode == 188) callYourAPI("arm");
-      else if (event.keyCode == 190) callYourAPI("disArm");
-      else if (event.keyCode == 69) callYourAPI("land");
+      else if (event.keyCode == 188) document.getElementById("arm").click();
+      else if (event.keyCode == 32)
+        document.getElementById("landTakeOff").click();
     });
   }, []);
 
@@ -401,7 +406,8 @@ function App() {
             <div className="w-4/12 flex justify-around items-center relative">
               <div className="h-4/5 relative">
                 <button
-                  value="takeOff"
+                  id="landTakeOff"
+                  value={landTakeOff ? "takeOff" : "land"}
                   onClick={(e) => callYourAPI(e.target.value)}
                   className="absolute w-full h-full left-0 "
                 ></button>
@@ -417,13 +423,14 @@ function App() {
             <div className="w-4/12 flex justify-around items-center relative">
               <div className="h-4/5 relative">
                 <button
-                  value="arm"
+                  id="arm"
+                  value={armDisArm ? "arm" : "disArm"}
                   onClick={(e) => callYourAPI(e.target.value)}
                   className="absolute w-full h-full left-0 "
                 ></button>
                 <img
                   className="mx-auto h-full"
-                  src={armButton}
+                  src={armDisArm ? armButton : disArmButton}
                   alt="armButton"
                 />
               </div>
@@ -444,13 +451,13 @@ function App() {
                     Unit: degree(°)
                   </div>
                   <div className="border-2 border-[#ffde59] mr-4 rounded h-[50%] lg:h-[70%] items-center flex text-xs lg:text-xl px-1 lg:px-1.5 font-thin">
-                    YAW: {yaw}
+                    YAW: {xData1[xData1.length - 1]}
                   </div>
                   <div className="border-2 border-[#5ce1e6] mr-4 rounded h-[50%] lg:h-[70%] items-center flex text-xs lg:text-xl px-1 lg:px-1.5 font-thin">
-                    ROLL: {roll}
+                    ROLL: {yData1[xData2.length - 1]}
                   </div>
                   <div className="border-2 border-[#ffa7e3] mr-4 rounded h-[50%] lg:h-[70%] items-center flex text-xs lg:text-xl px-1 lg:px-1.5 font-thin">
-                    PITCH: {pitch}
+                    PITCH: {zData1[zData1.length - 1]}
                   </div>
                 </div>
                 <div className="w-[100%] h-[77%] font-bold text-2xl h-full flex items-center justify-center bg-[#545454] border-2 border-white rounded-tr-xl rounded-b-xl">
@@ -467,7 +474,7 @@ function App() {
                 </div>
                 <div className="w-[100%] h-[13%] pl-4 font-bold text-2xl h-full flex  items-center bg-[url('./Assets/Images/graph_legend_bg.png')] bg-no-repeat bg-contain">
                   <div className="border-2 border-[#ffde59] mr-4 rounded h-[70%] items-center flex text-xl px-1.5 font-thin">
-                    THROTTLE: {throttle}
+                    THROTTLE: {xData2[xData2.length - 1]}
                   </div>
                 </div>
                 <div className="w-[100%] h-[77%] font-bold text-2xl h-full flex items-center justify-center bg-[#545454] border-2 border-white rounded-tr-xl rounded-b-xl">

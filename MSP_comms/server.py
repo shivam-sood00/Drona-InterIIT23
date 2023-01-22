@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import cross_origin
 from flask_cors import CORS
 import threading
-
+from random import *
 import plutoComms
 
 c = plutoComms.COMMS()
@@ -32,15 +32,20 @@ def calcOp(text):
 def droneParameters():
     global c
     params = c.paramsReceived
-    print(c.paramsReceived)
+    # print(c.paramsReceived)
     data = {}
     data["rcThrottle"] = params["rcThrottle"]
     data["Roll"] = params["Roll"]
     data["Pitch"] = params["Pitch"]
     data["Yaw"] = params["Yaw"]
 
+    # data["rcThrottle"] = randint(-18, 18)
+    # data["Roll"] = randint(-18, 18)
+    # data["Pitch"] = randint(-18, 18)
+    # data["Yaw"] = randint(-18, 18)
+
     # printing data on terminal
-    print("droneParameter " + str(data))
+    # print("droneParameter " + str(data))
     return data
 
 
