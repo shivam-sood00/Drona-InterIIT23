@@ -7,6 +7,16 @@ class PID():
 
     """
     def __init__(self,config,droneNo):
+        
+        """ 
+            Initializing the parameters for controllers:
+        
+            K_thrust_hover is PID coefficient for thrust 
+            K_roll_hover is the PID coefficient for the roll 
+            K_pitch_hover is the PID coefficient for the pitch 
+            K_yaw_hover is the PID coeffiecient for the yaw
+            
+        """
         self.K_thrust_hover = np.array(config.get(droneNo,"K_thrust_hover").split(','),dtype=np.float64).reshape(3,1)
         self.K_roll_hover = np.array(config.get(droneNo,"K_roll_hover").split(','),dtype=np.float64).reshape(3,1)
         self.K_pitch_hover = np.array(config.get(droneNo,"K_pitch_hover").split(','),dtype=np.float64).reshape(3,1)
@@ -33,6 +43,10 @@ class PID():
     e, e_dot, e_integral
     """
     def reset(self):
+        """
+            Initializing the parameters for error calculation of the thrust, roll,
+            pitch , yaw and prev_err.
+        """
         self.err_thrust = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.err_roll = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.err_pitch = np.array([0.0, 0.0, 0.0]).reshape(3,1)
@@ -40,6 +54,10 @@ class PID():
         self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
 
     def calc_err(self):
+        """
+            calculating the error, derivative of error and integral of error for 
+            thrust, roll, pitch and yaw.
+        """
         # self.update_target_waypoint()
         # print(self.waypoint)
         
@@ -72,6 +90,9 @@ class PID():
         self.err_yaw[2] = np.clip(self.err_yaw[2] + self.err_yaw[0], -30, 30)
 
     def update_pos(self,curPose):
+        """
+            Updating the current pose of the quadrotor.
+        """
         self.prev_pose = self.cur_pose
         # list_curPose = list(curPose.values())
         self.cur_pose[0] = curPose['x']
@@ -82,6 +103,9 @@ class PID():
         self.cur_pose[5] = curPose['Pitch']
 
     def set_target_pose(self,point):
+        """
+            Setting the target position.
+        """
         self.target_pose = np.array(point).reshape(3,1)                                           #TODO implement Carrot
 
     # def update_target_waypoint(self):
@@ -96,6 +120,9 @@ class PID():
     #     self.waypoint[2] = self.target_pose[2]
     
     def set_thrust(self):
+        """
+            Setting up and scaling the thrust as per the range of the rc commands to be given to the drone 
+        """
         self.thrust = np.sum(self.K_thrust_hover * self.err_thrust)      #Elementwise multiplication
         if self.useWay:
             self.thrust = np.sum(self.K_thrust_way * self.err_thrust)
@@ -112,6 +139,9 @@ class PID():
         pass
     
     def set_pitch_and_roll(self):
+        """
+            Detrmining the control output for the roll, pitch and yaw.
+        """
         # print(type(self.K_roll),type(self.err_roll))
         # print(self.K_roll,self.err_roll)
         roll = np.sum(self.K_roll_hover * self.err_roll)
@@ -135,6 +165,9 @@ class PID():
         return self.pitch, self.roll  
     
     def set_yaw(self):
+        """
+            Determining the control output for the yaw
+        """
         self.yaw = np.sum(self.K_yaw_hover * self.err_yaw)
         if self.useWay:
             self.yaw = np.sum(self.K_yaw_way * self.err_yaw)
@@ -143,12 +176,21 @@ class PID():
 
 
     def failsafe_out_of_camera(self):
+        """
+            failsafe condition for situations when the quadrotor is out of the camera view.
+        """
         pass
 
     def aruco_not_detected(self):
+        """
+            failsafe condition, when the aruco is not detected.
+        """
         pass
     
     def isReached(self):
+        """
+        confirmation of the quadrotor reaching the destination 
+        """
         distCond = (np.linalg.norm(self.cur_pose[:2] - self.target_pose[:2]))**0.5 
         velCond = (np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3]))**0.5 
         # print("distCond, velCond, z_err",distCond,velCond,self.cur_pose[2]-self.target_pose[2])
