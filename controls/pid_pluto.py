@@ -7,6 +7,9 @@ class PID():
 
     """
     def __init__(self,config,droneNo):
+        """
+            Initializing the PID parameters and parameters for error calculation 
+        """
         self.K_thrust_z = np.array(config.get(droneNo,"K_thrust_z").split(','),dtype=np.float64).reshape(3,1)
         self.K_roll_z = np.array(config.get(droneNo,"K_roll_z").split(','),dtype=np.float64).reshape(3,1)
         self.K_pitch_z = np.array(config.get(droneNo,"K_pitch_z").split(','),dtype=np.float64).reshape(3,1)
@@ -60,6 +63,10 @@ class PID():
     e, e_dot, e_integral
     """
     def reset(self):
+        """
+            Intializing the parameters for the calculation of error,
+            differential of error and integral of error in roll,pitch,yaw and thrust
+        """
         self.err_thrust = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.err_roll = np.array([0.0, 0.0, 0.0]).reshape(3,1)
         self.err_pitch = np.array([0.0, 0.0, 0.0]).reshape(3,1)
@@ -71,6 +78,9 @@ class PID():
         self.prev_err_list = [[],[],[],[]] #thrust, roll, pitch, yaw
 
     def calc_diff_err(self,diff_frame,err_list):
+        """
+            setting the differential of error to avoid spikes in the variation 
+        """
         # self.diff_fn
         temp = []
         for i in range(diff_frame):
@@ -80,6 +90,10 @@ class PID():
         return self.diff_fn(temp)
     
     def calc_err(self):
+        """
+            calculating the error, differential of error
+            and integral of error for roll,pitch and yaw
+        """
         # self.update_target_waypoint()
         # print(self.waypoint)
         
@@ -127,10 +141,16 @@ class PID():
             
 
     def update_pos(self,curPose):
+        """
+        Updating the current pose of the quadrotor
+        """
         self.prev_pose = self.cur_pose
         self.cur_pose = np.array(curPose).reshape(6,1)
 
     def set_target_pose(self,point,axis):
+        """
+        updating the target position using  the carrot approach
+        """
         self.target_pose = np.array(point).reshape(3,1)                                           #TODO implement Carrot
         # if not self.useWay:
         #     self.target_pose[:2] += self.steady_state_err_hover[:]
@@ -156,6 +176,9 @@ class PID():
     #     self.waypoint[2] = self.target_pose[2]
     
     def set_thrust(self):
+        """
+        Calculating the thrust output of the pid and clipping it within a safe range 
+        """
         # self.thrust = np.sum(self.K_thrust_hover * self.err_thrust)      #Elementwise multiplication
         # if self.useWay:
         #     self.thrust = np.sum(self.K_thrust_way * self.err_thrust)
@@ -174,6 +197,9 @@ class PID():
         pass
     
     def set_pitch_and_roll(self):
+        """
+        Determining the pitch and roll values from the PID and then clipping it within a suitable range 
+        """
         # print(type(self.K_roll),type(self.err_roll))
         # print(self.K_roll,self.err_roll)
         # roll = np.sum(self.K_roll_hover * self.err_roll)
@@ -201,6 +227,9 @@ class PID():
         return self.pitch, self.roll  
     
     def set_yaw(self):
+        """
+        Determining the yaw values from the PID 
+        """
         # self.yaw = np.sum(self.K_yaw_hover * self.err_yaw)
         # if self.useWay:
         #     self.yaw = np.sum(self.K_yaw_way * self.err_yaw)
@@ -210,12 +239,21 @@ class PID():
 
 
     def failsafe_out_of_camera(self):
+        """
+        Condition for stopping the quadrotor when it is out of the view of camera
+        """
         pass
 
     def aruco_not_detected(self):
+        """
+        condition for stopping the quadrotor when the aruco is not detected.
+        """
         pass
     
     def isReached(self):
+        """
+        Signal when the drone is reached at its destination.
+        """
         # if self.useWay:
         #     err = (self.target_pose[:2]-self.steady_state_err_way[:2]) - self.cur_pose[:2]
         # else:
