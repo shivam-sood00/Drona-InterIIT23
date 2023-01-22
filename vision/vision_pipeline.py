@@ -8,7 +8,22 @@ from scipy.spatial.transform import Rotation
 import csv
 
 class VisionPipeline():
+    """
+        This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
+        depth and rgb frames along with detection of aruco marker
 
+        Attributes:
+            depth_res: defines the depth resolution. Default is (720, 1080).
+            rgb_res: defines the rgb resolution. Default is (720, 1080).
+            align_to: defines frame to which alignment must be done. Default is "rgb".
+            marker_size: defines the marker size of the aruco tag. Default is 3.75.
+            marker_type: defines the aruco marker type. Default is DICT_4X4_50.
+            marker_dict: gets the required aruco dictionary.
+            require_marker_id: defines the marker id of the aruco tag placed on the drone.
+            calib_file_path: defines the path for camera calibration.
+            DEBUG: a flag to enable prints in code for debugging. Default is 0.
+        
+    """
     def __init__(self,
                  depth_res=(720, 1280),
                  rgb_res=(720, 1280),
@@ -40,6 +55,15 @@ class VisionPipeline():
 
 
     def init_realsense(self):
+        """
+        Initializes realsense, Enables both depth and rgb stream
+
+        Parameter:
+            None         
+
+        Returns:
+            None
+        """   
         self.pipeline = rs.pipeline()
 
         config = rs.config()
@@ -79,6 +103,15 @@ class VisionPipeline():
 
     
     def init_aruco_detector(self):
+        """
+        Calibrates the camera with Intrinsic Parameters and Extrinsic Parameters and generates parameters for marker
+        
+        Parameters:
+            None
+        
+        Returns:
+            None
+        """
         
         # if not os.path.exists(self.calib_file_path):
         #     raise FileNotFoundError(f"File {self.calib_file_path} not found!")
@@ -101,10 +134,29 @@ class VisionPipeline():
         
 
     def stop(self):
+        """
+        Stops pipeline
+
+        Parameters:
+            None
+        
+        Returns:
+            None
+        """
         self.pipeline.stop()
 
 
     def get_frames(self):
+        """
+        Aligns depth and rgb frames
+
+        Parameters:
+            None
+        
+        Returns:
+            aligned frames
+            
+        """
         self.frames = self.pipeline.wait_for_frames()
         self.aligned_frames = self.align_frames.process(self.frames)
 
@@ -112,18 +164,54 @@ class VisionPipeline():
 
     
     def extract_depth(self, frame):
+        """
+        Extracts depth frame
+
+        Parameters:
+            frame
+        
+        Returns:
+            depth frame
+        """
         return frame.get_depth_frame()
 
     
     def extract_rgb(self, frame):
+        """
+        Extracts rgb frame
+
+        Parameters:
+            frame
+        
+        Returns:
+            colour frame
+        """
         return frame.get_color_frame()
 
 
     def to_image(self, frame):
+        """
+        converts pyrealsense2.frame to np.array
+
+        Parameters:
+            frame: input frame of type pyrealsense2.frame
+        
+        Returns:
+            numpy array
+        """
         return np.asarray(frame.get_data())
 
     
     def detect_marker(self, frame):
+        """
+        Detection of aruco markers returning various aruco parameters like id and corner
+
+        Parameters:
+            frame: input frame of type pyrealsense2.frame
+        
+        Returns:
+            corner list of aruco tag
+        """
         # frame = cv2.medianBlur(frame, 3)
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
@@ -158,6 +246,17 @@ class VisionPipeline():
 
 
     def plot_markers(self, frame, marker_corners, marker_ids):
+        """
+        Draws lines around the detected frames
+
+        Parameters:
+            frame
+            marker_corners: corners of the detected aruco tag
+            marker_ids: ids of the detected markers
+        
+        Returns:
+            frame with plotted markers
+        """
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
             if marker_ids[i] == self.required_marker_id:
@@ -169,6 +268,16 @@ class VisionPipeline():
         return frame
 
     def plot_rej_markers(self, frame, marker_corners):
+        """
+        Draws lines around the detected frames
+
+        Parameters:
+            frame
+            marker_corners: corners of the detected aruco tag            
+        
+        Returns:
+            frame with plotted rejected markers
+        """
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
             frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 0), 4, cv2.LINE_AA)
@@ -177,11 +286,32 @@ class VisionPipeline():
 
 
     def show_frame(self, frame, window_name="Frame"):
+        """
+        Displays frame
+
+        Parameters:
+            frame:
+            window_name:
+        
+        Returns:
+            None
+        """
         cv2.imshow(window_name, frame)
 
 
 
     def estimate_pose(self, marker_corners, frame_of_ref="camera"):
+        """
+        Estimates the pose of the transform matrix using large aruco tag
+
+        Parameters:
+            list of marker corners
+            frame of reference. Default value is "camera"
+        
+        Returns:
+            6-DOF pose estimate of aruco marker in world frame
+            
+        """
         #print(marker_corners)
         #print(self.cam_matrix)
         #print(self.dist_coef)
@@ -206,6 +336,16 @@ class VisionPipeline():
 
 
     def make_tf_matrix(self, rvec, tvec):
+        """
+        Creates the transormation matrix using the rotation and translational vectors
+
+        Parameters:
+            rvec: contains rotational vectors
+            tvec: contains trsnslational vectors
+        
+        Returns:
+            Transformation matrix for the camera
+        """
         rot_mat = Rotation.from_rotvec(rvec).as_matrix()
         tf = np.eye(4)
         tf[:3, :3] = rot_mat
@@ -214,6 +354,15 @@ class VisionPipeline():
 
     
     def tf_to_outformat(self, tf):
+        """
+        converts the transformation matrix to a list
+
+        Parameters:
+            tf: Transformation matrix
+        
+        Returns:
+            out_vec: conversion of the transformation matrix into list
+        """
         out_vec = np.zeros((6, 1))
         out_vec[3:, 0] = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
         out_vec[:3, 0] = tf[:3, 3]
@@ -221,6 +370,15 @@ class VisionPipeline():
 
 
     def outformat_to_tf(self, input):
+        """
+        converts the list to the transformation matrix 
+
+        Parameters:
+            out_vec: conversion of the transformation matrix into list            
+        
+        Returns:            
+            tf: Transformation matrix
+        """
         tf = np.eye(4)
         tf[:3, :3] = Rotation.from_euler('xyz', input[3:, 0]).as_matrix()
         tf[:3, 3] = input[:3, 0]
@@ -228,6 +386,16 @@ class VisionPipeline():
 
 
     def depth_from_marker(self, depth_frame, marker_corners, kernel_size=1):
+        """
+        Finds depth from the estimated pose obtained from the aruco tag
+
+        Parameters:
+            depth_frame:
+            marker_corners: contains the list of aruco marker corners
+            kernel_size: contains the size of the kernel
+        Returns:
+            depths[]: depth of the point filtered using median filter
+        """
         mid_point = np.sum(marker_corners[0], 0) / 4.0
         mid_point = (mid_point + 0.5).astype(np.int32)
 
@@ -248,6 +416,13 @@ class VisionPipeline():
             return depths[int(num_values / 2.0) - 1]
 
     def cam_init(self):
+        """
+        Initializes camera and starts aruco detection
+        Parameters:
+            None
+        Returns:
+            None
+        """
         self.init_realsense()
         self.init_aruco_detector()
         
