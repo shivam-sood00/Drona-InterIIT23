@@ -32,9 +32,9 @@ for each in file:
         if stateCont==0:
             stateCont==3
         continue
-    if each[0]=="L":
+    if len(each) > len("Landing") and each.startswith('Landing'):
         break
-    elif each[0]>="A" and each[0]<="Z" or each[0]>="a" and each[0]<="z":
+    elif (each[0]>="A" and each[0]<="Z") or (each[0]>="a" and each[0]<="z"):
         continue
     elif each[0]=='[' and each[1]=='[':
         stateCont -=1
