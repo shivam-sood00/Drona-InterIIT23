@@ -45,6 +45,8 @@ class VisionPipeline():
         self.last_detected_marker = None
         self.tracking_area_th = 120
         self.tracking_point_th = 12
+
+        self.current_waypoint = None
         
         pass
 
@@ -73,7 +75,7 @@ class VisionPipeline():
         colorSensor.set_option(rs.option.brightness, 30)
 
         colorSensor.set_option(rs.option.exposure, 100)
-        colorSensor.set_option(rs.option.gain, 300)
+        # colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()
         self.depth_scale = self.depth_sensor.get_depth_scale()
@@ -247,7 +249,34 @@ class VisionPipeline():
         return frame
 
 
+    def update_waypoint(self, waypoint):
+        self.current_waypoint = waypoint
+        self.current_waypoint[0] = -self.current_waypoint[0]
+        self.current_waypoint = np.array(self.current_waypoint) * 100.0
+
+
     def show_frame(self, frame, window_name="Frame"):
+
+        if (self.current_waypoint is None):
+            pass
+        else:
+
+            point_ = np.array([self.current_waypoint[0], self.current_waypoint[1], self.current_waypoint[2], 1]).reshape((4, 1))
+
+            correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+            correction_tf = np.linalg.pinv(correction_tf)
+            
+            translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
+            
+            point_in_cam = correction_tf @ translation_tf @ point_
+            point_in_cam[:3, :] = point_in_cam[:3, :] / point_in_cam[3, 0]
+
+            temp_point = point_in_cam[:3, :]
+            temp_point = self.cam_matrix @ temp_point
+            temp_point[:2, :] = temp_point[:2, :] / temp_point[2, 0]
+
+            cv2.circle(frame, (int(temp_point[0, 0] + 0.5), int(temp_point[1, 0] + 0.5)), 7, (227, 3, 252), -1)
+
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
