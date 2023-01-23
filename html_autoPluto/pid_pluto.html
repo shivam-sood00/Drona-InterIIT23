@@ -77,32 +77,32 @@
 <dt id="pid_pluto.PID">
 <em class="property">class </em><code class="descclassname">pid_pluto.</code><code class="descname">PID</code><span class="sig-paren">(</span><em>config</em>, <em>droneNo</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Inputs -&gt; current state (x, y, z)
+<p>Inputs -&gt; current state (x, y, z) <br>
 Outputs -&gt; Thrust, Roll, Pitch (in 900-2100 range)
-[Kp, KD, KI] are the PID gains</p>
+[Kp, KD, KI] are the PID gains.</p>
 <dl class="method">
 <dt id="pid_pluto.PID.aruco_not_detected">
 <code class="descname">aruco_not_detected</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.aruco_not_detected" title="Permalink to this definition">¶</a></dt>
-<dd><p>condition for stopping the quadrotor when the aruco is not detected.</p>
+<dd><p>Condition for stopping the quadrotor when the aruco is not detected.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.calc_diff_err">
 <code class="descname">calc_diff_err</code><span class="sig-paren">(</span><em>diff_frame</em>, <em>err_list</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.calc_diff_err" title="Permalink to this definition">¶</a></dt>
-<dd><p>setting the differential of error to avoid spikes in the variation</p>
+<dd><p>Setting the differential of error to avoid spikes in the variation.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.calc_err">
 <code class="descname">calc_err</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.calc_err" title="Permalink to this definition">¶</a></dt>
-<dd><p>calculating the error, differential of error
-and integral of error for roll,pitch and yaw</p>
+<dd><p>Calculating the error, differential of error
+and integral of error for roll,pitch and yaw.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.failsafe_out_of_camera">
 <code class="descname">failsafe_out_of_camera</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.failsafe_out_of_camera" title="Permalink to this definition">¶</a></dt>
-<dd><p>Condition for stopping the quadrotor when it is out of the view of camera</p>
+<dd><p>Condition for stopping the quadrotor when it is out of the view of camera.</p>
 </dd></dl>
 
 <dl class="method">
@@ -115,43 +115,43 @@ and integral of error for roll,pitch and yaw</p>
 <dt id="pid_pluto.PID.reset">
 <code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.reset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Intializing the parameters for the calculation of error,
-differential of error and integral of error in roll,pitch,yaw and thrust</p>
+differential of error and integral of error in roll,pitch,yaw and thrust.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.set_pitch_and_roll">
 <code class="descname">set_pitch_and_roll</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_pitch_and_roll" title="Permalink to this definition">¶</a></dt>
-<dd><p>Determining the pitch and roll values from the PID and then clipping it within a suitable range</p>
+<dd><p>Determining the pitch and roll values from the PID and then clipping it within a suitable range.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.set_target_pose">
 <code class="descname">set_target_pose</code><span class="sig-paren">(</span><em>point</em>, <em>axis</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_target_pose" title="Permalink to this definition">¶</a></dt>
-<dd><p>updating the target position using  the carrot approach</p>
+<dd><p>Updating the target position using the carrot approach.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.set_thrust">
 <code class="descname">set_thrust</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_thrust" title="Permalink to this definition">¶</a></dt>
-<dd><p>Calculating the thrust output of the pid and clipping it within a safe range</p>
+<dd><p>Calculating the thrust output of the pid and clipping it within a safe range.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.set_thrust_using_dynamics">
 <code class="descname">set_thrust_using_dynamics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_thrust_using_dynamics" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use roll, pitch angles to keep z stable while waypoint navigation</p>
+<dd><p>Use roll, pitch angles to keep z stable while waypoint navigation.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.set_yaw">
 <code class="descname">set_yaw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_yaw" title="Permalink to this definition">¶</a></dt>
-<dd><p>Determining the yaw values from the PID</p>
+<dd><p>Determining the yaw values from the PID.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pid_pluto.PID.update_pos">
 <code class="descname">update_pos</code><span class="sig-paren">(</span><em>curPose</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.update_pos" title="Permalink to this definition">¶</a></dt>
-<dd><p>Updating the current pose of the quadrotor</p>
+<dd><p>Updating the current pose of the quadrotor.</p>
 </dd></dl>
 
 </dd></dl>
