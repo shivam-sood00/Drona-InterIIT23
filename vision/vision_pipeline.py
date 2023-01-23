@@ -8,6 +8,8 @@ from scipy.spatial.transform import Rotation
 import csv
 import math
 
+# cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
+
 class VisionPipeline():
 
     def __init__(self,
@@ -41,7 +43,7 @@ class VisionPipeline():
 
         self.do_tracking = do_tracking
         self.last_detected_marker = None
-        self.tracking_area_th = 60
+        self.tracking_area_th = 120
         self.tracking_point_th = 12
         
         pass
@@ -246,6 +248,7 @@ class VisionPipeline():
 
 
     def show_frame(self, frame, window_name="Frame"):
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
 
@@ -409,7 +412,7 @@ class VisionPipeline():
 
                 # data  = [dt,current_time,z_from_realsense]
                 # data.extend(aruco_pose.T[0].tolist())
-            
+            cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
             cv2.imshow("RGB Image",color_img)
                 
 
