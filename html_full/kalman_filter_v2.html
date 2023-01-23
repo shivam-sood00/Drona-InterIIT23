@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kalman_filter_v2 module &mdash; autoPluto  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> autoPluto
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">code</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">autoPluto</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">kalman_filter_v2 module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/kalman_filter_v2.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-kalman_filter_v2">
+<span id="kalman-filter-v2-module"></span><h1>kalman_filter_v2 module<a class="headerlink" href="#module-kalman_filter_v2" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="kalman_filter_v2.KalmanFilter">
+<em class="property">class </em><code class="descclassname">kalman_filter_v2.</code><code class="descname">KalmanFilter</code><span class="sig-paren">(</span><em>debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.KalmanFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for Extended Kalman Filter</p>
+<p>States and Control Inputs are defined as :-
+State X = [x, y, z, x’, y’, z’]
+Control Input U = [Upward Thurst (T - mg), Pitch Torque, Roll Torque, Yaw Torque]</p>
+<p>Uses Quadrotor Dynamics to perform Extended Kalman Filtering Estimation using Aruco Position Data and IMU’s Acceleration Data</p>
+<dl class="method">
+<dt id="kalman_filter_v2.KalmanFilter.apply_system_dynamics">
+<code class="descname">apply_system_dynamics</code><span class="sig-paren">(</span><em>imuData</em>, <em>U</em>, <em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.KalmanFilter.apply_system_dynamics" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>IMU Data , Control Input, Time Elapsed</dd>
+</dl>
+<p>Part of Prediction Step that predicts states, and is used with IMU Data and Control input to get a better estimate of states.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kalman_filter_v2.KalmanFilter.debugPrint">
+<code class="descname">debugPrint</code><span class="sig-paren">(</span><em>imu_data</em>, <em>cam_data</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.KalmanFilter.debugPrint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="kalman_filter_v2.KalmanFilter.estimate_pose">
+<code class="descname">estimate_pose</code><span class="sig-paren">(</span><em>control_inp</em>, <em>sensor_obs</em>, <em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.KalmanFilter.estimate_pose" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>Control Input, Sensor Observation</dd>
+<dt>Returns:</dt>
+<dd>Estimated States</dd>
+</dl>
+<p>Uses Aruco Position and IMU Data, and fuses the data using Extended Kalman Filter to given a better estimate of the states.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="kalman_filter_v2.KalmanFilter.update_measurement">
+<code class="descname">update_measurement</code><span class="sig-paren">(</span><em>H</em>, <em>sensor_obs</em>, <em>sensor_noise_bias</em>, <em>sensor_noise_cov</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.KalmanFilter.update_measurement" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>Observation Matrix, Sensor Observations, Sensor Bias, Sensor Noise Covariance</dd>
+</dl>
+<p>Performs the main step of Extended Kalman Filtering and updates the state prediction to better estimate
+the states</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="kalman_filter_v2.get_angle_rate">
+<code class="descclassname">kalman_filter_v2.</code><code class="descname">get_angle_rate</code><span class="sig-paren">(</span><em>imuData</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.get_angle_rate" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>IMU Data</dd>
+<dt>Returns:</dt>
+<dd>Euler Angle Rate</dd>
+</dl>
+<p>The function takes in Gyro Data from IMU Data and gives euler angular rates which is obtained after transformation</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="kalman_filter_v2.get_pos">
+<code class="descclassname">kalman_filter_v2.</code><code class="descname">get_pos</code><span class="sig-paren">(</span><em>prevPos</em>, <em>currentVelocity</em>, <em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.get_pos" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>Previous Position and Current Velocity</dd>
+<dt>Returns:</dt>
+<dd>Current Position</dd>
+</dl>
+<p>The function takes in previous position in world frame and current velocity to return current position, by using Euler Forward Method.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="kalman_filter_v2.get_velocity">
+<code class="descclassname">kalman_filter_v2.</code><code class="descname">get_velocity</code><span class="sig-paren">(</span><em>prevVelocity</em>, <em>imuData</em>, <em>dt</em><span class="sig-paren">)</span><a class="headerlink" href="#kalman_filter_v2.get_velocity" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Parameters:</dt>
+<dd>Previous Velocity and IMU Data</dd>
+<dt>Returns:</dt>
+<dd>Current Velocity</dd>
+</dl>
+<p>The velocity is taken with respect to world frame and transformed to body frame, where it is updated using acceleration 
+data of the accelerometer and then again transformed to the world frame.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, -.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
