@@ -212,13 +212,13 @@ class PID():
         pitch = np.sum(self.cur_K_pitch * self.err_pitch)
         
 
-        # self.pitch = pitch
-        # self.roll= roll
+        self.pitch = pitch
+        self.roll= roll
         yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
         # print("YAW", self.cur_pose[3])
         # print("CUR", self.cur_pose[3] , self.zero_yaw, "sin", np.sin(yaw_ref), "cos", np.cos(yaw_ref))
-        self.roll = roll*np.cos(yaw_ref) - pitch*np.sin(yaw_ref)
-        self.pitch = pitch*np.cos(yaw_ref) + roll*np.sin(yaw_ref)  #Coupled dynamics if yaw_ref changes
+        # self.roll = roll*np.cos(yaw_ref) - pitch*np.sin(yaw_ref)
+        # self.pitch = pitch*np.cos(yaw_ref) + roll*np.sin(yaw_ref)  #Coupled dynamics if yaw_ref changes
 
         # self.pitch = 1500 + np.clip(self.pitch, -150, 150) 
         # self.roll = 1500 - np.clip(self.roll, -150, 150)           #TODO tuned 
