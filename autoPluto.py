@@ -24,7 +24,12 @@ class autoPluto:
         self.CamQueue = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
-        self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
+        self.mode =  self.config.get("Mode","mode")
+        self.hover_reached_flag = True
+        if self.mode == 'Rectangle':
+            self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
+        else:
+            self.hover_z = float(self.config.get("Hover","z"))
         self.trajectory = []
         self.outOfBound = 0
         # print(self.config.sections())
@@ -55,9 +60,9 @@ class autoPluto:
     def cameraFeed(self):
         z = int(self.config.get(self.droneNo,"id"))
         # print(z)
-        camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0)
-        camera.cam_init()
-        camera.cam_process(self.CamQueue)
+        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0)
+        self.camera.cam_init()
+        self.camera.cam_process(self.CamQueue)
     
     def run(self):
         ret = 0
@@ -74,13 +79,21 @@ class autoPluto:
                 # if yawUpdateFlag:
                 #     yawUpdateFlag = False
                 self.pid.zero_yaw = self.currentState[3]
-                self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
-                self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1],  self.rectangle[2]])
-                self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
-                self.trajectory.append([self.currentState[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
-                self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
-                self.axis_move = ['z','x','y','x','y']
+                if self.mode == 'Rectangle':
+                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
+                    self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1],  self.rectangle[2]])
+                    self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
+                    self.trajectory.append([self.currentState[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
+                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
+                    self.axis_move = ['z','x','y','x','y']
+
+                else:
+                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.hover_z])
+                    self.axis_move = ['z']
+
+                
                 self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
+                self.camera.update_waypoint(self.trajectory[i])
                 
                 # if i>=len(self.trajectory):
                 #     print("done..!!")
@@ -110,13 +123,22 @@ class autoPluto:
             # print("not")
             time.sleep(self.runLoopWaitTime)
             if self.pid.isReached():
-                i += 1
-                if i == len(self.trajectory):
-                    print("Reached Final Waypoint. Now Landing")
-                    self.outOfBound = 3
+                if self.mode == "Rectangle": 
+                    i += 1
+                if i == len(self.trajectory) or self.mode !='Rectangle':
+                    print("Reached Final Waypoint.")
+                    
+                    if self.mode =='Rectangle':
+                        print("Now Landing")
+                        self.outOfBound = 3
+                    else:
+                        if self.hover_reached_flag:
+                            print("Hovering")
+                            self.hover_reached_flag = False
                 else:
                     self.pid.useWay = True
                     self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
+                    self.camera.update_waypoint(self.trajectory[i])
                     print("IS Reached True")
                 
                

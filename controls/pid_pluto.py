@@ -185,9 +185,10 @@ class PID():
         self.thrust = np.sum(self.cur_K_thrust * self.err_thrust)
         # scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.1)
         scale = 1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2])))
+        scale = 1
 
         self.thrust = scale*self.thrust
-        self.thrust = 1550 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
+        self.thrust = 1525 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
         return self.thrust
 
     def set_thrust_using_dynamics(self):
