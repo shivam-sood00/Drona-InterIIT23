@@ -7,3 +7,5 @@ vision/__pycache__/
 
 dronePass.py
 debug.txt
+
+*.avi
