@@ -1,0 +1,7 @@
+pid\_pluto module
+=================
+
+.. automodule:: pid_pluto
+    :members:
+    :undoc-members:
+    :show-inheritance:
