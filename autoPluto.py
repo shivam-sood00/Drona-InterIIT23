@@ -8,11 +8,12 @@ import time
 import numpy as np
 from controls.pid_pluto import PID
 from configparser import ConfigParser
-
+import signal
 
 
 class autoPluto:
     def __init__(self,debug = False):
+        signal.signal(signal.SIGINT, self.handler)
         self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
@@ -110,13 +111,15 @@ class autoPluto:
             time.sleep(self.runLoopWaitTime)
             if self.pid.isReached():
                 i += 1
-                self.pid.useWay = True
-                self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
-                print("IS Reached True")
-                
                 if i == len(self.trajectory):
-                    print("jai mata di")
+                    print("Reached Final Waypoint. Now Landing")
                     self.outOfBound = 3
+                else:
+                    self.pid.useWay = True
+                    self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
+                    print("IS Reached True")
+                
+               
                 # break
             
         time.sleep(2)
@@ -220,3 +223,9 @@ class autoPluto:
             self.comms.paramsSet["currentCommand"] = 2
             print("Landing: ",self.outOfBound)
             return 1
+        
+    def handler(self, sigma, frame):
+        msg = "Exit + Land"
+        self.comms.land()
+        print(msg)
+        exit()
