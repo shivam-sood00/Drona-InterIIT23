@@ -2,7 +2,7 @@ from MSP_comms.plutoComms import COMMS
 import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
-from vision.vision_pipeline import VisionPipeline
+from vision.vision_pipeline2 import VisionPipeline
 from vision.integrator import get_velocity,get_angle_rate
 import time
 import numpy as np
@@ -60,7 +60,7 @@ class autoPluto:
     def cameraFeed(self):
         z = int(self.config.get(self.droneNo,"id"))
         # print(z)
-        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0)
+        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0, imu_calib_data=[-0.03358463, 0.0135802, 0.0])
         self.camera.cam_init()
         self.camera.cam_process(self.CamQueue)
     
@@ -119,7 +119,15 @@ class autoPluto:
             # if self.file:
             #     self.write.writerows(np.array(data,dtype=np.float64))
             # print("ok")
-            print(self.currentState[0],self.currentState[1],self.currentState[2],self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],self.currentState[3],self.currentState[4],self.currentState[5],self.pid.err_pitch_with_sse[0],self.pid.err_roll_with_sse[0],self.pid.err_thrust_with_sse[0])
+            print(self.currentState[0],self.currentState[1],self.currentState[2],
+                    self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],
+                    self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],
+                    self.pid.err_roll[0],self.pid.err_pitch[0],self.pid.err_thrust[0],
+                    self.currentState[3],self.currentState[4],self.currentState[5],
+                    self.pid.err_pitch_with_sse[0],self.pid.err_roll_with_sse[0],
+                    self.pid.err_thrust_with_sse[0],self.pid.err_pitch[1],self.pid.err_roll[1],
+                    self.pid.err_thrust[1],self.pid.err_pitch[2],self.pid.err_roll[2],
+                    self.pid.err_thrust[2],self.pid.vel_error)
             # print("not")
             time.sleep(self.runLoopWaitTime)
             if self.pid.isReached():

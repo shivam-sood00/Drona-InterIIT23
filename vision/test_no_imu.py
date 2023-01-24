@@ -46,7 +46,7 @@ if __name__ == '__main__':
     align_to="rgb"
     marker_size=3.62 #13.8
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 1
+    required_marker_id = 6
     calib_file_path="vision/calib_data/MultiMatrix.npz"
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG,padding = 0)
@@ -54,6 +54,8 @@ if __name__ == '__main__':
 
     pipeline.init_realsense()
     pipeline.init_aruco_detector()
+
+    pipeline.update_waypoint([0, 0, 0.5])
 
     # [x, y, z, x', y', z', roll, pitch, yaw, roll', pitch', yaw']
     init_X = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape((12, 1))

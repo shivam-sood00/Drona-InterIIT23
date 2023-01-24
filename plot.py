@@ -23,10 +23,22 @@ errX_with_sse=[]
 errY_with_sse=[]
 errZ_with_sse=[]
 
+err_diffX=[]
+err_diffY=[]
+err_diffZ=[]
+
+err_intX=[]
+err_intY=[]
+err_intZ=[]
+
+vel = []
+
 
 stateCont = 3
 
 for each in file:
+    if each.strip()=="":
+        continue
     if stateCont<3:
         stateCont-=1
         if stateCont==0:
@@ -107,6 +119,16 @@ for each in file:
     errY_with_sse.append(msg[14])
     errZ_with_sse.append(msg[15])
 
+    err_diffX.append(msg[16])
+    err_diffY.append(msg[17])
+    err_diffZ.append(msg[18])
+
+    err_intX.append(msg[19])
+    err_intY.append(msg[20])
+    err_intZ.append(msg[21])
+
+    vel.append(msg[22])
+
 
 import matplotlib.pyplot as plt
 
@@ -115,6 +137,7 @@ from os.path import join
 from configparser import ConfigParser
 from os import makedirs
 # import yaml
+import shutil
 
 
 folder_name = datetime.now().strftime("%m-%d, %H:%M:%S")
@@ -129,6 +152,10 @@ config = ConfigParser()
 config.read("controls/droneData.ini")
 with open(join(folder_name,"DroneData.ini"), 'w') as configfile:
     config.write(configfile)
+
+shutil.copy2('debug.txt',folder_name)
+
+
 
 
 plt.plot(roll)
@@ -198,4 +225,32 @@ plt.clf()
 
 plt.plot(x,y)
 plt.savefig(f"{folder_name}/x vs y.png")
+plt.clf()
+
+plt.plot(err_diffX)
+plt.savefig(f"{folder_name}/err_diffX.png")
+plt.clf()
+
+plt.plot(err_diffY)
+plt.savefig(f"{folder_name}/err_diffY.png")
+plt.clf()
+
+plt.plot(err_diffZ)
+plt.savefig(f"{folder_name}/err_diffZ.png")
+plt.clf()
+
+plt.plot(err_intX)
+plt.savefig(f"{folder_name}/err_intX.png")
+plt.clf()
+
+plt.plot(err_intY)
+plt.savefig(f"{folder_name}/err_intY.png")
+plt.clf()
+
+plt.plot(err_intZ)
+plt.savefig(f"{folder_name}/err_intZ.png")
+plt.clf()
+
+plt.plot(vel)
+plt.savefig(f"{folder_name}/vel.png")
 plt.clf()

@@ -18,11 +18,13 @@ class VisionPipeline():
                  align_to="rgb",
                  marker_size=3.75,
                  marker_type=aruco.DICT_4X4_50,
-                 required_marker_id=0,
+                 required_marker_id=1,
                  calib_file_path="../calib_data/MultiMatrix.npz",
                  debug=0,
                  padding=50,
-                 do_tracking=True) -> None:
+                 do_tracking=True,
+                 calib_yaw_at_start=True,
+                 imu_calib_data=[0.0, 0.0, 0.0]) -> None:
 
 
         self.depth_res = depth_res
@@ -43,12 +45,17 @@ class VisionPipeline():
 
         self.do_tracking = do_tracking
         self.last_detected_marker = None
-        self.tracking_area_th = 120
+        self.tracking_area_th = 160
         self.tracking_point_th = 12
 
         self.estimated_pose = None
 
         self.current_waypoint = None
+
+        self.current_midpoint = None
+
+        self.calib_yaw_at_start = calib_yaw_at_start
+        self.imu_calib_data = imu_calib_data
         
         pass
 
@@ -271,10 +278,10 @@ class VisionPipeline():
 
             # point_ = np.array([self.current_waypoint[0], self.current_waypoint[1], self.current_waypoint[2], 1]).reshape((4, 1))
 
-            # correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+            # correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0])) #  -0.00417288, 0.00310284, 0
             # correction_tf = np.linalg.pinv(correction_tf)
             
-            # translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
+            # translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=np.array([self.cam_tvec[0], self.cam_tvec[1], 2.858]))
             
             # point_in_cam = correction_tf @ translation_tf @ point_
             # point_in_cam[:3, :] = point_in_cam[:3, :] / point_in_cam[3, 0]
@@ -290,13 +297,49 @@ class VisionPipeline():
             pass
         else:
             cv2.putText(frame, f"Current Estimate: [{self.estimated_pose[0]}, {self.estimated_pose[1]}, {self.estimated_pose[2]}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, f"YAW: [{Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        m = math.tan(self.cam_rvec[2])
 
+        if self.current_midpoint is None:
+            pass
+        else:
+            # print("PLOTLINE")
+            c = self.current_midpoint[1] - m * (self.current_midpoint[0])
+            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
 
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
         cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
         cv2.imshow("RGB Image", rgb_frame)
+
+
+    
+
+    def estimate_uncalib_pose(self, marker_corners):
+        rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
+                [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
+            )
+
+
+        # print(f"ARUCO ANGLE: {Rotation.from_rotvec(rVec[0, 0, :]).as_euler('xyz')}")
+        tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])
+        
+        correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+        tf = correction_tf @ tf
+        
+        # translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
+        # translation_tf = np.linalg.pinv(translation_tf)
+        # tf = translation_tf @ tf
+
+        tf = np.linalg.pinv(tf)
+
+        uncalib_rot = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
+        # uncalib_rot[0] = 0.0
+        # uncalib_rot[1] = 0.0
+        # print("ARUCO ANGLE: ", uncalib_rot)
+
+        return uncalib_rot[2]
 
 
 
@@ -312,10 +355,12 @@ class VisionPipeline():
         tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
         if frame_of_ref == "camera":
             
-            correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+            correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             tf = correction_tf @ tf
             
-            translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
+            # self.cam_rvec = Rotation.from_euler('xyz', np.array([0.0, 0.0, 0.14])).as_rotvec()
+            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=self.cam_tvec)
+            # translation_tf = self.make_tf_matrix(rvec=np.array([0.0, 0.0, 0.0]), tvec=self.cam_tvec)
             translation_tf = np.linalg.pinv(translation_tf)
             tf = translation_tf @ tf
             pass
@@ -371,6 +416,51 @@ class VisionPipeline():
         self.init_aruco_detector()
         
     def cam_process(self, cam_queue):
+        print(self.calib_yaw_at_start)
+        # exit()
+        if self.calib_yaw_at_start:
+        #### Find drone yaw
+            max_iters = 100
+            num_calib_frames = 0
+            rvec_uncalib = []
+            while True:
+                aligned_frames = self.get_frames()    
+                color_frame = self.extract_rgb(aligned_frames)
+                depth_frame = self.extract_depth(aligned_frames)
+
+                if not depth_frame or not color_frame:
+                    continue
+                
+                color_img = self.to_image(color_frame)
+                marker_corners = self.detect_marker(color_img)
+                
+                if marker_corners is None:
+                    pass
+                elif type(marker_corners) is str:
+                    pass
+                else:
+                    num_calib_frames += 1
+                    rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
+                    # if rvec_uncalib is None:
+                    #     rvec_uncalib = pipeline.estimate_uncalib_pose(marker_corners)
+                    # else:
+                    #     rvec_uncalib += pipeline.estimate_uncalib_pose(marker_corners)
+                    
+                    if(num_calib_frames >= max_iters):
+                        print("yaw Caliberated ")
+                        break  
+
+            rvec_uncalib.sort()
+            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, rvec_uncalib[int(len(rvec_uncalib) / 2.0)]])).as_rotvec()[2]
+            self.cam_rvec = np.array([0.0, 0.0, temp_+np.pi/2])
+            print(f"YAW Value from Calibration: {self.cam_rvec}")
+        
+        else:
+            self.cam_rvec = np.array([0.0, 0.0, 0.0])
+            
+
+        last_time = None
+        current_time = None
         counter = 0
         while True:
             # print("cam##############################################################loop")
@@ -384,7 +474,12 @@ class VisionPipeline():
             if not depth_frame or not color_frame:
                 continue
 
-            current_time = time.time()
+            # current_time = time.time()
+            # if not(last_time is None):
+            #     time_diff = current_time - last_time
+            #     if(time_diff != 0.0):
+            #         # self.avg_fps = 
+            #         pass
 
             color_img = self.to_image(color_frame)
 
@@ -434,6 +529,8 @@ class VisionPipeline():
                 z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
                 mid_point = np.sum(marker_corners[0], 0) / 4.0
                 mid_point = (mid_point + 0.5).astype(np.int32)
+
+                self.current_midpoint = mid_point.copy()
                 
                 #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
                 # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
@@ -442,7 +539,7 @@ class VisionPipeline():
                 # else:
                 #     flag = 0
                     # print("appending")
-                new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([-0.0073827, 0.00310284, 0])).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+                new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
                 
                 point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
                 # new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
@@ -456,7 +553,6 @@ class VisionPipeline():
                 
                 flag=0
                 cam_queue.append([current_time, aruco_pose, z_from_realsense])
-
                 self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
 
                 # data  = [dt,current_time,z_from_realsense]

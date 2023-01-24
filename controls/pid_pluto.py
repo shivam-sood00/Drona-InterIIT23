@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 class PID():
     """
     Inputs -> current state (x, y, z)
@@ -54,6 +55,8 @@ class PID():
         self.xy_thresh = float(config.get("Thresholds","xy"))
         self.vel_thresh = float(config.get("Thresholds","vel"))
         self.z_thresh = float(config.get("Thresholds","z"))
+
+        self.vel_error = 0.
         
         self.diff_fn_dict = {'min':np.min, 'avg':np.average}
         self.diff_fn = self.diff_fn_dict[config.get(droneNo,"diff_fn")]
@@ -84,7 +87,9 @@ class PID():
         # self.diff_fn
         temp = []
         for i in range(diff_frame):
-            temp.append(err_list[-1]- err_list[-2-i])
+            temp.append(err_list[-1-i]- err_list[-2-i])
+        # print("temp, ", temp)
+
         if len(temp) == 0:
             return 0
         return self.diff_fn(temp)
@@ -102,15 +107,17 @@ class PID():
         self.err_pitch[0] = self.target_pose[0] - self.cur_pose[0]
         self.err_yaw[0] = self.zero_yaw - self.cur_pose[3]
         
-        self.prev_err_list[0].append(self.err_thrust[0])
-        self.prev_err_list[1].append(self.err_roll[0])
-        self.prev_err_list[2].append(self.err_pitch[0])
-        self.prev_err_list[3].append(self.err_yaw[0])
+        self.prev_err_list[0].append(deepcopy(self.err_thrust[0]))
+        self.prev_err_list[1].append(deepcopy(self.err_roll[0]))
+        self.prev_err_list[2].append(deepcopy(self.err_pitch[0]))
+        self.prev_err_list[3].append(deepcopy(self.err_yaw[0]))
 
         for i in range(len(self.prev_err_list)):
             self.prev_err_list[i] = self.prev_err_list[i][-self.total_window:]
 
         diff_frame = min (self.diff_moving_win_len,len(self.prev_err_list[0])-1)
+
+        # print(diff_frame)
         # self.err_thrust[1] = self.err_thrust[0] - self.prev_err_list[0][-diff_frame]
         # self.err_roll[1] = self.err_roll[0] - self.prev_err_list[1][-diff_frame]
         # self.err_pitch[1] = self.err_pitch[0] - self.prev_err_list[2][-diff_frame]
@@ -265,6 +272,7 @@ class PID():
         err = abs(err)
         # distCond = np.linalg.norm(err)
         velCond = np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3])/0.04
+        self.vel_error = velCond
         print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
         if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
             return True
