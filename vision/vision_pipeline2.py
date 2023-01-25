@@ -264,7 +264,7 @@ class VisionPipeline():
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
             if marker_ids[i] == self.required_marker_id:
-                frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)
+                frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 0), 4, cv2.LINE_AA)
 
             else:
                 frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 0, 255), 4, cv2.LINE_AA)
@@ -274,7 +274,7 @@ class VisionPipeline():
     def plot_rej_markers(self, frame, marker_corners):
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
-            frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 0), 4, cv2.LINE_AA)
+            frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)
 
         return frame
 
@@ -306,13 +306,16 @@ class VisionPipeline():
             # temp_point[:2, :] = temp_point[:2, :] / temp_point[2, 0]
 
             # cv2.circle(frame, (int(temp_point[0, 0] + 0.5), int(temp_point[1, 0] + 0.5)), 7, (227, 3, 252), -1)
-            cv2.putText(frame, f"Goal: [{self.current_waypoint[0]/100.0}, {self.current_waypoint[1]/100.0}, {self.current_waypoint[2]/100.0}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         if self.estimated_pose is None:
             pass
         else:
-            cv2.putText(frame, f"Current Estimate: [{self.estimated_pose[0]}, {self.estimated_pose[1]}, {self.estimated_pose[2]}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(frame, f"YAW: [{Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Current Estimate (m): [{round(self.estimated_pose[0],2)}, {round(self.estimated_pose[1],2)}, {round(self.estimated_pose[2],2)}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        camera_yaw = round(Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)[2], 2)
+        camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
+        camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
+        cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         # m = math.tan(self.cam_rvec[2])
         # rot_euler = Rotation.from_rotvec(np.array(self.cam_rvec)).as_euler('xyz')
         
@@ -323,10 +326,10 @@ class VisionPipeline():
         if self.current_midpoint is not None:
             # print("PLOTLINE")
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
+            # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
 
         if not(self.avg_fps is None):
-            cv2.putText(frame, f"Average FPS: {self.avg_fps}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
