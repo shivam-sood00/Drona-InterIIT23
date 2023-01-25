@@ -24,7 +24,8 @@ class VisionPipeline():
                  padding=50,
                  do_tracking=True,
                  calib_yaw_at_start=True,
-                 imu_calib_data=[0.0, 0.0, 0.0]) -> None:
+                 imu_calib_data=[0.0, 0.0, 0.0],
+                 fps_moving_window_size=10) -> None:
 
 
         self.depth_res = depth_res
@@ -42,6 +43,8 @@ class VisionPipeline():
         
         self.DEBUG = debug
         self.padding = padding
+        self.fps_moving_window_size = fps_moving_window_size
+        self.fps_moving_window = []
 
         self.do_tracking = do_tracking
         self.last_detected_marker = None
@@ -49,9 +52,7 @@ class VisionPipeline():
         self.tracking_point_th = 12
 
         self.estimated_pose = None
-
         self.current_waypoint = None
-
         self.current_midpoint = None
 
         self.calib_yaw_at_start = calib_yaw_at_start
@@ -483,10 +484,12 @@ class VisionPipeline():
             if not(last_time is None):
                 time_diff = current_time - last_time
                 if(time_diff != 0.0):
-                    if self.avg_fps is None:
-                        self.avg_fps = 1/(time_diff)
+                    if len(self.fps_moving_window) >= self.fps_moving_window_size:
+                        self.fps_moving_window = self.fps_moving_window[1:]
                     else:
-                        self.avg_fps = (self.avg_fps + (1 / time_diff)) / 2.0
+                        self.fps_moving_window.append(1/time_diff)
+                    self.avg_fps = np.mean(self.fps_moving_window)
+
             
             last_time = current_time
 
