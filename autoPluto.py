@@ -44,6 +44,8 @@ class autoPluto:
         ##########
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
+        self.imuLock = threading.Lock()
+        self.commandLock = threading.Lock()
         # print(self.comms.paramsSet)
         # self.file = open('debug.csv', 'a+', newline ='')
         # with self.file:
@@ -52,11 +54,11 @@ class autoPluto:
         self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0, imu_calib_data=[-0.03358463, 0.0135802, 0.0])
         self.camera.cam_init()
         
-        readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
-        writeThread = threading.Thread(target=self.comms.write)
-        writeThread.start()
+        self.readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue, self.imuLock])
+        self.writeThread = threading.Thread(target=self.comms.write,args=[self.commandLock])
+        self.writeThread.start()
         self.lastTime = time.time()
-        readThread.start()
+        self.readThread.start()
 
     
     def run(self):
@@ -115,6 +117,7 @@ class autoPluto:
             # if self.file:
             #     self.write.writerows(np.array(data,dtype=np.float64))
             # print("ok")
+            self.commandLock.acquire()
             print(self.currentState[0],self.currentState[1],self.currentState[2],
                     self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],
                     self.comms.paramsSet["Yaw"],self.comms.paramsSet["Throttle"],
@@ -124,6 +127,7 @@ class autoPluto:
                     self.pid.err_thrust_with_sse[0],self.pid.err_pitch[1],self.pid.err_roll[1],
                     self.pid.err_thrust[1],self.pid.err_pitch[2],self.pid.err_roll[2],
                     self.pid.err_thrust[2],self.pid.vel_error)
+            self.commandLock.release()
             # print("not")
             time.sleep(self.runLoopWaitTime)
             if self.pid.isReached():
@@ -179,6 +183,7 @@ class autoPluto:
             # self.currentState[2] = 2.8 -self.currentState[2]
         # if len(self.IMUQueue)>0:
         #     print("Pitch: ",self.IMUQueue[-1]["Pitch"])
+        self.imuLock.acquire()
         if len(self.IMUQueue)>0:
             if self.currentState is None:
                 pass
@@ -193,6 +198,7 @@ class autoPluto:
         
         elif len(self.currentState) == 3:
             self.currentState = None
+        self.imuLock.release()
         
         
         if self.currentState is not None:
@@ -236,6 +242,7 @@ class autoPluto:
         # print("action: ",self.action)
     
     def takeAction(self):
+        self.commandLock.acquire()
         if self.outOfBound==0:
             # print("sending action")
             # converting to integer as we can only send integral values via MSP Packets
@@ -243,10 +250,12 @@ class autoPluto:
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
             self.comms.paramsSet["Yaw"] = int(self.action["Yaw"])
+            self.commandLock.release()
             # print("sent")
             return 0
         else:
             self.comms.paramsSet["currentCommand"] = 2
+            self.commandLock.release()
             print("Landing: ",self.outOfBound)
             return 1
         

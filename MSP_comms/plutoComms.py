@@ -167,29 +167,25 @@ class COMMS:
     Target of the Writing Thread
     ALl writing to drone takes place in this function untill we set sendData to false
     """
-    def write(self):
+    def write(self, commandLock):
         self.writeLoop = True
         self.getAllRequestMsgs()
-        # if self.paramsSet["trimRoll"]!=0 or self.paramsSet["trimPitch"]!=0: 
         msgLen = 4
         typeOfPayload = 239
         msgData = []
         msgData.extend(getBytes(toUnsigned(self.paramsSet["trimPitch"])))
         msgData.extend(getBytes(toUnsigned(self.paramsSet["trimRoll"])))
-        # self.paramsSet["trimRoll"] = 0
-        # self.paramsSet["trimPitch"] = 0
         msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
         if self.debug :
             print(msgToBeSent)
         self.mySocket.send(bytearray(msgToBeSent))
         while(self.writeLoop):
-            # print("writeloop")
-
             # Sending MSP_SET_RAW_RC type message
             start_time = time.time()
             msgLen = 16
             typeOfPayload = 200
             msgData = []
+            commandLock.acquire()
             msgData.extend(getBytes(self.paramsSet["Roll"]))
             msgData.extend(getBytes(self.paramsSet["Pitch"]))
             msgData.extend(getBytes(self.paramsSet["Throttle"]))
@@ -198,21 +194,28 @@ class COMMS:
             msgData.extend(getBytes(self.paramsSet["Aux2"]))
             msgData.extend(getBytes(self.paramsSet["Aux3"]))
             msgData.extend(getBytes(self.paramsSet["Aux4"]))
+            commandLock.release()
+            
             msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
             if self.debug :
                 print("message: ",msgToBeSent)
             self.mySocket.send(bytearray(msgToBeSent))
             # Sending MSP_SET_COMMAND type message
+            commandLock.acquire()
             if self.paramsSet["currentCommand"]!=0:
                 msgLen = 2
                 typeOfPayload = 217
                 msgData = []
                 msgData.extend(getBytes(self.paramsSet["currentCommand"]))
                 self.paramsSet["currentCommand"]=0
+                commandLock.release()
                 msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
                 if self.debug :
                     print(msgToBeSent)
                 self.mySocket.send(bytearray(msgToBeSent))
+            else:
+                commandLock.release()
+
             # sending MSP request messages for OUT Packets
             for request in self.requestMSPPackets:
                 # print(request)
@@ -229,7 +232,7 @@ class COMMS:
     Target function to the reading thread
     All the data sent by the drone is received in this function
     """
-    def read(self,IMUQueue):
+    def read(self,IMUQueue,imuLock):
         # buffer to hold the data sent by drone
         buff = []
         self.readLoop = True
@@ -246,7 +249,9 @@ class COMMS:
                 break
             
             buff = self.receiveMSPresponse(buff) 
+            imuLock.acquire()
             IMUQueue.append(self.paramsReceived)
+            imuLock.release()
             if self.debug:
                 self.printParams()
                 print(f"Read at {time.time()-start_time} s")
