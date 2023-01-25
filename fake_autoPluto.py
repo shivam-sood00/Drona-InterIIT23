@@ -2,7 +2,7 @@ from MSP_comms.plutoComms import COMMS
 import threading
 from approximatetimesync import time_sync
 from vision.kalman_filter_v2 import KalmanFilter
-from vision.vision_pipeline2 import VisionPipeline
+from vision.fake_vision_pipeline2 import VisionPipeline
 from vision.integrator import get_velocity,get_angle_rate
 import time
 import numpy as np
@@ -16,7 +16,7 @@ class autoPluto:
         signal.signal(signal.SIGINT, self.handler)
         self.debug = debug      
         self.config = ConfigParser()
-        self.config.read('controls/droneData.ini')  
+        self.config.read('controls/fake_droneData.ini')  
         self.runLoopWaitTime = 0.04
         self.CamQueue = []
         self.currentState = None
@@ -90,7 +90,7 @@ class autoPluto:
 
                 first = False
             
-            err = self.current_waypoint - self.currentState
+            err = np.array(self.current_waypoint) - np.array(self.currentState)
             print(self.currentState[0],self.currentState[1],self.currentState[2], err[0], err[1], err[2], self.current_waypoint[0], self.current_waypoint[1], self.current_waypoint[2])
             
             if self.prevState is not None and self.isReached_fake():
@@ -101,7 +101,7 @@ class autoPluto:
                     
                     if self.mode =='Rectangle':
                         print("Now Landing")
-                        self.outOfBound = 3
+                        break
                     else:
                         if self.hover_reached_flag:
                             print("Hovering")
@@ -132,12 +132,17 @@ class autoPluto:
         #     err = (self.target_pose[:2]-self.steady_state_err_way[:2]) - self.cur_pose[:2]
         # else:
         #     err = (self.target_pose[:2]-self.steady_state_err_hover[:2]) - self.cur_pose[:2]
-        err = (self.current_waypoint ) - self.currentState[:3]
+        
+        np_wp = np.array(self.current_waypoint).reshape(3,1)
+        np_state = np.array(self.currentState).reshape(3,1)
+        np_prev_state = np.array(self.prevState).reshape(3,1)
+
+        err = np_wp - np_state
 
         # err = abs(self.cur_pose[:2] - (self.target_pose[:2]+self.))
         err = abs(err)
         # distCond = np.linalg.norm(err)
-        velCond = np.linalg.norm(self.currentState - self.prevState)/0.04
+        velCond = np.linalg.norm(np_state - np_prev_state)/0.04
         self.vel_error = velCond
         print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
         if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
@@ -182,11 +187,11 @@ class autoPluto:
         
     def handler(self, sigma, frame):
         msg = "Exit + Land"
-        self.comms.land()
-        self.comms.readLoop = False
-        self.comms.writeLoop = False
-        self.readThread.join()
-        self.writeThread.join()
+        # self.comms.land()
+        # self.comms.readLoop = False
+        # self.comms.writeLoop = False
+        # self.readThread.join()
+        # self.writeThread.join()
         cv2.destroyAllWindows()
         print(msg)
         exit()

@@ -315,11 +315,18 @@ class autoPluto:
         
     def handler(self, sigma, frame):
         msg = "Exit + Land"
-        self.comms.land()
-        self.comms.readLoop = False
-        self.comms.writeLoop = False
-        self.readThread.join()
-        self.writeThread.join()
+        # self.comms.land()
+        # self.comms.readLoop = False
+        # self.comms.writeLoop = False
+        # self.readThread.join()
+        # self.writeThread.join()
         cv2.destroyAllWindows()
         print(msg)
         exit()
+
+if __name__ == "__main__":
+    drone1 = autoPluto()
+    # print("arming")
+    # drone1.comms.arm()
+    # print("calling run")
+    drone1.run()
