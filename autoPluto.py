@@ -14,7 +14,7 @@ import cv2
 class autoPluto:
     def __init__(self,debug = False):
         signal.signal(signal.SIGINT, self.handler)
-        self.comms = COMMS(debug=True)
+        self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
         # if self.debug:
@@ -68,7 +68,13 @@ class autoPluto:
         # yawUpdateFlag = True
         while(ret==0):
             # print("runloop")
+            start_time_camera = time.time()
             self.camera.cam_process(self.CamQueue)
+            
+            if self.debug:
+                print(f"{time.time()-start_time_camera} s for camera")
+    
+            start_time_pid = time.time()
             self.updateState()
             if self.currentState is None:
                 # print("here")
@@ -129,7 +135,6 @@ class autoPluto:
                     self.pid.err_thrust[2],self.pid.vel_error)
             self.commandLock.release()
             # print("not")
-            time.sleep(self.runLoopWaitTime)
             if self.pid.isReached():
                 if self.mode == "Rectangle": 
                     i += 1
@@ -148,9 +153,16 @@ class autoPluto:
                     self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
                     self.camera.update_waypoint(self.trajectory[i])
                     print("IS Reached True")
-                
-               
-                # break
+            
+            if self.debug:
+                print(f"{time.time()-start_time_pid} s for pid")
+            
+            loop_time = time.time() - start_time_camera
+            if loop_time < self.runLoopWaitTime:
+                time.sleep(self.runLoopWaitTime - loop_time)
+            
+            if self.debug:
+                print(f"Total time {loop_time}s")
             
         time.sleep(2)
     
