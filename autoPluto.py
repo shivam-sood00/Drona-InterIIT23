@@ -52,7 +52,6 @@ class autoPluto:
         #     self.write = csv.writer(self.file)
         z = int(self.config.get(self.droneNo,"id"))
         self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0, imu_calib_data=[-0.03358463, 0.0135802, 0.0])
-        self.camera.cam_init()
         
         self.readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue, self.imuLock])
         self.writeThread = threading.Thread(target=self.comms.write,args=[self.commandLock])

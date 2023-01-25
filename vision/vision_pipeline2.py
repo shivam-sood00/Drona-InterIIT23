@@ -65,6 +65,8 @@ class VisionPipeline():
         self.counter = 0
         
         self.avg_fps = None
+        self.cam_rvec = np.array([0.0, 0.0, 0.0])
+        self.raw_calib_yaw = 0.0
         if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
@@ -312,11 +314,12 @@ class VisionPipeline():
             cv2.putText(frame, f"Current Estimate: [{self.estimated_pose[0]}, {self.estimated_pose[1]}, {self.estimated_pose[2]}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         cv2.putText(frame, f"YAW: [{Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         # m = math.tan(self.cam_rvec[2])
-        rot_euler = Rotation.from_rotvec(np.array(self.cam_rvec)).as_euler('xyz')
+        # rot_euler = Rotation.from_rotvec(np.array(self.cam_rvec)).as_euler('xyz')
         
-        rot_img_mat = Rotation.from_euler('xyz', np.array([rot_euler[0], rot_euler[1], 0.0])).as_matrix() @ Rotation.from_euler('xyz', np.array([0.0, 0.0, rot_euler[2]])).as_matrix()
-        rot_img_yaw = Rotation.from_matrix(rot_img_mat).as_euler('xyz')[2]
-        m = -math.tan(rot_img_yaw)
+        # rot_img_mat = Rotation.from_euler('xyz', np.array([rot_euler[0], rot_euler[1], 0.0])).as_matrix() @ Rotation.from_euler('xyz', np.array([0.0, 0.0, rot_euler[2]])).as_matrix()
+        # rot_img_yaw = Rotation.from_matrix(rot_img_mat).as_euler('xyz')[2]
+        # m = -math.tan(rot_img_yaw)
+        m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             # print("PLOTLINE")
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
@@ -465,7 +468,8 @@ class VisionPipeline():
                         break   
 
             rvec_uncalib.sort()
-            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, rvec_uncalib[int(len(rvec_uncalib) / 2.0)]])).as_rotvec()[2]
+            self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
+            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
             yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
             self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
             print(f"YAW Value from Calibration: {self.cam_rvec}")
