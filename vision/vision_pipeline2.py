@@ -58,15 +58,20 @@ class VisionPipeline():
         self.calib_yaw_at_start = calib_yaw_at_start
         self.imu_calib_data = imu_calib_data
 
+        self.cam_init()
+
+        self.last_time = None
+        self.current_time = None
+        self.counter = 0
+        
         self.avg_fps = None
+        self.cam_rvec = np.array([0.0, 0.0, 0.0])
+        self.raw_calib_yaw = 0.0
         if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
             self.cam_rvec = np.array([0.0, 0.0, 0.0])
         
-        self.last_time = None
-        self.current_time = None
-        self.counter = 0
 
 
 
@@ -216,7 +221,7 @@ class VisionPipeline():
                     if self.DEBUG:
                         frame = self.plot_rej_markers(frame, reject)
                         rgb_frame = self.plot_rej_markers(rgb_frame, reject)
-                        print("NO marker detected")
+                        print("NO marker detected!")
                         self.show_frame(frame, rgb_frame)
                     
                     self.last_detected_marker = None
@@ -308,11 +313,14 @@ class VisionPipeline():
         else:
             cv2.putText(frame, f"Current Estimate: [{self.estimated_pose[0]}, {self.estimated_pose[1]}, {self.estimated_pose[2]}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         cv2.putText(frame, f"YAW: [{Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        m = math.tan(self.cam_rvec[2])
-
-        if self.current_midpoint is None:
-            pass
-        else:
+        # m = math.tan(self.cam_rvec[2])
+        # rot_euler = Rotation.from_rotvec(np.array(self.cam_rvec)).as_euler('xyz')
+        
+        # rot_img_mat = Rotation.from_euler('xyz', np.array([rot_euler[0], rot_euler[1], 0.0])).as_matrix() @ Rotation.from_euler('xyz', np.array([0.0, 0.0, rot_euler[2]])).as_matrix()
+        # rot_img_yaw = Rotation.from_matrix(rot_img_mat).as_euler('xyz')[2]
+        # m = -math.tan(rot_img_yaw)
+        m = math.tan(self.raw_calib_yaw + np.pi/2.0)
+        if self.current_midpoint is not None:
             # print("PLOTLINE")
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
             cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
@@ -437,20 +445,9 @@ class VisionPipeline():
                 aligned_frames = self.get_frames()    
                 color_frame = self.extract_rgb(aligned_frames)
                 depth_frame = self.extract_depth(aligned_frames)
-
                 if not depth_frame or not color_frame:
                     continue
                 
-                self.current_time = time.time()
-                if not(self.last_time is None):
-                    time_diff = self.current_time - self.last_time
-                    if(time_diff != 0.0):
-                        if len(self.fps_moving_window) >= self.fps_moving_window_size:
-                            self.fps_moving_window = self.fps_moving_window[1:]
-                        else:
-                            self.fps_moving_window.append(1/time_diff)
-                        self.avg_fps = np.mean(self.fps_moving_window)
-
                 color_img = self.to_image(color_frame)
                 marker_corners = self.detect_marker(color_img)
                 
@@ -468,11 +465,13 @@ class VisionPipeline():
                     
                     if(num_calib_frames >= max_iters):
                         print("yaw Caliberated ")
-                        break  
+                        break   
 
             rvec_uncalib.sort()
-            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, rvec_uncalib[int(len(rvec_uncalib) / 2.0)]])).as_rotvec()[2]
-            self.cam_rvec = np.array([0.0, 0.0, temp_+np.pi/2])
+            self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
+            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
+            yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+            self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
             print(f"YAW Value from Calibration: {self.cam_rvec}")
         
     def cam_process(self, cam_queue):
@@ -488,17 +487,15 @@ class VisionPipeline():
         if not(self.last_time is None):
             time_diff = self.current_time - self.last_time
             if(time_diff != 0.0):
-                if len(self.fps_moving_window) >= self.fps_moving_window_size:
-                    self.fps_moving_window = self.fps_moving_window[1:]
-                else:
-                    self.fps_moving_window.append(1/time_diff)
+                self.fps_moving_window.append(1/time_diff)
+                self.fps_moving_window[-self.fps_moving_window_size:]
                 self.avg_fps = np.mean(self.fps_moving_window)
             
         self.last_time = self.current_time
 
         if self.DEBUG:
             if not(self.avg_fps is None):
-                print(f"Average FPS: ", self.avg_fps)
+                print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
             
 
         color_img = self.to_image(color_frame)
@@ -514,7 +511,7 @@ class VisionPipeline():
             
         if marker_corners is None:
             self.counter += 1
-            if self.counter >= 15:
+            if self.counter >= 30:
                 flag = 2
                 cam_queue.append([flag])
                 self.counter = 0
@@ -558,7 +555,7 @@ class VisionPipeline():
             ##############################################################################
             # print("Z: ", z_from_realsense)
             
-            aruco_pose[0] = -aruco_pose[0]
+            # aruco_pose[0] = -aruco_pose[0]
                 
             # flag=0
             cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
