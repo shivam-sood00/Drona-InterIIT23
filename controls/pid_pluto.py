@@ -285,5 +285,6 @@ class PID():
 		low pass filter for the data
 		"""
 		if len(diff_error_list) > 0:
+			# print("DIFF ERROR LPF", self.final_diff_error*(1-self.alpha), self.alpha*diff_error_list[-1],diff_error_list[-1] )
 			self.final_diff_error = self.final_diff_error*(1-self.alpha) + self.alpha*diff_error_list[-1]
 			return self.final_diff_error
