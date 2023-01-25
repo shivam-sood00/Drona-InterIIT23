@@ -3,9 +3,7 @@ import numpy as np
 import cv2
 from cv2 import aruco
 import time
-import os
 from scipy.spatial.transform import Rotation
-import csv
 import math
 
 # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)

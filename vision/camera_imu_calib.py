@@ -1,11 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
-import cv2
 from cv2 import aruco
-import time
-import os
 from scipy.spatial.transform import Rotation
-import csv
 
 # pipeline = rs.pipeline()
 # config = rs.config()

@@ -1,6 +1,5 @@
 from MSP_comms.plutoComms import COMMS
 import threading
-from EKF.kalman_filter_v2 import KalmanFilter
 from vision.vision_pipeline2 import VisionPipeline
 import time
 import numpy as np
