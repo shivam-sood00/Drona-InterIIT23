@@ -56,6 +56,8 @@ class VisionPipeline():
 
         self.calib_yaw_at_start = calib_yaw_at_start
         self.imu_calib_data = imu_calib_data
+
+        self.avg_fps = None
         
         pass
 
@@ -307,6 +309,9 @@ class VisionPipeline():
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
             cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
 
+        if not(self.avg_fps is None):
+            cv2.putText(frame, f"Average FPS: {self.avg_fps}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
@@ -474,12 +479,21 @@ class VisionPipeline():
             if not depth_frame or not color_frame:
                 continue
 
-            # current_time = time.time()
-            # if not(last_time is None):
-            #     time_diff = current_time - last_time
-            #     if(time_diff != 0.0):
-            #         # self.avg_fps = 
-            #         pass
+            current_time = time.time()
+            if not(last_time is None):
+                time_diff = current_time - last_time
+                if(time_diff != 0.0):
+                    if self.avg_fps is None:
+                        self.avg_fps = 1/(time_diff)
+                    else:
+                        self.avg_fps = (self.avg_fps + (1 / time_diff)) / 2.0
+            
+            last_time = current_time
+
+            if self.DEBUG:
+                if not(self.avg_fps is None):
+                    print(f"Average FPS: ", self.avg_fps)
+            
 
             color_img = self.to_image(color_frame)
 

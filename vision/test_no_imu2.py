@@ -134,6 +134,8 @@ if __name__ == '__main__':
         pipeline.cam_rvec = np.array([0.0, 0.0, 0.0])
     
 
+    last_time = None
+    current_time = None
     try:
         while True:
 
@@ -145,6 +147,19 @@ if __name__ == '__main__':
                 continue
 
             current_time = time.time()
+            if not(last_time is None):
+                time_diff = current_time - last_time
+                if(time_diff != 0.0):
+                    if pipeline.avg_fps is None:
+                        pipeline.avg_fps = 1/(time_diff)
+                    else:
+                        pipeline.avg_fps = (pipeline.avg_fps + (1 / time_diff)) / 2.0
+            
+            last_time = current_time
+
+            if pipeline.DEBUG:
+                if not(pipeline.avg_fps is None):
+                    print(f"Average FPS: ", pipeline.avg_fps)
 
 
             depth_img = pipeline.to_image(depth_frame)
