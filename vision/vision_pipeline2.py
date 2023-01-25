@@ -59,8 +59,15 @@ class VisionPipeline():
         self.imu_calib_data = imu_calib_data
 
         self.avg_fps = None
+        if self.calib_yaw_at_start:
+            self.calibrate_yaw()
+        else:
+            self.cam_rvec = np.array([0.0, 0.0, 0.0])
         
-        pass
+        self.last_time = None
+        self.current_time = None
+        self.counter = 0
+
 
 
     def init_realsense(self):
@@ -318,6 +325,7 @@ class VisionPipeline():
 
         cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
         cv2.imshow("RGB Image", rgb_frame)
+        key = cv2.waitKey(1)
 
 
     
@@ -421,11 +429,7 @@ class VisionPipeline():
         self.init_realsense()
         self.init_aruco_detector()
         
-    def cam_process(self, cam_queue):
-        print(self.calib_yaw_at_start)
-        # exit()
-        if self.calib_yaw_at_start:
-        #### Find drone yaw
+    def calibrate_yaw(self):
             max_iters = 100
             num_calib_frames = 0
             rvec_uncalib = []
@@ -437,6 +441,16 @@ class VisionPipeline():
                 if not depth_frame or not color_frame:
                     continue
                 
+                self.current_time = time.time()
+                if not(self.last_time is None):
+                    time_diff = self.current_time - self.last_time
+                    if(time_diff != 0.0):
+                        if len(self.fps_moving_window) >= self.fps_moving_window_size:
+                            self.fps_moving_window = self.fps_moving_window[1:]
+                        else:
+                            self.fps_moving_window.append(1/time_diff)
+                        self.avg_fps = np.mean(self.fps_moving_window)
+
                 color_img = self.to_image(color_frame)
                 marker_corners = self.detect_marker(color_img)
                 
@@ -461,127 +475,98 @@ class VisionPipeline():
             self.cam_rvec = np.array([0.0, 0.0, temp_+np.pi/2])
             print(f"YAW Value from Calibration: {self.cam_rvec}")
         
-        else:
-            self.cam_rvec = np.array([0.0, 0.0, 0.0])
+    def cam_process(self, cam_queue):
+        flag = 0
+        aligned_frames = self.get_frames()    
+        color_frame = self.extract_rgb(aligned_frames)
+        depth_frame = self.extract_depth(aligned_frames)
+
+        if not depth_frame or not color_frame:
+            return
+
+        self.current_time = time.time()
+        if not(self.last_time is None):
+            time_diff = self.current_time - self.last_time
+            if(time_diff != 0.0):
+                if len(self.fps_moving_window) >= self.fps_moving_window_size:
+                    self.fps_moving_window = self.fps_moving_window[1:]
+                else:
+                    self.fps_moving_window.append(1/time_diff)
+                self.avg_fps = np.mean(self.fps_moving_window)
+            
+        self.last_time = self.current_time
+
+        if self.DEBUG:
+            if not(self.avg_fps is None):
+                print(f"Average FPS: ", self.avg_fps)
             
 
-        last_time = None
-        current_time = None
-        counter = 0
-        while True:
-            # print("cam##############################################################loop")
-            flag = 0
-            x_threshold = 0
-            y_threshold = 0
-            aligned_frames = self.get_frames()    
-            color_frame = self.extract_rgb(aligned_frames)
-            depth_frame = self.extract_depth(aligned_frames)
+        color_img = self.to_image(color_frame)
 
-            if not depth_frame or not color_frame:
-                continue
-
-            current_time = time.time()
-            if not(last_time is None):
-                time_diff = current_time - last_time
-                if(time_diff != 0.0):
-                    if len(self.fps_moving_window) >= self.fps_moving_window_size:
-                        self.fps_moving_window = self.fps_moving_window[1:]
-                    else:
-                        self.fps_moving_window.append(1/time_diff)
-                    self.avg_fps = np.mean(self.fps_moving_window)
-
+        # time when we finish processing for this frame
+        # new_frame_time = time.time()
+        # fps = 1/(new_frame_time-prev_frame_time)
+        # prev_frame_time = new_frame_time
+        # fps = int(fps)
+        # print(fps)
+        
+        marker_corners = self.detect_marker(color_img)
             
-            last_time = current_time
-
-            if self.DEBUG:
-                if not(self.avg_fps is None):
-                    print(f"Average FPS: ", self.avg_fps)
-            
-
-            color_img = self.to_image(color_frame)
-
-            # time when we finish processing for this frame
-            # new_frame_time = time.time()
-            # fps = 1/(new_frame_time-prev_frame_time)
-            # prev_frame_time = new_frame_time
-            # fps = int(fps)
-            # print(fps)
-            
-            marker_corners = self.detect_marker(color_img)
-            
-            if marker_corners is None:
-                counter += 1
-                if counter >= 15:
-                    flag = 2
-                    cam_queue.append([flag])
-                    counter = 0
+        if marker_corners is None:
+            self.counter += 1
+            if self.counter >= 15:
+                flag = 2
+                cam_queue.append([flag])
+                self.counter = 0
                 # print("no aruco")
                 pass
-            elif type(marker_corners) == type("None"):
-                    flag = 1
-                    cam_queue.append([flag])
-            else:
-                # print("detected")
-                counter = 0
-                aruco_pose = self.estimate_pose(marker_corners)
-                #dt = current_time - last_time
-                #last_time = current_time
-                #print(f"[{current_time}]: Aruco ESTIMATE: ", aruco_pose)
+        elif type(marker_corners) == type("None"):
+            flag = 1
+            cam_queue.append([flag])
+        else:
+            # print("detected")
+            self.counter = 0
+            aruco_pose = self.estimate_pose(marker_corners)
+            _intrisics = rs.intrinsics()
+            _intrisics.width = self.rgb_res[1]
+            _intrisics.height = self.rgb_res[0]
+            _intrisics.ppx = self.cam_matrix[0][2]
+            _intrisics.ppy = self.cam_matrix[1][2]
+            _intrisics.fx = self.cam_matrix[0][0]
+            _intrisics.fy = self.cam_matrix[1][1]
 
-                # kf.apply_system_dynamics(control_input, dt)
-                # print(f"[{current_time}]: System Dynamics ESTIMATE: ", kf.H @ kf.X)
-                # kf.update_measurement(aruco_pose, aruco_noise_bias, aruco_noise_cov)
-                # pose_estimate = (kf.H @ kf.X)
+            z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+            mid_point = np.sum(marker_corners[0], 0) / 4.0
+            mid_point = (mid_point + 0.5).astype(np.int32)
 
-                # print(f"[{current_time}]: EKF ESTIMATE: ", pose_estimate)
-                #####################################################################
-                _intrisics = rs.intrinsics()
-                _intrisics.width = self.rgb_res[1]
-                _intrisics.height = self.rgb_res[0]
-                _intrisics.ppx = self.cam_matrix[0][2]
-                _intrisics.ppy = self.cam_matrix[1][2]
-                _intrisics.fx = self.cam_matrix[0][0]
-                _intrisics.fy = self.cam_matrix[1][1]
-
-                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
-                mid_point = np.sum(marker_corners[0], 0) / 4.0
-                mid_point = (mid_point + 0.5).astype(np.int32)
-
-                self.current_midpoint = mid_point.copy()
+            self.current_midpoint = mid_point.copy()
+            
+        #print(f"[{self.current_time}]: Z from REALSENSE: ", z_from_realsense)
+            # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
+            #     flag = 1
+            #     cam_queue.append([flag])
+            # else:
+            #     flag = 0
+                # print("appending")
+            new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
+            
+            point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+            # new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+            # new_tf = np.linalg.pinv(new_tf)
+            z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+            z_from_realsense = -z_from_realsense + 2.858
+            ##############################################################################
+            # print("Z: ", z_from_realsense)
+            
+            aruco_pose[0] = -aruco_pose[0]
                 
-                #print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
-                # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
-                #     flag = 1
-                #     cam_queue.append([flag])
-                # else:
-                #     flag = 0
-                    # print("appending")
-                new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
-                
-                point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-                # new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
-                # new_tf = np.linalg.pinv(new_tf)
-                z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
-                z_from_realsense = -z_from_realsense + 2.858
-                ##############################################################################
-                # print("Z: ", z_from_realsense)
-                
-                aruco_pose[0] = -aruco_pose[0]
-                
-                flag=0
-                cam_queue.append([current_time, aruco_pose, z_from_realsense])
-                self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
+            # flag=0
+            cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
+            self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
 
-                # data  = [dt,current_time,z_from_realsense]
+            # data  = [dt,self.current_time,z_from_realsense]
                 # data.extend(aruco_pose.T[0].tolist())
             # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
             # cv2.imshow("RGB Image",color_img)
-                
-
-            key = cv2.waitKey(1)
-            if key & 0xFF == ord('q') or key == 27:
-                cv2.destroyAllWindows()
-                
-                break
     
     

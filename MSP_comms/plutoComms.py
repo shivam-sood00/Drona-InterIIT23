@@ -186,6 +186,7 @@ class COMMS:
             # print("writeloop")
 
             # Sending MSP_SET_RAW_RC type message
+            start_time = time.time()
             msgLen = 16
             typeOfPayload = 200
             msgData = []
@@ -217,7 +218,12 @@ class COMMS:
                 # print(request)
                 self.mySocket.send(bytearray(request))
             # sleep to control writing frequency
-            time.sleep(self.inLoopSleepTime)
+            end_time = time.time()
+            loop_time = end_time - start_time
+            if loop_time > self.inLoopSleepTime:
+                print("ERRORRRR : Writing at less than 25 Hz")
+            else:
+                time.sleep(self.inLoopSleepTime - loop_time)
 
     """
     Target function to the reading thread
@@ -233,6 +239,7 @@ class COMMS:
         # Always reading values and updating the buffer within the readThread utill readLoop is set to false
         while(self.readLoop):
             # print("readloop")
+            start_time = time.time()
             # Time out after 2 seconds of not getting data
             ready = select.select([self.mySocket],[],[],2) 
             if not ready[0]:
@@ -242,6 +249,7 @@ class COMMS:
             IMUQueue.append(self.paramsReceived)
             if self.debug:
                 self.printParams()
+                print(f"Read at {time.time()-start_time} s")
     
     # function to print all the parameters
     def printParams(self):

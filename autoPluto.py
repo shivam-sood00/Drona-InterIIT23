@@ -9,12 +9,12 @@ import numpy as np
 from controls.pid_pluto import PID
 from configparser import ConfigParser
 import signal
-
+import cv2
 
 class autoPluto:
     def __init__(self,debug = False):
         signal.signal(signal.SIGINT, self.handler)
-        self.comms = COMMS()
+        self.comms = COMMS(debug=True)
         self.debug = debug      
         self.config = ConfigParser()
         # if self.debug:
@@ -48,21 +48,16 @@ class autoPluto:
         # self.file = open('debug.csv', 'a+', newline ='')
         # with self.file:
         #     self.write = csv.writer(self.file)
+        z = int(self.config.get(self.droneNo,"id"))
+        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0, imu_calib_data=[-0.03358463, 0.0135802, 0.0])
+        self.camera.cam_init()
+        
         readThread = threading.Thread(target=self.comms.read,args=[self.IMUQueue])
         writeThread = threading.Thread(target=self.comms.write)
-        cameraThread = threading.Thread(target=self.cameraFeed)
         writeThread.start()
         self.lastTime = time.time()
         readThread.start()
-        cameraThread.start()
-    
-    # updates queueXYZ
-    def cameraFeed(self):
-        z = int(self.config.get(self.droneNo,"id"))
-        # print(z)
-        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0, imu_calib_data=[-0.03358463, 0.0135802, 0.0])
-        self.camera.cam_init()
-        self.camera.cam_process(self.CamQueue)
+
     
     def run(self):
         ret = 0
@@ -71,6 +66,7 @@ class autoPluto:
         # yawUpdateFlag = True
         while(ret==0):
             # print("runloop")
+            self.camera.cam_process(self.CamQueue)
             self.updateState()
             if self.currentState is None:
                 # print("here")
@@ -257,5 +253,6 @@ class autoPluto:
     def handler(self, sigma, frame):
         msg = "Exit + Land"
         self.comms.land()
+        cv2.destroyAllWindows()
         print(msg)
         exit()
