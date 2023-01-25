@@ -51,7 +51,7 @@ if __name__ == '__main__':
     align_to="rgb"
     marker_size=3.62 #13.8
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 6
+    required_marker_id = 0
     calib_file_path="vision/calib_data/MultiMatrix.npz"
 
     calib_yaw_at_start = True
@@ -220,7 +220,8 @@ if __name__ == '__main__':
                 dt = current_time - last_time
                 last_time = current_time
                 print(f"[{current_time}]: Aruco ESTIMATE: ")
-                print(aruco_pose*100)
+                print("X:",aruco_pose[0][0]*100,"Y:",aruco_pose[1][0]*100," Z:",aruco_pose[2][0]*100)
+                # print(aruco_pose[0][0]*100, aruco_pose[2][0]*100)
 
                 # kf.apply_system_dynamics(control_input, dt)
                 # print(f"[{current_time}]: System Dynamics ESTIMATE: ", kf.H @ kf.X)

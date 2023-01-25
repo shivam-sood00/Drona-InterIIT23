@@ -57,6 +57,7 @@ class PID():
 		self.z_thresh = float(config.get("Thresholds","z"))
 
 		self.vel_error = 0.
+		self.final_diff_error = 0.0
 		
 		self.diff_fn_dict = {'min':np.min, 'avg':np.average, 'lpf':self.low_pass_filter}
 		self.diff_fn = self.diff_fn_dict[config.get(droneNo,"diff_fn")]
@@ -283,4 +284,6 @@ class PID():
 		"""
 		low pass filter for the data
 		"""
-		return self.alpha*diff_error_list[-1] + (1-self.alpha)*diff_error_list[-2]
+		if len(diff_error_list) > 0:
+			self.final_diff_error = self.final_diff_error*(1-self.alpha) + self.alpha*diff_error_list[-1]
+			return self.final_diff_error

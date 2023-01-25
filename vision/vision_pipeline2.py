@@ -555,7 +555,7 @@ class VisionPipeline():
             ##############################################################################
             # print("Z: ", z_from_realsense)
             
-            # aruco_pose[0] = -aruco_pose[0]
+            aruco_pose[0] = -aruco_pose[0]
                 
             # flag=0
             cam_queue.append([self.current_time, aruco_pose, z_from_realsense])

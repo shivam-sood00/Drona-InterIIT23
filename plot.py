@@ -35,8 +35,10 @@ vel = []
 
 
 stateCont = 3
-
+i= 0
 for each in file:
+    i += 1
+    print(i)
     if each.strip()=="":
         continue
     if stateCont<3:
@@ -50,6 +52,8 @@ for each in file:
         continue
     elif each[0]=='[' and each[1]=='[':
         stateCont -=1
+        continue
+    elif each[:2] == "--":
         continue
     q=0
     msg=[]

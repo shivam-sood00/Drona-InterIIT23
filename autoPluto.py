@@ -273,6 +273,10 @@ class autoPluto:
     def handler(self, sigma, frame):
         msg = "Exit + Land"
         self.comms.land()
+        self.comms.readLoop = False
+        self.comms.writeLoop = False
+        self.readThread.join()
+        self.writeThread.join()
         cv2.destroyAllWindows()
         print(msg)
         exit()
