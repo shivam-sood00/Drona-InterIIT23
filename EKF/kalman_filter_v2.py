@@ -92,7 +92,6 @@ class KalmanFilter():
             sensor_noise_cov: Sensor Noise Covariance
         """
         # Calculate the measurement residual
-        #sensor_obs = sensor_obs.reshape((3, 1))
         measurement_residual = sensor_obs - ((H @ self.X) + (sensor_noise_bias))    
 
                     
@@ -109,10 +108,6 @@ class KalmanFilter():
         # Update the state covariance estimate for time k
         M = K @ H
         self.P = (np.eye(M.shape[0]) - M) @ self.P @ (np.eye(M.shape[0]) - M).T + K @ sensor_noise_cov @ K.T #P_k - (K_k @ H_k @ P_k) 
-    
-    def debugPrint(self,imu_data,cam_data):
-        print("IMU Data : ",imu_data)
-        print("Cam Data : ",cam_data)
 
 
     def estimate_pose(self, control_inp, sensor_obs, dt):
@@ -129,31 +124,6 @@ class KalmanFilter():
         """
         imuData = sensor_obs["imu"]
         cameraData = sensor_obs["cam"]
-
-        # if flag == 3:
-        #     # Both Empty
-        #     self.apply_system_dynamics(control_input, dt)
-        #     x = self.X
-
-        # elif flag == 1:
-        #     # Only IMU
-        #     imu_data = self.getRPY(sensor_obs["imu"])
-        #     self.apply_system_dynamics(control_input, dt)
-        #     self.update_measurement(self.imu_H, imu_data, self.imu_noise_bias, self.imu_noise_cov)
-        #     x = self.X
-
-        # elif flag == 2:
-        #     # Only Aruco
-        #     camera_data = self.getXYZ(sensor_obs["camera"])
-        #     self.apply_system_dynamics(control_input, dt)
-        #     self.update_measurement(self.aruco_H, camera_data, self.aruco_noise_bias, self.aruco_noise_cov)
-        #     x = self.X
-
-        # else:
-        #     # Both
-        #     imu_data = self.getRPY(sensor_obs["imu"])
-        #     camera_data = self.getXYZ(sensor_obs["camera"])
-        
         
         # Store Position and Velocity to be updated to current timestep 
         prevPos = self.X[:3]
@@ -163,7 +133,10 @@ class KalmanFilter():
         imu_calc_vel = get_velocity(prevVel,imuData,dt)
         
         # Update the Dynamics and Get Expected States, Input as Throttle
-        self.apply_system_dynamics(imuData, control_inp[3], dt)
+        
+        # thrust = get_thrust(control_inp[3])  #TODO thrust vs throttle stick mapping
+        thrust = control_inp[3] 
+        self.apply_system_dynamics(imuData, thrust, dt)
 
         # Update the current velocity estimate using IMU Calculated Estimate
         self.update_measurement(self.imu_H_vel, np.array(imu_calc_vel), self.imu_noise_bias, self.imu_noise_cov)

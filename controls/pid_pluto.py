@@ -1,16 +1,14 @@
 import numpy as np
 from copy import deepcopy
-
 class PID():
-    """
-    This is the implementation of the PID controller.
-    The current states are the x, y, z coordinates.
+	"""
+	This is the implementation of the PID controller.
+	The current states are the x, y, z coordinates.
     The control variables are thrust, roll, pitch in the range of 900-2100.
     Kp, Kd and Ki are the PID gains required to tune the control variables.
-
-    """
-    def __init__(self,config,droneNo):
-        """
+	"""
+	def __init__(self,config,droneNo):
+		"""
             Initializing the PID gains and  the corresponding parameters for error calculation.
             K_thrust_z, K_roll_z, K_pitch_z, K_yaw_z are the PID gains for the motion corresponding to z axis.
 
@@ -45,63 +43,63 @@ class PID():
             diff_fn: Selected function from the diff_fn_dict for the derivative term.
             alpha: parameter for the low_pass_filter function.
         """
-        self.K_thrust_z = np.array(config.get(droneNo,"K_thrust_z").split(','),dtype=np.float64).reshape(3,1)
-        self.K_roll_z = np.array(config.get(droneNo,"K_roll_z").split(','),dtype=np.float64).reshape(3,1)
-        self.K_pitch_z = np.array(config.get(droneNo,"K_pitch_z").split(','),dtype=np.float64).reshape(3,1)
-        self.K_yaw_z = np.array(config.get(droneNo,"K_yaw_z").split(','),dtype=np.float64).reshape(3,1)
-        
-        self.K_thrust_way_x = np.array(config.get(droneNo,"K_thrust_way_x").split(','),dtype=np.float64).reshape(3,1)
-        self.K_roll_way_x = np.array(config.get(droneNo,"K_roll_way_x").split(','),dtype=np.float64).reshape(3,1)
-        self.K_pitch_way_x = np.array(config.get(droneNo,"K_pitch_way_x").split(','),dtype=np.float64).reshape(3,1)
-        self.K_yaw_way_x = np.array(config.get(droneNo,"K_yaw_way_x").split(','),dtype=np.float64).reshape(3,1)
-        
-        self.K_thrust_way_y = np.array(config.get(droneNo,"K_thrust_way_y").split(','),dtype=np.float64).reshape(3,1)
-        self.K_roll_way_y = np.array(config.get(droneNo,"K_roll_way_y").split(','),dtype=np.float64).reshape(3,1)
-        self.K_pitch_way_y = np.array(config.get(droneNo,"K_pitch_way_y").split(','),dtype=np.float64).reshape(3,1)
-        self.K_yaw_way_y = np.array(config.get(droneNo,"K_yaw_way_y").split(','),dtype=np.float64).reshape(3,1)
-        
-        self.cur_K_thrust = None
-        self.cur_K_roll = None
-        self.cur_K_pitch = None
-        self.cur_K_yaw = None
-        
-        self.steady_state_err_way_z = np.array(config.get(droneNo,"steady_state_err_way_z").split(','),dtype=np.float64).reshape(3,1)
-        self.steady_state_err_way_x = np.array(config.get(droneNo,"steady_state_err_way_x").split(','),dtype=np.float64).reshape(3,1)
-        self.steady_state_err_way_y = np.array(config.get(droneNo,"steady_state_err_way_y").split(','),dtype=np.float64).reshape(3,1)
-        self.move = {'x': self.steady_state_err_way_x , 'y': self.steady_state_err_way_y , 'z': self.steady_state_err_way_z }
-        self.move_K = {'x': (self.K_thrust_way_x, self.K_roll_way_x, self.K_pitch_way_x, self.K_yaw_way_x) ,
-                       'y': (self.K_thrust_way_y, self.K_roll_way_y, self.K_pitch_way_y, self.K_yaw_way_y) ,
-                       'z': (self.K_thrust_z, self.K_roll_z, self.K_pitch_z, self.K_yaw_z) }
+		self.K_thrust_z = np.array(config.get(droneNo,"K_thrust_z").split(','),dtype=np.float64).reshape(3,1)
+		self.K_roll_z = np.array(config.get(droneNo,"K_roll_z").split(','),dtype=np.float64).reshape(3,1)
+		self.K_pitch_z = np.array(config.get(droneNo,"K_pitch_z").split(','),dtype=np.float64).reshape(3,1)
+		self.K_yaw_z = np.array(config.get(droneNo,"K_yaw_z").split(','),dtype=np.float64).reshape(3,1)
+		
+		self.K_thrust_way_x = np.array(config.get(droneNo,"K_thrust_way_x").split(','),dtype=np.float64).reshape(3,1)
+		self.K_roll_way_x = np.array(config.get(droneNo,"K_roll_way_x").split(','),dtype=np.float64).reshape(3,1)
+		self.K_pitch_way_x = np.array(config.get(droneNo,"K_pitch_way_x").split(','),dtype=np.float64).reshape(3,1)
+		self.K_yaw_way_x = np.array(config.get(droneNo,"K_yaw_way_x").split(','),dtype=np.float64).reshape(3,1)
+		
+		self.K_thrust_way_y = np.array(config.get(droneNo,"K_thrust_way_y").split(','),dtype=np.float64).reshape(3,1)
+		self.K_roll_way_y = np.array(config.get(droneNo,"K_roll_way_y").split(','),dtype=np.float64).reshape(3,1)
+		self.K_pitch_way_y = np.array(config.get(droneNo,"K_pitch_way_y").split(','),dtype=np.float64).reshape(3,1)
+		self.K_yaw_way_y = np.array(config.get(droneNo,"K_yaw_way_y").split(','),dtype=np.float64).reshape(3,1)
+		
+		self.cur_K_thrust = None
+		self.cur_K_roll = None
+		self.cur_K_pitch = None
+		self.cur_K_yaw = None
+		
+		self.steady_state_err_way_z = np.array(config.get(droneNo,"steady_state_err_way_z").split(','),dtype=np.float64).reshape(3,1)
+		self.steady_state_err_way_x = np.array(config.get(droneNo,"steady_state_err_way_x").split(','),dtype=np.float64).reshape(3,1)
+		self.steady_state_err_way_y = np.array(config.get(droneNo,"steady_state_err_way_y").split(','),dtype=np.float64).reshape(3,1)
+		self.move = {'x': self.steady_state_err_way_x , 'y': self.steady_state_err_way_y , 'z': self.steady_state_err_way_z }
+		self.move_K = {'x': (self.K_thrust_way_x, self.K_roll_way_x, self.K_pitch_way_x, self.K_yaw_way_x) ,
+					   'y': (self.K_thrust_way_y, self.K_roll_way_y, self.K_pitch_way_y, self.K_yaw_way_y) ,
+					   'z': (self.K_thrust_z, self.K_roll_z, self.K_pitch_z, self.K_yaw_z) }
 
-        self.cur_steady_state = None 
-        # print(self.K_pitch,self.K_roll,self.K_pitch,self.K_yaw)
-        self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1) # x,y,z,yaw
-        self.prev_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1)
-        self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
-        self.zero_yaw = None
-        self.useWay = False
-        self.int_moving_win_len = int(config.get(droneNo,"int_moving_win_len"))
-        self.diff_moving_win_len = int(config.get(droneNo,"diff_moving_win_len"))
-        self.total_window = max(self.int_moving_win_len,self.diff_moving_win_len)
-        
-        self.xy_thresh = float(config.get("Thresholds","xy"))
-        self.vel_thresh = float(config.get("Thresholds","vel"))
-        self.z_thresh = float(config.get("Thresholds","z"))
+		self.cur_steady_state = None 
+		self.cur_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1) # x,y,z,yaw
+		self.prev_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1)
+		self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
+		self.zero_yaw = None
+		self.useWay = False
+		self.int_moving_win_len = int(config.get(droneNo,"int_moving_win_len"))
+		self.diff_moving_win_len = int(config.get(droneNo,"diff_moving_win_len"))
+		self.total_window = max(self.int_moving_win_len,self.diff_moving_win_len)
+		
+		self.xy_thresh = float(config.get("Thresholds","xy"))
+		self.vel_thresh = float(config.get("Thresholds","vel"))
+		self.z_thresh = float(config.get("Thresholds","z"))
 
-        self.vel_error = 0.
-        
-        self.diff_fn_dict = {'min':np.min, 'avg':np.average, 'lpf':self.low_pass_filter}
-        self.diff_fn = self.diff_fn_dict[config.get(droneNo,"diff_fn")]
-        self.alpha = float(config.get(droneNo,"alpha_low_pass"))
-        self.reset()
-        
-    """
-    e, e_dot, e_integral
-    """
-    def reset(self):
-        """
+		self.vel_error = 0.
+		self.final_diff_error = 0.0
+		
+		self.diff_fn_dict = {'min':np.min, 'avg':np.average, 'lpf':self.low_pass_filter}
+		self.diff_fn = self.diff_fn_dict[config.get(droneNo,"diff_fn")]
+		self.alpha = float(config.get(droneNo,"alpha_low_pass"))
+		self.reset()
+		
+	"""
+	e, e_dot, e_integral
+	"""
+	def reset(self):
+		"""
         Reset the error terms.
         err_thrust: error in thrust.
         err_roll: error in roll.
@@ -114,33 +112,31 @@ class PID():
         prev_err_list: list of previous errors corresponding to thrust, roll, pitch and yaw respectively.
 
         """
-        self.err_thrust = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.err_roll = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.err_pitch = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.err_roll_with_sse = 0.0
-        self.err_pitch_with_sse = 0.0
-        self.err_thrust_with_sse = 0.0
-        self.err_yaw = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-        self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
-        self.prev_err_list = [[],[],[],[]] #thrust, roll, pitch, yaw
+		self.err_thrust = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.err_roll = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.err_pitch = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.err_roll_with_sse = 0.0
+		self.err_pitch_with_sse = 0.0
+		self.err_thrust_with_sse = 0.0
+		self.err_yaw = np.array([0.0, 0.0, 0.0]).reshape(3,1)
+		self.prev_err = np.array([0.0, 0.0, 0.0, 0.0]).reshape(4,1)      #Thrust, Roll, Pitch, Yaw for Derivative term
+		self.prev_err_list = [[],[],[],[]] #thrust, roll, pitch, yaw
 
-    def calc_diff_err(self,diff_frame,err_list):
-        """
+	def calc_diff_err(self,diff_frame,err_list):
+		"""
             Calculating the differential error and storing the differtial error in list of length diff_moving_win_len
             and then storing the corresponding min, average or low pass filter function being called in the diff_fn.
         """
-        # self.diff_fn
-        temp = []
-        for i in range(diff_frame):
-            temp.append(err_list[-1-i]- err_list[-2-i])
-        # print("temp, ", temp)
+		temp = []
+		for i in range(diff_frame):
+			temp.append(err_list[-1-i]- err_list[-2-i])
 
-        if len(temp) == 0:
-            return 0
-        return self.diff_fn(temp)
-    
-    def calc_err(self):
-        """
+		if len(temp) == 0:
+			return 0
+		return self.diff_fn(temp)
+	
+	def calc_err(self):
+		"""
         Calculating the error terms for the proportional, integral and derivative gain of the PID controller 
         corresponding to the thrust, roll, pitch and yaw.
         Simultaneously appending the list containing prev_err_list with the current error term for thrust, roll, pitch and yaw.
@@ -148,189 +144,106 @@ class PID():
         Calculating the err_pitch_with_sse, err_roll_with_sse and err_thrust_with_sse for the steady state error in pitch, roll and thrust respectively.
 
         """
-        # self.update_target_waypoint()
-        # print(self.waypoint)
-        
-        self.err_thrust[0] = self.target_pose[2] - self.cur_pose[2]
-        self.err_roll[0] = self.target_pose[1] - self.cur_pose[1]
-        self.err_pitch[0] = self.target_pose[0] - self.cur_pose[0]
-        self.err_yaw[0] = self.zero_yaw - self.cur_pose[3]
-        
-        self.prev_err_list[0].append(deepcopy(self.err_thrust[0]))
-        self.prev_err_list[1].append(deepcopy(self.err_roll[0]))
-        self.prev_err_list[2].append(deepcopy(self.err_pitch[0]))
-        self.prev_err_list[3].append(deepcopy(self.err_yaw[0]))
+		self.err_thrust[0] = self.target_pose[2] - self.cur_pose[2]
+		self.err_roll[0] = self.target_pose[1] - self.cur_pose[1]
+		self.err_pitch[0] = self.target_pose[0] - self.cur_pose[0]
+		self.err_yaw[0] = self.zero_yaw - self.cur_pose[3]
+		
+		self.prev_err_list[0].append(deepcopy(self.err_thrust[0]))
+		self.prev_err_list[1].append(deepcopy(self.err_roll[0]))
+		self.prev_err_list[2].append(deepcopy(self.err_pitch[0]))
+		self.prev_err_list[3].append(deepcopy(self.err_yaw[0]))
 
-        for i in range(len(self.prev_err_list)):
-            self.prev_err_list[i] = self.prev_err_list[i][-self.total_window:]
+		for i in range(len(self.prev_err_list)):
+			self.prev_err_list[i] = self.prev_err_list[i][-self.total_window:]
 
-        diff_frame = min (self.diff_moving_win_len,len(self.prev_err_list[0])-1)
-
-        # print(diff_frame)
-        # self.err_thrust[1] = self.err_thrust[0] - self.prev_err_list[0][-diff_frame]
-        # self.err_roll[1] = self.err_roll[0] - self.prev_err_list[1][-diff_frame]
-        # self.err_pitch[1] = self.err_pitch[0] - self.prev_err_list[2][-diff_frame]
-        # self.err_yaw[1] = self.err_yaw[0] - self.prev_err_list[3][-diff_frame]
-        
-        self.err_thrust[1] = self.calc_diff_err(diff_frame,self.prev_err_list[0])
-        self.err_roll[1] = self.calc_diff_err(diff_frame,self.prev_err_list[1])
-        self.err_pitch[1] = self.calc_diff_err(diff_frame,self.prev_err_list[2])
-        self.err_yaw[1] = self.calc_diff_err(diff_frame,self.prev_err_list[3])
+		diff_frame = min (self.diff_moving_win_len,len(self.prev_err_list[0])-1)	
+		self.err_thrust[1] = self.calc_diff_err(diff_frame,self.prev_err_list[0])
+		self.err_roll[1] = self.calc_diff_err(diff_frame,self.prev_err_list[1])
+		self.err_pitch[1] = self.calc_diff_err(diff_frame,self.prev_err_list[2])
+		self.err_yaw[1] = self.calc_diff_err(diff_frame,self.prev_err_list[3])
 
 
-        self.err_thrust[2] = np.clip(sum(self.prev_err_list[0][-self.int_moving_win_len:]), -100, 100)        
-        self.err_roll[2] = np.clip(sum(self.prev_err_list[1][-self.int_moving_win_len:]), -30, 30)
-        self.err_pitch[2] = np.clip(sum(self.prev_err_list[2][-self.int_moving_win_len:]), -30, 30)
-        self.err_yaw[2] = np.clip(sum(self.prev_err_list[3][-self.int_moving_win_len:]), -30, 30)
-        
-        # if self.useWay:
-        #     self.err_pitch_with_sse = self.err_pitch[0] - self.steady_state_err_way[0]
-        #     self.err_roll_with_sse = self.err_roll[0] - self.steady_state_err_way[1]
-        # else:
-        #     self.err_pitch_with_sse = self.err_pitch[0] - self.steady_state_err_hover[0]
-        #     self.err_roll_with_sse = self.err_roll[0] - self.steady_state_err_hover[1]
-            
-        
-        self.err_pitch_with_sse = self.err_pitch[0] - self.cur_steady_state[0]
-        self.err_roll_with_sse = self.err_roll[0] - self.cur_steady_state[1]
-        self.err_thrust_with_sse = self.err_thrust[0] - self.cur_steady_state[2]
-            
+		self.err_thrust[2] = np.clip(sum(self.prev_err_list[0][-self.int_moving_win_len:]), -100, 100)        
+		self.err_roll[2] = np.clip(sum(self.prev_err_list[1][-self.int_moving_win_len:]), -30, 30)
+		self.err_pitch[2] = np.clip(sum(self.prev_err_list[2][-self.int_moving_win_len:]), -30, 30)
+		self.err_yaw[2] = np.clip(sum(self.prev_err_list[3][-self.int_moving_win_len:]), -30, 30)
+		
+		self.err_pitch_with_sse = self.err_pitch[0] - self.cur_steady_state[0]
+		self.err_roll_with_sse = self.err_roll[0] - self.cur_steady_state[1]
+		self.err_thrust_with_sse = self.err_thrust[0] - self.cur_steady_state[2]
+			
 
-    def update_pos(self,curPose):
-        """
+	def update_pos(self,curPose):
+		"""
         Updating the previous position and the current position of the quadrotor respectively.
         """
-        self.prev_pose = self.cur_pose
-        self.cur_pose = np.array(curPose).reshape(6,1)
+		self.prev_pose = self.cur_pose
+		self.cur_pose = np.array(curPose).reshape(6,1)
 
-    def set_target_pose(self,point,axis):
-        """
+	def set_target_pose(self,point,axis):
+		"""
         Updating the target position using the carrot approach.
         """
-        self.target_pose = np.array(point).reshape(3,1)                                           #TODO implement Carrot
-        # if not self.useWay:
-        #     self.target_pose[:2] += self.steady_state_err_hover[:]
-        # else:
-        #     self.target_pose[:2] += self.steady_state_err_way[:]
-        # self.move = axis
-        
-        self.cur_steady_state = self.move[axis]
-        # print(self.cur_steady_state)
-        self.cur_K_thrust , self.cur_K_roll, self.cur_K_pitch, self.cur_K_yaw = self.move_K[axis]
-        
-        self.target_pose += self.cur_steady_state
-
-    # def update_target_waypoint(self):
-    #     dif = self.target_pose - self.cur_pose[:3]
-    #     mag = np.linalg.norm(dif)**0.5
-    #     distanceForWayPoint = 0.2
-    #     self.useWay = distanceForWayPoint>mag
-    #     if self.useWay:
-    #         self.waypoint = self.target_pose                                                #TODO Import wp from config
-    #     else:
-    #         self.waypoint = self.cur_pose[:3] + distanceForWayPoint*(dif/mag)
-    #     self.waypoint[2] = self.target_pose[2]
-    
-    def set_thrust(self):
-        """
+		self.target_pose = np.array(point).reshape(3,1)                                          
+		self.cur_steady_state = self.move[axis]
+		self.cur_K_thrust , self.cur_K_roll, self.cur_K_pitch, self.cur_K_yaw = self.move_K[axis]
+		
+		self.target_pose += self.cur_steady_state
+	
+	def set_thrust(self):
+		"""
         Calculating output of the PID controller corresponding to Thrust and clipping it to the range of -250 to 250.
         """
-        # self.thrust = np.sum(self.K_thrust_hover * self.err_thrust)      #Elementwise multiplication
-        # if self.useWay:
-        #     self.thrust = np.sum(self.K_thrust_way * self.err_thrust)
-        self.thrust = np.sum(self.cur_K_thrust * self.err_thrust)
-        # scale = np.clip(1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2]))), 1, 1.1)
-        scale = 1/(np.cos(np.radians(self.cur_pose[-1]))*np.cos(np.radians(self.cur_pose[-2])))
-        scale = 1
+		self.thrust = np.sum(self.cur_K_thrust * self.err_thrust)
+		self.thrust = 1525 + np.clip(self.thrust, -250, 300)
+		return self.thrust
 
-        self.thrust = scale*self.thrust
-        self.thrust = 1525 + np.clip(self.thrust, -250, 300)       #TODO tune (Import from config)
-        return self.thrust
-
-    def set_thrust_using_dynamics(self):
-        """
-        Use roll, pitch angles to keep z stable while waypoint navigation.
-        """
-        pass
-    
-    def set_pitch_and_roll(self):
-        """
+	def set_thrust_using_dynamics(self):
+		pass
+	
+	def set_pitch_and_roll(self):
+		"""
         Calculating output of the PID controller corresponding to Pitch and Roll and clipping it to the range of -250 to 250 respectively.
-        """
-        # print(type(self.K_roll),type(self.err_roll))
-        # print(self.K_roll,self.err_roll)
-        # roll = np.sum(self.K_roll_hover * self.err_roll)
-        # pitch = np.sum(self.K_pitch_hover * self.err_pitch)
-        # if self.useWay:
-        #     roll = np.sum(self.K_roll_way * self.err_roll)
-        #     pitch = np.sum(self.K_pitch_way * self.err_pitch)
-        
-        roll = np.sum(self.cur_K_roll * self.err_roll)
-        pitch = np.sum(self.cur_K_pitch * self.err_pitch)
-        
+        """	
+		roll = np.sum(self.cur_K_roll * self.err_roll)
+		pitch = np.sum(self.cur_K_pitch * self.err_pitch)
+		
 
-        self.pitch = pitch
-        self.roll= roll
-        yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
-        # print("YAW", self.cur_pose[3])
-        # print("CUR", self.cur_pose[3] , self.zero_yaw, "sin", np.sin(yaw_ref), "cos", np.cos(yaw_ref))
-        # self.roll = roll*np.cos(yaw_ref) - pitch*np.sin(yaw_ref)
-        # self.pitch = pitch*np.cos(yaw_ref) + roll*np.sin(yaw_ref)  #Coupled dynamics if yaw_ref changes
-
-        # self.pitch = 1500 + np.clip(self.pitch, -150, 150) 
-        # self.roll = 1500 - np.clip(self.roll, -150, 150)           #TODO tuned 
-        self.pitch = 1500 + np.clip(self.pitch, -250, 250) 
-        self.roll = 1500 - np.clip(self.roll, -250, 250)           #TODO tuned 
-        return self.pitch, self.roll  
-    
-    def set_yaw(self):
-        """
+		self.pitch = pitch
+		self.roll= roll
+		yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
+		self.pitch = 1500 + np.clip(self.pitch, -250, 250) 
+		self.roll = 1500 - np.clip(self.roll, -250, 250)
+		return self.pitch, self.roll  
+	
+	def set_yaw(self):
+		"""
         Calculating output of the PID controller corresponding to Yaw and clipping it to the range of -150 to 150 respectively.
         """
-        # self.yaw = np.sum(self.K_yaw_hover * self.err_yaw)
-        # if self.useWay:avg
-        #     self.yaw = np.sum(self.K_yaw_way * self.err_yaw)
-        self.yaw = np.sum(self.cur_K_yaw * self.err_yaw)
-        self.yaw = 1500 + np.clip(self.yaw, -150, 150)           #TODO tuned 
-        return self.yaw
-
-
-    def failsafe_out_of_camera(self):
-        """
-        Disarming the quadrotor when it is out of camera view.
-        """
-        pass
-
-    def aruco_not_detected(self):
-        """
-        Disarming the quadrotor when ArUco marker is not detected.
-        """
-        pass
-    
-    def isReached(self):
-        """
+		self.yaw = np.sum(self.cur_K_yaw * self.err_yaw)
+		self.yaw = 1500 + np.clip(self.yaw, -150, 150)
+		return self.yaw
+	
+	def isReached(self):
+		"""
         Boolean function to check if the quadrotor has reached the target pose.
         When the error in velocity and position is less than a threshold value, the quadrotor is considered to have reached the target pose,
         function returns True, else False.
         """
-        # if self.useWay:
-        #     err = (self.target_pose[:2]-self.steady_state_err_way[:2]) - self.cur_pose[:2]
-        # else:
-        #     err = (self.target_pose[:2]-self.steady_state_err_hover[:2]) - self.cur_pose[:2]
-        err = (self.target_pose - self.cur_steady_state ) - self.cur_pose[:3]
+		err = (self.target_pose - self.cur_steady_state ) - self.cur_pose[:3]
+		err = abs(err)
+		velCond = np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3])/0.04
+		self.vel_error = velCond
+		print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
+		if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
+			return True
+		return False
 
-        # err = abs(self.cur_pose[:2] - (self.target_pose[:2]+self.))
-        err = abs(err)
-        # distCond = np.linalg.norm(err)
-        velCond = np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3])/0.04
-        self.vel_error = velCond
-        print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
-        if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
-            return True
-        return False
-
-    def low_pass_filter(self, diff_error_list):
-        """
+	def low_pass_filter(self, diff_error_list):
+		"""
         Filter to smoothen the error signal for PID controller.
         """
-        return self.alpha*diff_error_list[-1] + (1-self.alpha)*diff_error_list[-2]
+		if len(diff_error_list) > 0:
+			self.final_diff_error = self.final_diff_error*(1-self.alpha) + self.alpha*diff_error_list[-1]
+			return self.final_diff_error

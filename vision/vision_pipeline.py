@@ -6,13 +6,10 @@ import time
 from scipy.spatial.transform import Rotation
 import math
 
-# cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
-
 class VisionPipeline():
     """
         This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
         depth and rgb frames along with detection of aruco marker.
-
         Attributes:
             depth_res: defines the depth resolution. Default is (720, 1080).
             rgb_res: defines the rgb resolution. Default is (720, 1080).
@@ -32,7 +29,6 @@ class VisionPipeline():
                  marker_size=3.75,
                  marker_type=aruco.DICT_4X4_50,
                  required_marker_id=1,
-                 calib_file_path="../calib_data/MultiMatrix.npz",
                  debug=0,
                  padding=50,
                  do_tracking=True,
@@ -44,10 +40,6 @@ class VisionPipeline():
         self.depth_res = depth_res
         self.rgb_res = rgb_res
         self.align_to = align_to
-
-
-        self.calib_file_path = calib_file_path
-
         self.marker_size = marker_size
         self.marker_type = marker_type
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
@@ -87,14 +79,12 @@ class VisionPipeline():
         
 
 
-
+    
     def init_realsense(self):
         """
         Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
-
         Parameter:
             None         
-
         Returns:
             None
         """
@@ -146,18 +136,8 @@ class VisionPipeline():
         Returns:
             None
         """ 
-        # if not os.path.exists(self.calib_file_path):
-        #     raise FileNotFoundError(f"File {self.calib_file_path} not found!")
-
-        # calib_data = np.load(self.calib_file_path)
-        fx = 640.381164550781
-        cx = 631.432983398438
-        fy = 639.533020019531
-        cy = 409.294647216797
         self.cam_matrix = np.array([[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]) #calib_data["camMatrix"]
         self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
-        """dist_coef = np.zeros((5, 1))"""
-
         self.cam_rvec = np.array([0.10357627, -2.8488926,  -0.55131484])
         self.cam_tvec = np.array([46.22983901,   1.60285046, 278.0799618])
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
@@ -169,7 +149,6 @@ class VisionPipeline():
     def stop(self):
         """
         Stops the pipeline.
-
         Parameters:
             None
         
@@ -182,7 +161,6 @@ class VisionPipeline():
     def get_frames(self):
         """
         Returns the aligned depth and rgb frames for proper depth detection.
-
         Parameters:
             None
         
@@ -190,7 +168,6 @@ class VisionPipeline():
             aligned frames: Returns frame with depth and RGB frame aligned.
             
         """
-        self.frames = self.pipeline.wait_for_frames()
         self.frames = self.pipeline.wait_for_frames()
         self.aligned_frames = self.align_frames.process(self.frames)
 
@@ -200,7 +177,6 @@ class VisionPipeline():
     def extract_depth(self, frame):
         """
         Returns depth frame from Realsense Depth Camera.
-
         Parameters:
             frame
         
@@ -213,7 +189,6 @@ class VisionPipeline():
     def extract_rgb(self, frame):
         """
         Extracts RGB frame from Realsense RGB Camera.
-
         Parameters:
             frame
         
@@ -226,7 +201,6 @@ class VisionPipeline():
     def to_image(self, frame):
         """
         Converts pyrealsense2.frame to np.array.
-
         Parameters:
             frame: input frame of type pyrealsense2.frame
         
@@ -239,13 +213,12 @@ class VisionPipeline():
     def find_area(self, corners):
         """
         Utility function to find area of the quadrilateral using corner data.
-
         Parameters:
             corners: co-ordinate of the corners whose area needs to be calculated
         
         Returns:
             area:  returns area of the quadrilateral, specified by its corners
-        """   
+        """  
         corners = corners[0]
         area = (corners[0][0] * corners[1][1] + corners[1][0] * corners[2][1] + corners[2][0] * corners[3][1] + corners[3][0] * corners[0][1])
         area = area - (corners[1][0] * corners[0][1] + corners[2][0] * corners[1][1] + corners[3][0] * corners[2][1] + corners[0][0] * corners[3][1])
@@ -255,7 +228,6 @@ class VisionPipeline():
     def detect_marker(self, frame):
         """
         Detection of ArUco markers returning its corners.
-
         Parameters:
             frame: input frame of type numpy.array
         
@@ -267,7 +239,6 @@ class VisionPipeline():
             Case 3:
                 "None" : Returns a string, if goes out of region of interest
         """
-        # frame = cv2.medianBlur(frame, 3)
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
         marker_corners, marker_IDs, reject = aruco.detectMarkers(
@@ -277,9 +248,6 @@ class VisionPipeline():
         if self.DEBUG:
             frame = self.plot_markers(frame, marker_corners, marker_IDs)
             rgb_frame = self.plot_markers(frame.copy(), marker_corners, marker_IDs)
-            # frame = self.plot_rej_markers(frame, reject)
-            # cv2.imwrite(f"frames/{time.time()}.jpg", frame)
-            # self.show_frame(frame)
 
         if marker_IDs is None:
             
@@ -335,7 +303,6 @@ class VisionPipeline():
                         self.show_frame(frame, rgb_frame)
                         print("NO marker detected")
                     return None
-                        # print(reject_corners.shape)
                     
         
         if self.DEBUG:
@@ -347,9 +314,7 @@ class VisionPipeline():
         for i, id_ in enumerate(marker_IDs):
             
             if id_ == self.required_marker_id:
-                # print(marker_corners[i])
                 mid_point = np.sum(marker_corners[i][0], 0) / 4.0
-                # print(mid_point)
                 if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
                     return "None"
 
@@ -363,7 +328,6 @@ class VisionPipeline():
     def plot_markers(self, frame, marker_corners, marker_ids):
         """
         Draws lines around the detected frames.
-
         Parameters:
             frame: RGB frame
             marker_corners: corners of the detected aruco tag
@@ -372,6 +336,7 @@ class VisionPipeline():
         Returns:
             frame with plotted markers
         """
+        
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
             if marker_ids[i] == self.required_marker_id:
@@ -385,7 +350,6 @@ class VisionPipeline():
     def plot_rej_markers(self, frame, marker_corners):
         """
         Draws lines around the detected frames.
-
         Parameters:
             frame: RGB frame
             marker_corners: corners of the detected aruco tag            
@@ -403,20 +367,16 @@ class VisionPipeline():
     def update_waypoint(self, waypoint):
         """
         Updates the waypoint that is plotted on the image frame to be displayed.
-
         Parameters:
             waypoint: this is the new waypoint to be updated         
         """
         self.current_waypoint = waypoint
-        self.current_waypoint = waypoint
-        # self.current_waypoint[0] = self.current_waypoint[0]
         self.current_waypoint = np.array(self.current_waypoint) * 100.0
 
 
     def show_frame(self, frame, rgb_frame, window_name="Frame"):
         """
         Displays frame for debugging purpose.
-
         Parameters:
             frame: edited RGB Frame with texts
             rgb_frame: original RGB Frame 
@@ -425,25 +385,10 @@ class VisionPipeline():
         Returns:
             None
         """
+
         if (self.current_waypoint is None):
             pass
         else:
-
-            # point_ = np.array([self.current_waypoint[0], self.current_waypoint[1], self.current_waypoint[2], 1]).reshape((4, 1))
-
-            # correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0])) #  -0.00417288, 0.00310284, 0
-            # correction_tf = np.linalg.pinv(correction_tf)
-            
-            # translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=np.array([self.cam_tvec[0], self.cam_tvec[1], 2.858]))
-            
-            # point_in_cam = correction_tf @ translation_tf @ point_
-            # point_in_cam[:3, :] = point_in_cam[:3, :] / point_in_cam[3, 0]
-
-            # temp_point = point_in_cam[:3, :]
-            # temp_point = self.cam_matrix @ temp_point
-            # temp_point[:2, :] = temp_point[:2, :] / temp_point[2, 0]
-
-            # cv2.circle(frame, (int(temp_point[0, 0] + 0.5), int(temp_point[1, 0] + 0.5)), 7, (227, 3, 252), -1)
             cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         if self.estimated_pose is None:
@@ -454,17 +399,9 @@ class VisionPipeline():
         camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
         camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
         cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        # m = math.tan(self.cam_rvec[2])
-        # rot_euler = Rotation.from_rotvec(np.array(self.cam_rvec)).as_euler('xyz')
-        
-        # rot_img_mat = Rotation.from_euler('xyz', np.array([rot_euler[0], rot_euler[1], 0.0])).as_matrix() @ Rotation.from_euler('xyz', np.array([0.0, 0.0, rot_euler[2]])).as_matrix()
-        # rot_img_yaw = Rotation.from_matrix(rot_img_mat).as_euler('xyz')[2]
-        # m = -math.tan(rot_img_yaw)
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
-            # print("PLOTLINE")
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-            # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -482,7 +419,6 @@ class VisionPipeline():
     def estimate_uncalib_pose(self, marker_corners):
         """
         Returns attitude of Aruco to estimate initial yaw (used by calibrate_yaw() method).
-
         Parameters:
             marker_corners: corners of the detected aruco tag            
         
@@ -494,55 +430,37 @@ class VisionPipeline():
             )
 
 
-        # print(f"ARUCO ANGLE: {Rotation.from_rotvec(rVec[0, 0, :]).as_euler('xyz')}")
         tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])
         
         correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
         tf = correction_tf @ tf
-        
-        # translation_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array([0, 0, 0])).as_rotvec(), tvec=self.cam_tvec)
-        # translation_tf = np.linalg.pinv(translation_tf)
-        # tf = translation_tf @ tf
-
         tf = np.linalg.pinv(tf)
 
         uncalib_rot = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
-        # uncalib_rot[0] = 0.0
-        # uncalib_rot[1] = 0.0
-        # print("ARUCO ANGLE: ", uncalib_rot)
-
         return uncalib_rot[2]
 
 
 
-    def estimate_pose(self, marker_corners, frame_of_ref="camera"):
+    def estimate_pose(self, marker_corners, frame_of_ref="camera"):  
         """
         Estimates the pose of the transform matrix using large ArUco tag.
-
         Parameters:
             marker_corners: list of marker corners
             frame_of_ref: frame of reference. Default value is "camera"
         
         Returns:
             6-DOF pose estimate of aruco marker in world frame    
-        """
-        #print(marker_corners)
-        #print(self.cam_matrix)
-        #print(self.dist_coef)
-        
+        """  
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
-        # print("RVec:",rVec,"Tvec:",tVec)
         tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
         if frame_of_ref == "camera":
             
             correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             tf = correction_tf @ tf
             
-            # self.cam_rvec = Rotation.from_euler('xyz', np.array([0.0, 0.0, 0.14])).as_rotvec()
             translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=self.cam_tvec)
-            # translation_tf = self.make_tf_matrix(rvec=np.array([0.0, 0.0, 0.0]), tvec=self.cam_tvec)
             translation_tf = np.linalg.pinv(translation_tf)
             tf = translation_tf @ tf
             pass
@@ -554,7 +472,6 @@ class VisionPipeline():
     def make_tf_matrix(self, rvec, tvec):
         """
         Creates the transormation matrix using the rotation and translational vectors.
-
         Parameters:
             rvec: contains rotational vectors
             tvec: contains trsnslational vectors
@@ -572,7 +489,6 @@ class VisionPipeline():
     def tf_to_outformat(self, tf):
         """
         Converts the transformation matrix to a list.
-
         Parameters:
             tf: transformation matrix
         
@@ -588,7 +504,6 @@ class VisionPipeline():
     def outformat_to_tf(self, input):
         """
         Converts the list to the transformation matrix. 
-
         Parameters:
             out_vec: conversion of the transformation matrix into list            
         
@@ -604,12 +519,10 @@ class VisionPipeline():
     def depth_from_marker(self, depth_frame, marker_corners, kernel_size=1):
         """
         Finds depth from the estimated pose obtained from the ArUco tag.
-
         Parameters:
             depth_frame:
             marker_corners: contains the list of aruco marker corners
             kernel_size: contains the size of the kernel
-
         Returns:
             depths: depth of the point filtered using median filter
         """
@@ -635,10 +548,8 @@ class VisionPipeline():
     def cam_init(self):
         """
         Initializes camera and starts ArUco detection.
-
         Parameters:
             None
-
         Returns:
             None
         """
@@ -675,11 +586,6 @@ class VisionPipeline():
                 else:
                     num_calib_frames += 1
                     rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
-                    # if rvec_uncalib is None:
-                    #     rvec_uncalib = pipeline.estimate_uncalib_pose(marker_corners)
-                    # else:
-                    #     rvec_uncalib += pipeline.estimate_uncalib_pose(marker_corners)
-                    
                     if(num_calib_frames >= max_iters):
                         print("yaw Caliberated ")
                         break   
@@ -700,7 +606,7 @@ class VisionPipeline():
         
         Returns:
             None
-        """    
+        """ 
         flag = 0
         aligned_frames = self.get_frames()    
         color_frame = self.extract_rgb(aligned_frames)
@@ -726,13 +632,6 @@ class VisionPipeline():
 
         color_img = self.to_image(color_frame)
 
-        # time when we finish processing for this frame
-        # new_frame_time = time.time()
-        # fps = 1/(new_frame_time-prev_frame_time)
-        # prev_frame_time = new_frame_time
-        # fps = int(fps)
-        # print(fps)
-        
         marker_corners = self.detect_marker(color_img)
             
         if marker_corners is None:
@@ -741,13 +640,11 @@ class VisionPipeline():
                 flag = 2
                 cam_queue.append([flag])
                 self.counter = 0
-                # print("no aruco")
                 pass
         elif type(marker_corners) == type("None"):
             flag = 1
             cam_queue.append([flag])
         else:
-            # print("detected")
             self.counter = 0
             aruco_pose = self.estimate_pose(marker_corners)
             _intrisics = rs.intrinsics()
@@ -763,33 +660,15 @@ class VisionPipeline():
             mid_point = (mid_point + 0.5).astype(np.int32)
 
             self.current_midpoint = mid_point.copy()
-            
-        #print(f"[{self.current_time}]: Z from REALSENSE: ", z_from_realsense)
-            # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
-            #     flag = 1
-            #     cam_queue.append([flag])
-            # else:
-            #     flag = 0
-                # print("appending")
             new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             
             point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-            # new_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
-            # new_tf = np.linalg.pinv(new_tf)
             z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
             z_from_realsense = -z_from_realsense + 2.858
-            ##############################################################################
-            # print("Z: ", z_from_realsense)
             
             aruco_pose[0] = -aruco_pose[0]
                 
-            # flag=0
             cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
             self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
-
-            # data  = [dt,self.current_time,z_from_realsense]
-                # data.extend(aruco_pose.T[0].tolist())
-            # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
-            # cv2.imshow("RGB Image",color_img)
     
     

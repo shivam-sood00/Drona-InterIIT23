@@ -1,6 +1,6 @@
 from MSP_comms.plutoComms import COMMS
 import threading
-from vision.vision_pipeline2 import VisionPipeline
+from vision.vision_pipeline import VisionPipeline
 import time
 import numpy as np
 from controls.pid_pluto import PID
@@ -250,7 +250,7 @@ class autoPluto:
         """
         Updating the control actions in terms of the calculated error by the PID and determining the values of
         pitch, roll, throttle and yaw.
-        """
+        """ 
         # if len(self.IMUQueue)!=0:
         #     temp = self.IMUQueue[-1].copy()
         #     self.action[0] = temp["rcRoll"]
@@ -305,3 +305,8 @@ class autoPluto:
         cv2.destroyAllWindows()
         print(msg)
         exit()
+
+if __name__ == '__main__':
+    drone1 = autoPluto()
+    drone1.comms.arm()
+    drone1.run()
