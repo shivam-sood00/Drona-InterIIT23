@@ -1,6 +1,9 @@
 import time
 file = open('debug.txt', 'r')
 # This will print every line one by one in the file
+''''
+Utilites for parsing flight data and making required plots.
+'''
 x=[]
 y=[]
 z=[]

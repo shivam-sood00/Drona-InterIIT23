@@ -18,6 +18,7 @@ class MSPPacket:
         """
         Constructor for the MSP Packet Class.
         Initializes the header list and direction dictionary.
+        
         Parameters:
             debug: to pass in the flag for debugging, by default set to False.
         """
@@ -31,6 +32,7 @@ class MSPPacket:
         """
         Constructor for the MSP Packet Class.
         Initializes the header list and direction dictionary.
+        
         Parameters:
             debug: to pass in the flag for debugging, by default set to False.
         """

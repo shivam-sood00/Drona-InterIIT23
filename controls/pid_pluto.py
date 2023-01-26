@@ -9,7 +9,7 @@ class PID():
 	"""
 	def __init__(self,config,droneNo):
 		"""
-            Initializing the PID gains and  the corresponding parameters for error calculation.
+            Initializing the PID gains and the corresponding parameters for error calculation.
             K_thrust_z, K_roll_z, K_pitch_z, K_yaw_z are the PID gains for the motion corresponding to z axis.
 
             K_thrust_way_x, K_roll_way_x, K_pitch_way_x, K_yaw_way_x are the PID gains 
@@ -21,27 +21,27 @@ class PID():
             steady_state_err_way_z, steady_state_err_way_x, steady_state_err_way_y are the steady state errors
             for the motion corresponding to z, x and y axis respectively.
 
-            move : a dictionary which stores the steady state errors for the motion corresponding to x, y and z axis respectively.
+            move : A dictionary which stores the steady state errors for the motion corresponding to x, y and z axis respectively.
 
-            move_K : a dictionary which stores the PID gains for the motion of qaudrotor corresponding to x, y and z axis respectively.
+            move_K : A dictionary which stores the PID gains for the motion of qaudrotor corresponding to x, y and z axis respectively.
 
-            cur_steady_state : the current steady state error for the motion of quadrotor.
-            cur_pos : the current position of the quadrotor.
-            cur_vel : the current velocity of the quadrotor.
-            target_pos : the target position of the quadrotor.
-            waypoint: waypoint that the quadrotor is currently moving towards.
-            zero_yaw: yaw angle of the quadrotor when it is stationary.
-            useway: boolean variable to check if the quadrotor is moving towards a waypoint or not.
-            int_moving_win_len: length of the moving window for the integral term.
-            diff_moving_win_len: length of the moving window for the derivative term.
-            total_win_len: total length of the moving window.
-            xy_thresh: threshold for the distance between the quadrotor and the waypoint along x and y axis, while stablizing the quadrotor at the waypoint.
-            z_thresh: threshold for the distance between the quadrotor and the waypoint along the z-axis, while stablizing the quadrotor at the waypoint.
-            vel_thresh: threshold for the velocity of the quadrotor along the x y and z axis, while stablizing the quadrotor at the waypoint.
-            vel_error: error in the velocity of the quadrotor along the x y and z axis, while stablizing the quadrotor at the waypoint.
-            diff_fn_dict: dictionary which stores the moving window, low_pass_filter and average functions for the derivative term.
+            cur_steady_state : The current steady state error for the motion of quadrotor.
+            cur_pos : The current position of the quadrotor.
+            cur_vel : The current velocity of the quadrotor.
+            target_pos : The target position of the quadrotor.
+            waypoint: Waypoint that the quadrotor is currently moving towards.
+            zero_yaw: Yaw angle of the quadrotor when it is stationary.
+            useway: Boolean variable to check if the quadrotor is moving towards a waypoint or not.
+            int_moving_win_len: Length of the moving window for the integral term.
+            diff_moving_win_len: Length of the moving window for the derivative term.
+            total_win_len: Total length of the moving window.
+            xy_thresh: Threshold for the distance between the quadrotor and the waypoint along x and y axis, while stablizing the quadrotor at the waypoint.
+            z_thresh: Threshold for the distance between the quadrotor and the waypoint along the z-axis, while stablizing the quadrotor at the waypoint.
+            vel_thresh: Threshold for the velocity of the quadrotor along the x y and z axis, while stablizing the quadrotor at the waypoint.
+            vel_error: Error in the velocity of the quadrotor along the x y and z axis, while stablizing the quadrotor at the waypoint.
+            diff_fn_dict: Dictionary which stores the moving window, low_pass_filter and average functions for the derivative term.
             diff_fn: Selected function from the diff_fn_dict for the derivative term.
-            alpha: parameter for the low_pass_filter function.
+            alpha: Parameter for the low_pass_filter function.
         """
 		self.K_thrust_z = np.array(config.get(droneNo,"K_thrust_z").split(','),dtype=np.float64).reshape(3,1)
 		self.K_roll_z = np.array(config.get(droneNo,"K_roll_z").split(','),dtype=np.float64).reshape(3,1)
@@ -76,7 +76,7 @@ class PID():
 		self.prev_pose = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).reshape(6,1)
 		self.target_pose = np.array([0.0, 0.0, 0.0]).reshape(3,1)
 		self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
-		self.backward_pitch_scale = 1.0                                    #Unsymmetric dynamics due to arUco
+		self.backward_pitch_scale = 1.0         #Unsymmetric dynamics due to arUco
 		self.zero_yaw = None
 		self.useWay = False
 		self.int_moving_win_len = int(config.get(droneNo,"int_moving_win_len"))
@@ -101,15 +101,15 @@ class PID():
 	def reset(self):
 		"""
         Reset the error terms.
-        err_thrust: error in thrust.
-        err_roll: error in roll.
-        err_pitch: error in pitch.
+        err_thrust: Error in thrust.
+        err_roll: Error in roll.
+        err_pitch: Error in pitch.
         err_roll_with_sse: Bias term corresponding to the steady state error in roll due to external disturbances at the setpoint.
         err_pitch_with_sse: Bias term corresponding to the steady state error in pitch  due to external disturbancesat the setpoint.
         err_thrust_with_sse: Bias term corresponding to the steady state error in thrust due to external disturbances at the setpoint.
-        err_yaw: error in yaw.
-        prev_err: previous error.
-        prev_err_list: list of previous errors corresponding to thrust, roll, pitch and yaw respectively.
+        err_yaw: Error in yaw.
+        prev_err: Previous error.
+        prev_err_list: List of previous errors corresponding to thrust, roll, pitch and yaw respectively.
 
         """
 		self.err_thrust = np.array([0.0, 0.0, 0.0]).reshape(3,1)
@@ -198,9 +198,6 @@ class PID():
 		self.thrust = np.sum(self.cur_K_thrust * self.err_thrust)
 		self.thrust = 1525 + np.clip(self.thrust, -250, 300)
 		return self.thrust
-
-	def set_thrust_using_dynamics(self):
-		pass
 	
 	def set_pitch_and_roll(self):
 		"""

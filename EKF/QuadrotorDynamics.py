@@ -1,7 +1,7 @@
 import numpy as np
 class QuadrotorDynamics():
     """
-    A class for Quadrotor Dynamics. Initialized with mass (m), gravity(g) and the three moment of intertia (I_x, I_y, I_z) and
+    A helper class for Quadrotor Dynamics. Initialized with mass (m), gravity(g) and the three moment of intertia (I_x, I_y, I_z) and
     calculates the Matrix A, B and C for the state space equation X' = AX + BU + C.
     
     Attributes:

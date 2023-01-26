@@ -13,7 +13,20 @@ class KalmanFilter():
     """
 
     def __init__(self,debug = False) -> None:
-
+        """
+        self.imu_noise_cov: IMU Noise Covariance Matrix.
+        self.aruco_noise_cov: Aruco Noise Covariance Matrix.
+        self.imu_noise_bias: Bias for IMU Sensor.
+        self.aruco_noise_bias: Bias for the incoming aruco data.
+        self.process_noise: Matrix for Modelling Noise in the State Dynamics Model. 
+        self.P: Process Noise Covariance.
+        self.Q: Model Process Covariance.
+        self.X: States of the drone.
+        self.drone: An object of QuadrotorDynamics class to get the A, B, C matrix.
+        self.imu_H_vel: Sensor Observation Matrix for IMU to update velocity.
+        self.imu_H_pos: Sensor Observation Matrix for IMU to update position.
+        self.aruco_H_pos:  Sensor Observation Matrix for Aruco to update position.
+        """
         self.imu_noise_cov = np.array([[0.29801201,0.0260134,0.03899557],
                               [0.0260134,0.1585327,0.03870672],
                               [0.03899557,0.03870672,0.61070139]])
@@ -25,8 +38,6 @@ class KalmanFilter():
 
         self.imu_noise_bias = np.zeros(3)
         self.aruco_noise_bias = np.zeros(3)
-
-        self.debug = debug
 
         self.X = np.array([0.0 , 0, 0, 0, 0, 0],dtype=np.float32)
         self.P = np.zeros((6,6),dtype=np.float32)

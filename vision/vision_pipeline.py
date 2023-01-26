@@ -5,11 +5,13 @@ from cv2 import aruco
 import time
 from scipy.spatial.transform import Rotation
 import math
+import yaml
 
 class VisionPipeline():
     """
         This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
         depth and rgb frames along with detection of aruco marker.
+       
         Attributes:
             depth_res: defines the depth resolution. Default is (720, 1080).
             rgb_res: defines the rgb resolution. Default is (720, 1080).
@@ -31,9 +33,7 @@ class VisionPipeline():
                  required_marker_id=1,
                  debug=0,
                  padding=50,
-                 do_tracking=True,
-                 calib_yaw_at_start=True,
-                 imu_calib_data=[0.0, 0.0, 0.0],
+                 config_file="./config.yaml",
                  fps_moving_window_size=10) -> None:
 
 
@@ -45,23 +45,25 @@ class VisionPipeline():
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
 
         self.required_marker_id = required_marker_id
+
+        self.camera_config = yaml.load(config_file)
         
         self.DEBUG = debug
         self.padding = padding
         self.fps_moving_window_size = fps_moving_window_size
         self.fps_moving_window = []
 
-        self.do_tracking = do_tracking
+        self.do_tracking = self.camera_config['tracking']['enable']
         self.last_detected_marker = None
-        self.tracking_area_th = 160
-        self.tracking_point_th = 12
+        self.tracking_area_th = self.camera_config['tracking']['area_th']
+        self.tracking_point_th = self.camera_config['tracking']['centroid_th']
 
         self.estimated_pose = None
         self.current_waypoint = None
         self.current_midpoint = None
 
-        self.calib_yaw_at_start = calib_yaw_at_start
-        self.imu_calib_data = imu_calib_data
+        self.calib_yaw_at_start = self.camera_config['extrinsics']['calibrate_yaw']
+        self.imu_calib_data = self.camera_config['extrinsics']['imu_correction']
 
         self.cam_init()
 
@@ -83,11 +85,15 @@ class VisionPipeline():
     def init_realsense(self):
         """
         Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
+        
         Parameter:
             None         
+        
         Returns:
             None
         """
+
+        # Start realsense pipeline
         self.pipeline = rs.pipeline()
 
         config = rs.config()
@@ -96,21 +102,22 @@ class VisionPipeline():
         
         profile = self.pipeline.start(config)
 
-        colorSensor = profile.get_device().query_sensors()[1];
+        colorSensor = profile.get_device().query_sensors()[1]
+
+        # Set camera parameters
 
         # rs.option.enable_auto_exposure
         rs.option.enable_motion_correction
-        # print(colorSensor.get_info(rs.camera_info.name))
 
-        colorSensor.set_option(rs.option.enable_auto_exposure, 0)
-        colorSensor.set_option(rs.option.enable_auto_white_balance, 0)
+        colorSensor.set_option(rs.option.enable_auto_exposure, self.camera_config['camera_params']['enable_auto_exposure'])
+        colorSensor.set_option(rs.option.enable_auto_white_balance, self.camera_config['camera_params']['enable_auto_white_balance'])
 
-        colorSensor.set_option(rs.option.sharpness, 100)
-        colorSensor.set_option(rs.option.contrast, 50)
+        colorSensor.set_option(rs.option.sharpness, self.camera_config['camera_params']['sharpness'])
+        colorSensor.set_option(rs.option.contrast, self.camera_config['camera_params']['contrast'])
         # colorSensor.set_option(rs.option.gamma, 0)
-        colorSensor.set_option(rs.option.brightness, 30)
+        colorSensor.set_option(rs.option.brightness, self.camera_config['camera_params']['brightness'])
 
-        colorSensor.set_option(rs.option.exposure, 100)
+        colorSensor.set_option(rs.option.exposure, self.camera_config['camera_params']['exposure'])
         # colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()
@@ -136,10 +143,11 @@ class VisionPipeline():
         Returns:
             None
         """ 
-        self.cam_matrix = np.array([[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]) #calib_data["camMatrix"]
-        self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
-        self.cam_rvec = np.array([0.10357627, -2.8488926,  -0.55131484])
-        self.cam_tvec = np.array([46.22983901,   1.60285046, 278.0799618])
+
+        self.cam_matrix = np.array(self.camera_config['intrinsics']['cam_matrix']) #calib_data["camMatrix"]
+        self.dist_coef = np.array(self.camera_config['intrinsics']['dist_coeff']) #np.zeros((5, 1))  #calib_data["distCoef"]
+        self.cam_rvec = np.array([0.0, 0.0, 0.0])
+        self.cam_tvec = np.array(self.camera_config['extrinsics']['global_origin'])
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
 
@@ -149,6 +157,7 @@ class VisionPipeline():
     def stop(self):
         """
         Stops the pipeline.
+        
         Parameters:
             None
         
@@ -161,6 +170,7 @@ class VisionPipeline():
     def get_frames(self):
         """
         Returns the aligned depth and rgb frames for proper depth detection.
+        
         Parameters:
             None
         
@@ -177,6 +187,7 @@ class VisionPipeline():
     def extract_depth(self, frame):
         """
         Returns depth frame from Realsense Depth Camera.
+        
         Parameters:
             frame
         
@@ -189,6 +200,7 @@ class VisionPipeline():
     def extract_rgb(self, frame):
         """
         Extracts RGB frame from Realsense RGB Camera.
+        
         Parameters:
             frame
         
@@ -201,6 +213,7 @@ class VisionPipeline():
     def to_image(self, frame):
         """
         Converts pyrealsense2.frame to np.array.
+        
         Parameters:
             frame: input frame of type pyrealsense2.frame
         
@@ -213,6 +226,7 @@ class VisionPipeline():
     def find_area(self, corners):
         """
         Utility function to find area of the quadrilateral using corner data.
+        
         Parameters:
             corners: co-ordinate of the corners whose area needs to be calculated
         
@@ -228,6 +242,7 @@ class VisionPipeline():
     def detect_marker(self, frame):
         """
         Detection of ArUco markers returning its corners.
+        
         Parameters:
             frame: input frame of type numpy.array
         
@@ -304,22 +319,22 @@ class VisionPipeline():
                         print("NO marker detected")
                     return None
                     
-        
-        if self.DEBUG:
-            frame = self.plot_rej_markers(frame, reject)
-            rgb_frame = self.plot_rej_markers(rgb_frame, reject)
-            self.show_frame(frame, rgb_frame)            
-                    
+        else:
+            if self.DEBUG:
+                frame = self.plot_rej_markers(frame, reject)
+                rgb_frame = self.plot_rej_markers(rgb_frame, reject)
+                self.show_frame(frame, rgb_frame)            
+                        
 
-        for i, id_ in enumerate(marker_IDs):
-            
-            if id_ == self.required_marker_id:
-                mid_point = np.sum(marker_corners[i][0], 0) / 4.0
-                if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
-                    return "None"
+            for i, id_ in enumerate(marker_IDs):
+                
+                if id_ == self.required_marker_id:
+                    mid_point = np.sum(marker_corners[i][0], 0) / 4.0
+                    if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
+                        return "None"
 
-                self.last_detected_marker = marker_corners[i].copy()
-                return marker_corners[i].astype(np.int32)
+                    self.last_detected_marker = marker_corners[i].copy()
+                    return marker_corners[i].astype(np.int32)
 
         return None
 
@@ -328,6 +343,7 @@ class VisionPipeline():
     def plot_markers(self, frame, marker_corners, marker_ids):
         """
         Draws lines around the detected frames.
+        
         Parameters:
             frame: RGB frame
             marker_corners: corners of the detected aruco tag
@@ -350,6 +366,7 @@ class VisionPipeline():
     def plot_rej_markers(self, frame, marker_corners):
         """
         Draws lines around the detected frames.
+        
         Parameters:
             frame: RGB frame
             marker_corners: corners of the detected aruco tag            
@@ -367,6 +384,7 @@ class VisionPipeline():
     def update_waypoint(self, waypoint):
         """
         Updates the waypoint that is plotted on the image frame to be displayed.
+        
         Parameters:
             waypoint: this is the new waypoint to be updated         
         """
@@ -377,6 +395,7 @@ class VisionPipeline():
     def show_frame(self, frame, rgb_frame, window_name="Frame"):
         """
         Displays frame for debugging purpose.
+        
         Parameters:
             frame: edited RGB Frame with texts
             rgb_frame: original RGB Frame 
@@ -419,6 +438,7 @@ class VisionPipeline():
     def estimate_uncalib_pose(self, marker_corners):
         """
         Returns attitude of Aruco to estimate initial yaw (used by calibrate_yaw() method).
+        
         Parameters:
             marker_corners: corners of the detected aruco tag            
         
@@ -444,6 +464,7 @@ class VisionPipeline():
     def estimate_pose(self, marker_corners, frame_of_ref="camera"):  
         """
         Estimates the pose of the transform matrix using large ArUco tag.
+        
         Parameters:
             marker_corners: list of marker corners
             frame_of_ref: frame of reference. Default value is "camera"
@@ -472,6 +493,7 @@ class VisionPipeline():
     def make_tf_matrix(self, rvec, tvec):
         """
         Creates the transormation matrix using the rotation and translational vectors.
+        
         Parameters:
             rvec: contains rotational vectors
             tvec: contains trsnslational vectors
@@ -489,6 +511,7 @@ class VisionPipeline():
     def tf_to_outformat(self, tf):
         """
         Converts the transformation matrix to a list.
+        
         Parameters:
             tf: transformation matrix
         
@@ -504,6 +527,7 @@ class VisionPipeline():
     def outformat_to_tf(self, input):
         """
         Converts the list to the transformation matrix. 
+        
         Parameters:
             out_vec: conversion of the transformation matrix into list            
         
@@ -587,7 +611,7 @@ class VisionPipeline():
                     num_calib_frames += 1
                     rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
                     if(num_calib_frames >= max_iters):
-                        print("yaw Caliberated ")
+                        print("Yaw Calibrated ")
                         break   
 
             rvec_uncalib.sort()

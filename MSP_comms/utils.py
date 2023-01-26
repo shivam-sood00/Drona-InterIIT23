@@ -1,5 +1,7 @@
 import math
-
+'''
+Utility Script for communicating using MSP packets
+'''
 def getBytes(value): 
     LSB=value % 256
     MSB=math.floor(value/256)

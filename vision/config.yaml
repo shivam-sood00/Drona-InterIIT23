@@ -1,0 +1,23 @@
+intrinsics:
+  cam_matrix: [[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]
+  dist_coeff: [0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]
+
+extrinsics:
+  global_origin: [46.22983901,   1.60285046, 278.0799618]
+  imu_correction: [-0.03358463, 0.0135802, 0.0]
+  calibrate_yaw: False
+
+camera_params:
+  enable_auto_exposure: 0
+  enable_auto_white_balance: 0
+  sharpness: 100
+  contrast: 50
+  brightness: 30
+  exposure: 100
+
+
+tracking:
+  enable: True
+  area_th: 160
+  centroid_th: 12
+
