@@ -70,7 +70,8 @@ class VisionPipeline():
         if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
-            self.cam_rvec = np.array([0.0, 0.0, 0.0])
+            self.raw_calib_yaw = 1.67992897
+            self.cam_rvec = np.array([0.0, 0.0, 1.67992897])
         
 
 
@@ -124,12 +125,12 @@ class VisionPipeline():
         cx = 631.432983398438
         fy = 639.533020019531
         cy = 409.294647216797
-        self.cam_matrix = np.array([[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]) #calib_data["camMatrix"]
-        self.dist_coef = np.array([0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]) #np.zeros((5, 1))  #calib_data["distCoef"]
+        self.cam_matrix = np.array([[1363.6279296875, 0, 980.393493652344],[0, 1363.76220703125, 548.691650390625],[0,0,1]]) #calib_data["camMatrix"]
+        self.dist_coef = np.array([0.0, 0.0, 0.0, 0.0, 0.0]) #np.zeros((5, 1))  #calib_data["distCoef"]
         """dist_coef = np.zeros((5, 1))"""
 
         self.cam_rvec = np.array([0.10357627, -2.8488926,  -0.55131484])
-        self.cam_tvec = np.array([46.22983901,   1.60285046, 278.0799618])
+        self.cam_tvec = np.array([-11.09842957, -42.78326732, 275.62761152])
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
 
@@ -326,7 +327,7 @@ class VisionPipeline():
         if self.current_midpoint is not None:
             # print("PLOTLINE")
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-            # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
+            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3, cv2.LINE_8)
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -377,14 +378,14 @@ class VisionPipeline():
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
         # print("RVec:",rVec,"Tvec:",tVec)
-        tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
+        tf = self.make_tf_matrix(np.array([0, 0, 0]), (tVec[0, 0, :] - self.cam_tvec))
         if frame_of_ref == "camera":
             
             correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             tf = correction_tf @ tf
             
             # self.cam_rvec = Rotation.from_euler('xyz', np.array([0.0, 0.0, 0.14])).as_rotvec()
-            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=self.cam_tvec)
+            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
             # translation_tf = self.make_tf_matrix(rvec=np.array([0.0, 0.0, 0.0]), tvec=self.cam_tvec)
             translation_tf = np.linalg.pinv(translation_tf)
             tf = translation_tf @ tf

@@ -49,13 +49,13 @@ if __name__ == '__main__':
     depth_res=(720, 1280)
     rgb_res=(1080, 1920)
     align_to="rgb"
-    marker_size=3.62 #13.8
+    marker_size=3.62 #13.8 #3.62 #13.8
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 0
+    required_marker_id = 3 #11 #0
     calib_file_path="vision/calib_data/MultiMatrix.npz"
 
-    calib_yaw_at_start = True
-    imu_calib_data = [-0.03358463, 0.0135802, 0.0]
+    calib_yaw_at_start = False
+    imu_calib_data = [-0.18492422, -0.01799725,  0.]
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, calib_file_path, debug=DEBUG,padding = 0, calib_yaw_at_start=calib_yaw_at_start, imu_calib_data=imu_calib_data)
     # pipeline = VisionPipeline(depth_res,rgb_res=(1080,1920),marker_size=3.6,required_marker_id=z,debug=1,padding = 0)
@@ -92,47 +92,54 @@ if __name__ == '__main__':
 
     # normal_aruco = [[], []]
     # aruco_avg_corners = [[], []]
-    # aruco_avg_pose = [[], []]
+    # # aruco_avg_pose = [[], []]
 
-    pipeline.calib_yaw_at_start = True
-    if pipeline.calib_yaw_at_start:
-        max_iters = 100
-        num_calib_frames = 0
-        rvec_uncalib = []
-        while True:
-            aligned_frames = pipeline.get_frames()    
-            color_frame = pipeline.extract_rgb(aligned_frames)
-            depth_frame = pipeline.extract_depth(aligned_frames)
+    # pipeline.calib_yaw_at_start = calib_yaw_at_start
+    # if pipeline.calib_yaw_at_start:
+    #     max_iters = 100
+    #     num_calib_frames = 0
+    #     rvec_uncalib = []
+    #     while True:
+    #         aligned_frames = pipeline.get_frames()    
+    #         color_frame = pipeline.extract_rgb(aligned_frames)
+    #         depth_frame = pipeline.extract_depth(aligned_frames)
 
-            if not depth_frame or not color_frame:
-                continue
+    #         if not depth_frame or not color_frame:
+    #             continue
             
-            color_img = pipeline.to_image(color_frame)
-            marker_corners = pipeline.detect_marker(color_img)
+    #         color_img = pipeline.to_image(color_frame)
+    #         marker_corners = pipeline.detect_marker(color_img)
             
-            if marker_corners is None:
-                pass
-            elif type(marker_corners) is str:
-                pass
-            else:
-                num_calib_frames += 1
-                rvec_uncalib.append(pipeline.estimate_uncalib_pose(marker_corners))
-                # if rvec_uncalib is None:
-                #     rvec_uncalib = pipeline.estimate_uncalib_pose(marker_corners)
-                # else:
-                #     rvec_uncalib += pipeline.estimate_uncalib_pose(marker_corners)
+    #         if marker_corners is None:
+    #             pass
+    #         elif type(marker_corners) is str:
+    #             pass
+    #         else:
+    #             num_calib_frames += 1
+    #             rvec_uncalib.append(pipeline.estimate_uncalib_pose(marker_corners))
+    #             # if rvec_uncalib is None:
+    #             #     rvec_uncalib = pipeline.estimate_uncalib_pose(marker_corners)
+    #             # else:
+    #             #     rvec_uncalib += pipeline.estimate_uncalib_pose(marker_corners)
                 
-                if(num_calib_frames >= max_iters):
-                    print("yaw Caliberated ")
-                    break 
+    #             if(num_calib_frames >= max_iters):
+    #                 print("yaw Caliberated ")
+    #                 break 
         
-        rvec_uncalib.sort()
-        temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, rvec_uncalib[int(len(rvec_uncalib) / 2.0)]])).as_rotvec()[2]
-        pipeline.cam_rvec = np.array([0.0, 0.0, temp_+np.pi/2])
-        # print(f"CAM RVEC: {Rotation.from_rotvec(pipeline.cam_rvec).as_euler('xyz')}")
-    else:
-        pipeline.cam_rvec = np.array([0.0, 0.0, 0.0])
+    #     rvec_uncalib.sort()
+    #     temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, rvec_uncalib[int(len(rvec_uncalib) / 2.0)]])).as_rotvec()[2]
+    #     pipeline.cam_rvec = np.array([0.0, 0.0, temp_+np.pi/2])
+    #     # print(f"CAM RVEC: {Rotation.from_rotvec(pipeline.cam_rvec).as_euler('xyz')}")
+    # else:
+    #     pipeline.cam_rvec = np.array([0.0, 0.0, 0.0])
     
+
+    if pipeline.calib_yaw_at_start:
+        pipeline.calibrate_yaw()
+    else:
+        pipeline.raw_calib_yaw = 1.67992897
+        pipeline.cam_rvec = np.array([0.0, 0.0, 1.67992897])
+
 
     last_time = None
     current_time = None
@@ -159,7 +166,8 @@ if __name__ == '__main__':
 
             if pipeline.DEBUG:
                 if not(pipeline.avg_fps is None):
-                    print(f"Average FPS: ", pipeline.avg_fps)
+                    # print(f"Average FPS: ", pipeline.avg_fps)
+                    pass
 
 
             depth_img = pipeline.to_image(depth_frame)
@@ -173,7 +181,7 @@ if __name__ == '__main__':
             fps = 1/(new_frame_time-prev_frame_time)
             prev_frame_time = new_frame_time
             fps = int(fps)
-            print(fps)
+            # print(fps)
             
             marker_corners = pipeline.detect_marker(color_img)
             
@@ -200,7 +208,7 @@ if __name__ == '__main__':
                 # normal_aruco[1].append(aruco_pose[1][0])
 
                 ###
-                print("AVG CORNERS: ", avg_corners)
+                # print("AVG CORNERS: ", avg_corners)
                 aruco_pose_moving_corners = pipeline.estimate_pose(avg_corners)
                 aruco_pose_moving_corners[0][0] = aruco_pose_moving_corners[0][0] * -1.0
                 # print("moving corners pose", aruco_pose_moving_corners)
@@ -245,7 +253,7 @@ if __name__ == '__main__':
 
                 pipeline.current_midpoint = mid_point.copy()
 
-                print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
+                # print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
                 new_tf = pipeline.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
                 # if aruco_pose[0] >= x_threshold or aruco_pose[1] >= y_threshold:
                 #     flag = 1
@@ -258,9 +266,16 @@ if __name__ == '__main__':
                 # new_tf = pipeline.make_tf_matrix(rvec=pipeline.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
                 # new_tf = np.linalg.pinv(new_tf)
                 z_from_realsense = (new_tf @ np.array(
-                    [point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
+                    [point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))
                 
-                z_from_realsense = -z_from_realsense + 2.858 #2.8189825700392364 + 0.04041281
+                z_from_realsense[:3] = z_from_realsense[:3] - np.array([-17.46048358,   9.40649772, 303.78945803])
+
+                translation_tf = pipeline.make_tf_matrix(rvec=pipeline.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+                translation_tf = np.linalg.pinv(translation_tf)
+
+                z_from_realsense = translation_tf @ z_from_realsense
+
+                # z_from_realsense = -z_from_realsense# + 2.858 #2.8189825700392364 + 0.04041281
                 print(f"[{current_time}]: Z from REALSENSE: ", z_from_realsense)
 
 
