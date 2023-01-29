@@ -28,13 +28,13 @@ N =10                                                                     # Pred
 
 U_ref = np.array([457.7,457.7,457.7,457.7], dtype ='f')     				                ############## Reference velocity and reference omega					                               		                                                                   
 
-Q_phi =0                                                              ############## # gains to control error in x,y,theta during motion
+Q_phi =0                                                             ############## # gains to control error in x,y,theta during motion
 Q_phi_dot =0
-Q_theta = 0                                                                                                                                            
+Q_theta = 1                                                                                                                                           
 Q_theta_dot =0                                                                                                                                    
 Q_psi = 0                                                                                                                                           
 Q_psi_dot =0                                                                                                                                      
-Q_z = 100
+Q_z = 0
 Q_x = 0
 Q_Vz = 0
 Q_Vx =0
@@ -51,6 +51,7 @@ error_allowed_in_g = 1e-100                                                 # er
 
 delta_T = 0.1
 
+X_target = ca.vertcat(1 ,0, 1, 0 ,0 ,0, 1, 0, 0 ,0 ,0 ,0)
 
 """# parameters that depend on simulator 
 """
@@ -82,7 +83,7 @@ theta_dot_bound_min = -inf
 
 psi_bound_max = inf                     
 psi_bound_min = -inf 
-psi_dot_bound_max = inf                     
+psi_dot_bound_max = inf                   
 psi_dot_bound_min = -inf
 
 x_bound_max = inf                                                           # enter x and y bounds when limited world like indoor environments                   
@@ -99,8 +100,11 @@ Vz_bound_max = inf
 Vz_bound_min = -inf                    
 
 
-omega_max = 460.0                                                                                                                                        
-omega_min = 450#-omega_max
+# omega_max = 460.0                                                                                                                                        
+# omega_min = 450#-omega_max
+
+omega_max = 450.0                                                                                                                                        
+omega_min = 440#-omega_max              ###################################################
 
 
 
@@ -115,7 +119,7 @@ total_path_points = 0
 global path  
 
 
-des = ca.vertcat(0 ,0, 0, 0 ,0 ,0, 0.9, 0, 0 ,0 ,0 ,0)
+
 # path = np.zeros((100,3))
 # i = 0
 # while(des[2]>=path[i,2]):
@@ -287,12 +291,30 @@ ubx[11:n_bound_var*(N+1):n_states] = psi_dot_bound_max
 
 lbx[n_bound_var*(N+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min                       
 ubx[(n_bound_var*(N+1)):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max                      
-lbx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min               
+lbx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min          ##################################################     
 ubx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max 
 lbx[n_bound_var*(N+1)+2:(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min                       
 ubx[(n_bound_var*(N+1)+2):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max                      
 lbx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min               
-ubx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max               
+ubx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max  
+
+# lbx[n_bound_var*(N+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min                       
+# ubx[(n_bound_var*(N+1)):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max                      
+# lbx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_min          ##################################################     
+# ubx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_max 
+# lbx[n_bound_var*(N+1)+2:(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min                       
+# ubx[(n_bound_var*(N+1)+2):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max                      
+# lbx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_min               
+# ubx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_max  
+
+lbx[n_bound_var*(N+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_min                       
+ubx[(n_bound_var*(N+1)):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_max                      
+lbx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min          ##################################################     
+ubx[(n_bound_var*(N+1)+1):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max 
+lbx[n_bound_var*(N+1)+2:(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_min                       
+ubx[(n_bound_var*(N+1)+2):(n_bound_var*(N+1)+n_controls*N):n_controls] = 0#omega_max                      
+lbx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_min               
+ubx[(n_bound_var*(N+1)+3):(n_bound_var*(N+1)+n_controls*N):n_controls] = omega_max  
 
 def wRb(roll, pitch, yaw):
     R = np.zeros((3, 3))
@@ -319,12 +341,12 @@ def odometry_callback(msg):
 
     global phi,phi_dot,theta,theta_dot,psi,psi_dot,x,y,z,Vx,Vy,Vz
     x = msg.pose.pose.position.x
-    y = -1*(msg.pose.pose.position.y)
-    z = -1*msg.pose.pose.position.z
+    y = 1*(msg.pose.pose.position.y)
+    z = 1*msg.pose.pose.position.z
     Vx = msg.twist.twist.linear.x
-    Vy = -1*(msg.twist.twist.linear.y)
-    Vz = -1*msg.twist.twist.linear.z
-    """"
+    Vy = 1*(msg.twist.twist.linear.y)
+    Vz = 1*msg.twist.twist.linear.z
+    """"p
     Identify the change
     """
     # [Vx,Vy,Vz] = wRb(phi,theta,psi) * [Vx,Vy,Vz] ##########################################
@@ -334,10 +356,26 @@ def odometry_callback(msg):
                        msg.pose.pose.orientation.w])
     eul_b = np.zeros((3, 1))
     eul_b = get_euler_angles_from_quaternion(quat_b)
-    phi = -eul_b[0]; theta = eul_b[1]; psi = -eul_b[2]
-    phi_dot = -(msg.twist.twist.angular.x)
+    phi = eul_b[0]; theta = eul_b[1]; psi = eul_b[2]
+    
+    phi_dot = (msg.twist.twist.angular.x)
     theta_dot = msg.twist.twist.angular.y
-    psi_dot = -(msg.twist.twist.angular.z)
+    psi_dot = (msg.twist.twist.angular.z)
+
+    x = x
+    y = y
+    z = -z
+    Vx = Vx
+    Vy = Vy
+    Vz = -Vz
+    phi = -phi
+    phi_dot = -phi_dot 
+    theta = 0.2#theta   ###########################################################
+    theta_dot = theta_dot
+    psi = psi
+    psi_dot = psi_dot
+
+    print("                             phi",phi)
 
     # print("z=",z,"Vz=",Vz)
 rospy.init_node("hello",anonymous=True)
@@ -346,7 +384,7 @@ pubActuators = rospy.Publisher("hummingbird/command/motor_speed", Actuators, que
 msg = Actuators()
 rate = rospy.Rate(10)
 rate.sleep()
-
+print()
 
 
 ##########################################################################
@@ -380,7 +418,7 @@ while(True):
     
     # X_init = np.array([phi],[phi_dot],[theta],[theta_dot],[psi],[psi_dot],[z],[Vz],[x],[Vx],[y],[Vy], dtype = 'f') ####################################################################                                                                                                                                                                                        
     # X_target = np.array([path[total_path_points-1][0], path[total_path_points-1][1], 0 ]  , dtype = 'f')   #########################################taken####
-    X_target = des
+    
     P = ca.vertcat(X_init,  X_target)                                                                                 
 
     # close_index = KDTree(path).query(np.array([]))[1]  ###########################                                    
@@ -420,6 +458,9 @@ while(True):
         ca.reshape(X0[:, -1], -1, 1)
     )
 
+    # print(X0.numel())
+    print("                             pred ",X0[1,1])
+
     u_to_apply = u[:,0]
     print("APPL",u_to_apply)
     omega1, omega2, omega3, omega4 =u_to_apply[0], u_to_apply[1], u_to_apply[2],u_to_apply[3]#float(u_to_apply[0,0].full()[0,0]), float(u_to_apply[1,0].full()[0,0]), float(u_to_apply[2,0].full()[0,0], float(u_to_apply[3,0].full()[0,0]))
@@ -432,7 +473,7 @@ while(True):
     #                 ubx=args['ubx'],
                 
     #                 lbg=args['lbg'],
-    #                 ubg=args['ubg'],
+    #                 ubg=args['ubg'],print()
     #                 p=args['p']
                         
     #             )           
@@ -449,11 +490,12 @@ while(True):
     pitch_U3 = b*(-(omega3_casadi**2) + (omega1_casadi**2))
     yaw_U4 = d*(omega2_casadi**2+omega4_casadi**2-omega1_casadi**2-omega3_casadi**2)
 
-    omega = [omega1,omega2,omega3,omega4]
-    if omega1 != omega2 and omega2 != omega3 and omega3 != omega4:
-        print("############################reacting to disturbance") 
+    # omega = [omega1,omega2,omega3,omega4]
+    omega = [omega1,omega4,omega3,omega2]
+    # if omega1 != omega2 and omega2 != omega3 and omega3 != omega4:
+        # print("reacting to disturbance########################################################################################") 
         
-        
+    
     msg.angular_velocities = omega
     pubActuators.publish(msg)
     
