@@ -7,6 +7,8 @@ from scipy.spatial.transform import Rotation
 import math
 import yaml
 
+import wandb
+
 class VisionPipeline():
     """
         This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
@@ -46,7 +48,8 @@ class VisionPipeline():
 
         self.required_marker_id = required_marker_id
 
-        self.camera_config = yaml.load(config_file)
+        with open(config_file, 'r') as f:
+            self.camera_config = yaml.load(f)
         
         self.DEBUG = debug
         self.padding = padding
@@ -67,6 +70,9 @@ class VisionPipeline():
 
         self.cam_init()
 
+        if self.camera_config['wandb']['use_wandb']:
+            self.wandb_init()
+
         self.last_time = None
         self.current_time = None
         self.counter = 0
@@ -77,8 +83,14 @@ class VisionPipeline():
         if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
-            self.cam_rvec = np.array([0.0, 0.0, 0.0])
+            self.cam_rvec = np.array(self.camera_config['extrinsics']['default_yaw']) #np.array([0.0, 0.0, 0.0])
+            self.raw_calib_yaw = self.camera_config['extrinsics']['default_yaw'][2] # 0.0
         
+
+
+    def wandb_init(self):
+        wandb.init(project="inter-iit", config=self.camera_config)
+        pass        
 
 
     
@@ -475,13 +487,26 @@ class VisionPipeline():
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
-        tf = self.make_tf_matrix(np.array([0, 0, 0]), tVec[0, 0, :])
+
+        if self.DEBUG:
+            print("[RAW ARUCO] (meters)--> X:", tVec[0, 0, 0] / 100.0, ", Y:", tVec[0, 0, 1] / 100.0, "Z:", tVec[0, 0, 2] / 100.0)
+            
+        if self.camera_config['wandb']['use_wandb']:
+            wandb.log({
+                'raw_aruco_x': tVec[0, 0, 0] / 100.0,
+                'raw_aruco_y': tVec[0, 0, 1] / 100.0,
+                'raw_aruco_z': tVec[0, 0, 2] / 100.0
+            })
+
+            
+
+        tf = self.make_tf_matrix(np.array([0, 0, 0]), (tVec[0, 0, :] - self.cam_tvec))
         if frame_of_ref == "camera":
             
             correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             tf = correction_tf @ tf
             
-            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=self.cam_tvec)
+            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
             translation_tf = np.linalg.pinv(translation_tf)
             tf = translation_tf @ tf
             pass
@@ -561,7 +586,8 @@ class VisionPipeline():
                     depths.append(depth)
                 except:
                     pass
-
+        
+        depths = list(set(depths))
         depths.sort()
         num_values = len(depths)
         if num_values % 2 == 0:
@@ -685,12 +711,45 @@ class VisionPipeline():
 
             self.current_midpoint = mid_point.copy()
             new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
-            
             point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-            z_from_realsense = (new_tf @ np.array([point_from_rs[0] * 100.0, point_from_rs[1] * 100.0, point_from_rs[2] * 100.0, 1]))[2] / 100.0
-            z_from_realsense = -z_from_realsense + 2.858
             
+            if self.DEBUG:
+                print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+            if self.camera_config['wandb']['use_wandb']:
+                wandb.log({
+                    'raw_realsense_x': point_from_rs[0],
+                    'raw_realsense_y': point_from_rs[1],
+                    'raw_realsense_z': point_from_rs[2], 
+                })    
+
+
+            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_config['extrinsics']['realsense_origin'])
+            point_from_rs = (new_tf @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2], 1]))
+            
+
             aruco_pose[0] = -aruco_pose[0]
+            # z_from_realsense = -z_from_realsense + 2.858
+            z_from_realsense = point_from_rs[2]
+
+
+            if self.DEBUG:
+                print("[ARUCO] (meters)--> X:", aruco_pose[0], ", Y:", aruco_pose[1], ", Z:", aruco_pose[2])
+                print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+            if self.camera_config['wandb']['use_wandb']:
+                wandb.log({
+                    'aruco_x': aruco_pose[0],
+                    'aruco_y': aruco_pose[1],
+                    'aruco_z': aruco_pose[2],
+
+                    'realsense_x': point_from_rs[0],
+                    'realsense_y': point_from_rs[1],
+                    'realsense_z': point_from_rs[2],
+                })
+
                 
             cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
             self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
