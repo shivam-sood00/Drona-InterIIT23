@@ -9,3 +9,5 @@ dronePass.py
 debug.txt
 
 *.avi
+
+**/wandb/**

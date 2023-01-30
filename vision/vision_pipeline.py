@@ -51,6 +51,10 @@ class VisionPipeline():
         with open(config_file, 'r') as f:
             self.camera_config = yaml.load(f)
         
+        self.camera_id = self.camera_config['active_camera']
+        self.camera_intrinsic = self.camera_config['camera'][self.camera_id]['intrinsics']
+        self.camera_extrinsic = self.camera_config['camera'][self.camera_id]['extrinsics']
+        
         self.DEBUG = debug
         self.padding = padding
         self.fps_moving_window_size = fps_moving_window_size
@@ -65,8 +69,8 @@ class VisionPipeline():
         self.current_waypoint = None
         self.current_midpoint = None
 
-        self.calib_yaw_at_start = self.camera_config['extrinsics']['calibrate_yaw']
-        self.imu_calib_data = self.camera_config['extrinsics']['imu_correction']
+        self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
+        self.imu_calib_data = self.camera_extrinsic['imu_correction']
 
         self.cam_init()
 
@@ -80,12 +84,19 @@ class VisionPipeline():
         self.avg_fps = None
         self.cam_rvec = np.array([0.0, 0.0, 0.0])
         self.raw_calib_yaw = 0.0
+
+        self.rp_correction = Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_matrix()
+
         if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
-            self.cam_rvec = np.array(self.camera_config['extrinsics']['default_yaw']) #np.array([0.0, 0.0, 0.0])
-            self.raw_calib_yaw = self.camera_config['extrinsics']['default_yaw'][2] # 0.0
+            self.cam_rvec = np.array(self.camera_extrinsic['default_yaw']) #np.array([0.0, 0.0, 0.0])
+            self.raw_calib_yaw = self.camera_extrinsic['default_yaw'][2] # 0.0
         
+        self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
+        self.yaw_correction = np.linalg.pinv(self.yaw_correction)
+        self.rpy_correction = self.yaw_correction @ self.rp_correction 
+
 
 
     def wandb_init(self):
@@ -156,10 +167,10 @@ class VisionPipeline():
             None
         """ 
 
-        self.cam_matrix = np.array(self.camera_config['intrinsics']['cam_matrix']) #calib_data["camMatrix"]
-        self.dist_coef = np.array(self.camera_config['intrinsics']['dist_coeff']) #np.zeros((5, 1))  #calib_data["distCoef"]
+        self.cam_matrix = np.array(self.camera_intrinsic['cam_matrix']) #calib_data["camMatrix"]
+        self.dist_coef = np.array(self.camera_intrinsic['dist_coeff']) #np.zeros((5, 1))  #calib_data["distCoef"]
         self.cam_rvec = np.array([0.0, 0.0, 0.0])
-        self.cam_tvec = np.array(self.camera_config['extrinsics']['global_origin'])
+        self.cam_tvec = np.array(self.camera_extrinsic['global_origin'])
         self.cam_tf = np.linalg.pinv(self.make_tf_matrix(self.cam_rvec, self.cam_tvec))
 
 
@@ -433,6 +444,7 @@ class VisionPipeline():
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
+            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -461,14 +473,11 @@ class VisionPipeline():
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
 
+        aruco_rot = Rotation.from_rotvec(rVec[0, 0, :]).as_matrix()
+        aruco_rot = self.rp_correction @ aruco_rot
+        aruco_rot = np.linalg.pinv(aruco_rot)
 
-        tf = self.make_tf_matrix(rVec[0, 0, :], tVec[0, 0, :])
-        
-        correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
-        tf = correction_tf @ tf
-        tf = np.linalg.pinv(tf)
-
-        uncalib_rot = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
+        uncalib_rot = Rotation.from_matrix(aruco_rot).as_euler('xyz')
         return uncalib_rot[2]
 
 
@@ -498,21 +507,11 @@ class VisionPipeline():
                 'raw_aruco_z': tVec[0, 0, 2] / 100.0
             })
 
-            
+        output = self.rpy_correction @ np.array([tVec[0, 0, 0], tVec[0, 0, 1], tVec[0, 0, 2]])
+        output = output / 100.0
+        output = output - self.cam_tvec
 
-        tf = self.make_tf_matrix(np.array([0, 0, 0]), (tVec[0, 0, :] - self.cam_tvec))
-        if frame_of_ref == "camera":
-            
-            correction_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
-            tf = correction_tf @ tf
-            
-            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
-            translation_tf = np.linalg.pinv(translation_tf)
-            tf = translation_tf @ tf
-            pass
-        else:        
-            tf = self.cam_tf @ tf
-        return self.tf_to_outformat(tf) / 100.0
+        return output
 
 
     def make_tf_matrix(self, rvec, tvec):
@@ -681,7 +680,6 @@ class VisionPipeline():
             
 
         color_img = self.to_image(color_frame)
-
         marker_corners = self.detect_marker(color_img)
             
         if marker_corners is None:
@@ -710,7 +708,6 @@ class VisionPipeline():
             mid_point = (mid_point + 0.5).astype(np.int32)
 
             self.current_midpoint = mid_point.copy()
-            new_tf = self.make_tf_matrix(rvec=Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_rotvec(), tvec=np.array([0.0, 0.0, 0.0]))
             point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
             
             if self.DEBUG:
@@ -725,15 +722,13 @@ class VisionPipeline():
                 })    
 
 
-            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_config['extrinsics']['realsense_origin'])
-            point_from_rs = (new_tf @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2], 1]))
-            
-            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
-            translation_tf = np.linalg.pinv(translation_tf)
-            point_from_rs = translation_tf @ point_from_rs
+           
+            point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
 
             aruco_pose[0] = -aruco_pose[0]
-            # z_from_realsense = -z_from_realsense + 2.858
+            point_from_rs[0] = -point_from_rs[0]
             z_from_realsense = point_from_rs[2]
 
 
@@ -753,8 +748,12 @@ class VisionPipeline():
                     'realsense_z': point_from_rs[2],
                 })
 
-                
-            cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
-            self.estimated_pose = [aruco_pose[0][0], aruco_pose[1][0], z_from_realsense]
+            
+            if self.camera_config['use_aruco_xy']:
+                cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
+                self.estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]
+            else:
+                cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
+                self.estimated_pose = [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
     
     

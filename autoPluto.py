@@ -205,9 +205,9 @@ class autoPluto:
             
             if self.outOfBound==0:
                 if self.currentState is  None:
-                    self.currentState = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    self.currentState = list(sensorData[1][:2]) + [sensorData[2]]
                 else:
-                    self.currentState[:3] = list(sensorData[1][:2,0]) + [sensorData[2]]
+                    self.currentState[:3] = list(sensorData[1][:2]) + [sensorData[2]]
                     
         self.imuLock.acquire()
         if len(self.IMUQueue)>0:

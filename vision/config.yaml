@@ -1,11 +1,29 @@
-intrinsics:
-  cam_matrix: [[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]
-  dist_coeff: [0.1269819023042869, -0.4583739190940396, 0.002002457353149274, -0.01606097632795915, 0.3598527092759298]
+# for camera 1
+active_camera: 1
+camera: 
+  1:
+    intrinsics:
+      cam_matrix: [[1363.6279296875, 0, 980.393493652344],[0, 1363.76220703125, 548.691650390625],[0,0,1]]
+      dist_coeff: [0.0, 0.0, 0.0, 0.0, 0.0]
 
-extrinsics:
-  global_origin: [46.22983901,   1.60285046, 278.0799618]
-  imu_correction: [-0.03358463, 0.0135802, 0.0]
-  calibrate_yaw: False
+    extrinsics:
+      global_origin:  [0.0, 0.0, 0.0] #[32.09, 3.832, 280.2] #[0.0, 0.0, 0.0] #[46.22983901,   1.60285046, 278.0799618] # From aruco
+      realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
+      imu_correction: [-0.04298656,  0.01464409,  0.        ]
+      calibrate_yaw: False
+      default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
+  2: #(KRSSG)
+    intrinsics:
+      cam_matrix: [[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]
+      dist_coeff: [0.0, 0.0, 0.0, 0.0, 0.0]
+    
+    extrinsics:
+      global_origin:  [0.0, 0.0, 0.0] #[32.09, 3.832, 280.2] #[0.0, 0.0, 0.0] #[46.22983901,   1.60285046, 278.0799618] # From aruco
+      realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
+      imu_correction: [-0.04298656,  0.01464409,  0.        ]
+      calibrate_yaw: False
+      default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
+
 
 camera_params:
   enable_auto_exposure: 0
@@ -21,3 +39,9 @@ tracking:
   area_th: 160
   centroid_th: 12
 
+
+wandb:
+  use_wandb: False
+
+
+use_aruco_xy: False
