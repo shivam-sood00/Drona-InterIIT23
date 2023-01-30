@@ -728,6 +728,9 @@ class VisionPipeline():
             point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_config['extrinsics']['realsense_origin'])
             point_from_rs = (new_tf @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2], 1]))
             
+            translation_tf = self.make_tf_matrix(rvec=self.cam_rvec, tvec=np.array([0.0, 0.0, 0.0]))
+            translation_tf = np.linalg.pinv(translation_tf)
+            point_from_rs = translation_tf @ point_from_rs
 
             aruco_pose[0] = -aruco_pose[0]
             # z_from_realsense = -z_from_realsense + 2.858
