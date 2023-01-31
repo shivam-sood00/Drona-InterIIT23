@@ -1,4 +1,5 @@
 from operator import pos
+import sys
 import pyrealsense2 as rs
 import numpy as np
 import cv2
@@ -7,7 +8,7 @@ import time
 from scipy.spatial.transform import Rotation
 import math
 import yaml
-
+from math import isnan
 import wandb
 
 class VisionPipeline():
@@ -36,7 +37,7 @@ class VisionPipeline():
                  required_marker_id=1,
                  debug=0,
                  padding=50,
-                 config_file="./config.yaml",
+                 config_file="./vision/config.yaml",
                  fps_moving_window_size=10) -> None:
 
 
@@ -66,7 +67,7 @@ class VisionPipeline():
         self.tracking_point_th = self.camera_config['tracking']['centroid_th']
 
         self.estimated_pose = None
-        self.previous_pose = None
+        self.previous_pose = [0.0,0.0,10.0]
         self.current_waypoint = None
         self.current_midpoint = None
 
@@ -75,6 +76,7 @@ class VisionPipeline():
 
         self.cam_init()
 
+        self.get_frames()
         self.init_intrinsics()
 
         if self.camera_config['wandb']['use_wandb']:
@@ -166,7 +168,7 @@ class VisionPipeline():
         self.rgb_intrinsics.fx = self.cam_matrix[0][0]
         self.rgb_intrinsics.fy = self.cam_matrix[1][1]
 
-        self.depth_intrinsics = self.frame.get_depth_frame().profile.as_video_stream_profile().intrinsics
+        self.depth_intrinsics = self.frames.get_depth_frame().profile.as_video_stream_profile().intrinsics
     
     def init_aruco_detector(self):
         """
@@ -229,7 +231,7 @@ class VisionPipeline():
         Returns:
             depth frame
         """
-        return frame.get_self.depth_frame_aligned()
+        return frame.get_depth_frame()
 
     
     def extract_rgb(self, frame):
@@ -242,7 +244,7 @@ class VisionPipeline():
         Returns:
             frame.get_self.color_frame(): colour frame
         """
-        return frame.get_self.color_frame()
+        return frame.get_color_frame()
 
 
     def to_image(self, frame):
@@ -465,6 +467,7 @@ class VisionPipeline():
         cv2.imshow(window_name, frame)
 
         cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
+        cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
         cv2.imshow("RGB Image", rgb_frame)
         key = cv2.waitKey(1)
 
@@ -634,7 +637,6 @@ class VisionPipeline():
                 aligned_frames = self.get_frames()    
                 self.color_frame = self.extract_rgb(aligned_frames)
                 self.depth_frame_aligned = self.extract_depth(aligned_frames)
-                self.depth_frame_full = self.frames.get_depth_frame()
                 if not self.depth_frame_aligned or not self.color_frame:
                     continue
                 
@@ -660,35 +662,45 @@ class VisionPipeline():
             print(f"YAW Value from Calibration: {self.cam_rvec}")
         
     def dfs(self, x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y):
-        
-        component_id[x][y]=counter
+
+        component_id[x-start_x][y-start_y]=counter
         component_size[counter] += 1
 
         for xx in range(x-1, x+2):
             for yy in range(y-1, y+2):
-                if xx==x and yy==y or y<start_y or x<start_x or x>=end_x or y>=end_y:
+                if (xx==x and yy==y) or yy<start_y or xx<start_x or xx>=end_x or yy>=end_y:
                     continue
-                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_depth(x,y)>1.2192 and self.depth_frame_full.get_depth(x,y)<2.1336:
-                    if abs(self.depth_frame_full.get_depth(x,y)-self.depth_frame_full.get_depth(xx,yy))< 0.05:
+                if component_id[xx-start_x][yy-start_y] == -1 and self.depth_frame_full.get_distance(xx,yy)<2.5:
+                    if abs(self.depth_frame_full.get_distance(x,y)-self.depth_frame_full.get_distance(xx,yy))< 0.02:
                         self.dfs(xx,yy,component_id, component_size, counter,start_x,start_y,end_x,end_y)
 
     def estimate_drone_center_from_depth(self):
 
-        depth_search_region = 100
-        pose_pixel = rs.project_point_to_pixel(self.depth_intrinsics, self.previous_pose)
-
-        start_x = max(0,pose_pixel[0]-depth_search_region)
-        end_x = min(pose_pixel[0]+depth_search_region, self.depth_res[1])
-        start_y = max(0,pose_pixel[1]-depth_search_region)
-        end_y = min(pose_pixel[1]+depth_search_region, self.depth_res[0])   # debug here
-
+        depth_search_region = 50
+        pose_pixel = rs.rs2_project_point_to_pixel(self.depth_intrinsics, self.previous_pose)
+        if isnan(pose_pixel[0]):
+            self.previous_pose = [0.0,0.0,10.0]
+            return None
+        print(pose_pixel)
+        start_x = max(0,int(pose_pixel[0])-depth_search_region)
+        end_x = min(int(pose_pixel[0])+depth_search_region, int(self.depth_res[1]))
+        start_y = max(0,int(pose_pixel[1])-depth_search_region)
+        end_y = min(int(pose_pixel[1])+depth_search_region, int(self.depth_res[0]))  
+        # print(type(start_x))
+        # print(type(start_y))
+        # print(type(end_x))
+        # print(type(end_y))
+        # print(pose_pixel)
+        # print(self.depth_res)
         component_id = np.full((end_x-start_x, end_y-start_y), -1, dtype=int)
         component_size = {}
         counter=0
-
         for x in range(start_x, end_x):
             for y in range(start_y, end_y):    
-                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_depth(x,y)>1.2192 and self.depth_frame_full.get_depth(x,y)<2.1336:
+                # print(self.depth_frame_full.get_distance(x,y))
+                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_distance(x,y)<2.5:
+                    component_size[counter]=0
+                    # print("dfs")
                     self.dfs(x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y)
                     counter+=1
 
@@ -702,11 +714,17 @@ class VisionPipeline():
         
         x_mean, y_mean = 0,0
 
+        drone_image = 10*np.asarray(self.depth_frame_full.get_data())
+        print(drone_image)
         for x in range(start_x, end_x):
             for y in range(start_y, end_y):
                 if component_id[x-start_x][y-start_y] == largest_component_id:
                     x_mean+=x
                     y_mean+=y
+                    drone_image[y][x] = 100000
+        print(component_size[largest_component_id])
+        cv2.imshow("drone_segmented", drone_image)
+        cv2.waitKey(1)
 
         return (x_mean//component_size[largest_component_id], y_mean//component_size[largest_component_id])
 
@@ -759,12 +777,12 @@ class VisionPipeline():
         
 
     def pose_estimation_from_depth_camera(self):
-        
+        # return None
         drone_center = self.estimate_drone_center_from_depth()
         if drone_center is None:
             return None
 
-        return self.position_from_pixel(self.depth_intrinsics, drone_center[0], drone_center[1], self.depth_frame_full.get_depth(drone_center[0], drone_center[1]))
+        return self.position_from_pixel(self.depth_intrinsics, drone_center[0], drone_center[1], self.depth_frame_full.get_distance(drone_center[0], drone_center[1]))
 
     def pose_estimation(self, use_cam=True, use_depth=True, marker_corners=None):
         
@@ -779,6 +797,7 @@ class VisionPipeline():
         if aruco_pose is not None:
             return aruco_pose
         elif depth_pose is not None:
+            print("depth_pose: " + str(depth_pose))
             return depth_pose
         else:
             return []
@@ -797,6 +816,7 @@ class VisionPipeline():
         aligned_frames = self.get_frames()    
         self.color_frame = self.extract_rgb(aligned_frames)
         self.depth_frame_aligned = self.extract_depth(aligned_frames)
+        self.depth_frame_full = self.frames.get_depth_frame()
 
         if not self.depth_frame_aligned or not self.color_frame:
             return
@@ -820,11 +840,11 @@ class VisionPipeline():
         marker_corners = self.detect_marker(color_img)
             
         if marker_corners is None:
-            pose_from_depth = self.pose_estimation(use_camera=False, use_depth=True)
-            if len(pose_from_depth):
-                cam_queue.append(pose_from_depth)
-                self.estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
-            else:
+            # pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
+            # if len(pose_from_depth):
+            #     cam_queue.append(pose_from_depth)
+            #     self.estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
+            # else:
                 self.counter += 1
                 if self.counter >= 30:
                     flag = 2
@@ -835,7 +855,7 @@ class VisionPipeline():
             cam_queue.append([flag])
         else:
             self.counter = 0
-            pose_from_camera = self.pose_estimation(use_camera=True, use_depth=False)
+            pose_from_camera = self.pose_estimation(use_cam=True, use_depth=False, marker_corners=marker_corners)
         
             cam_queue.append([self.current_time, pose_from_camera, pose_from_camera[3]])
             self.estimated_pose = [pose_from_camera[0], pose_from_camera[1], pose_from_camera[2]]
