@@ -1,3 +1,4 @@
+from operator import pos
 import pyrealsense2 as rs
 import numpy as np
 import cv2
@@ -45,7 +46,6 @@ class VisionPipeline():
         self.marker_size = marker_size
         self.marker_type = marker_type
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
-
         self.required_marker_id = required_marker_id
 
         with open(config_file, 'r') as f:
@@ -66,6 +66,7 @@ class VisionPipeline():
         self.tracking_point_th = self.camera_config['tracking']['centroid_th']
 
         self.estimated_pose = None
+        self.previous_pose = None
         self.current_waypoint = None
         self.current_midpoint = None
 
@@ -73,6 +74,8 @@ class VisionPipeline():
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
 
         self.cam_init()
+
+        self.init_intrinsics()
 
         if self.camera_config['wandb']['use_wandb']:
             self.wandb_init()
@@ -154,7 +157,16 @@ class VisionPipeline():
         else:
             raise NotImplementedError(f"Align to {self.align_to} not implemented!")
 
+    def init_intrinsics(self):
+        self.rgb_intrinsics = rs.intrinsics()
+        self.rgb_intrinsics.width = self.rgb_res[1]
+        self.rgb_intrinsics.height = self.rgb_res[0]
+        self.rgb_intrinsics.ppx = self.cam_matrix[0][2]
+        self.rgb_intrinsics.ppy = self.cam_matrix[1][2]
+        self.rgb_intrinsics.fx = self.cam_matrix[0][0]
+        self.rgb_intrinsics.fy = self.cam_matrix[1][1]
 
+        self.depth_intrinsics = self.frame.get_depth_frame().profile.as_video_stream_profile().intrinsics
     
     def init_aruco_detector(self):
         """
@@ -217,7 +229,7 @@ class VisionPipeline():
         Returns:
             depth frame
         """
-        return frame.get_depth_frame()
+        return frame.get_self.depth_frame_aligned()
 
     
     def extract_rgb(self, frame):
@@ -228,9 +240,9 @@ class VisionPipeline():
             frame
         
         Returns:
-            frame.get_color_frame(): colour frame
+            frame.get_self.color_frame(): colour frame
         """
-        return frame.get_color_frame()
+        return frame.get_self.color_frame()
 
 
     def to_image(self, frame):
@@ -564,11 +576,11 @@ class VisionPipeline():
         return tf
 
 
-    def depth_from_marker(self, depth_frame, marker_corners, kernel_size=1):
+    def depth_from_marker(self, depth_frame_aligned, marker_corners, kernel_size=1):
         """
         Finds depth from the estimated pose obtained from the ArUco tag.
         Parameters:
-            depth_frame:
+            self.depth_frame_aligned:
             marker_corners: contains the list of aruco marker corners
             kernel_size: contains the size of the kernel
         Returns:
@@ -581,7 +593,7 @@ class VisionPipeline():
         for j in range(-int(kernel_size / 2.0), int(kernel_size / 2.0) + 1):
             for k in range(-int(kernel_size / 2.0), int(kernel_size / 2.0) + 1):
                 try:
-                    depth = depth_frame.get_distance(mid_point[0] + j, mid_point[1] + k)
+                    depth = depth_frame_aligned.get_distance(mid_point[0] + j, mid_point[1] + k)
                     depths.append(depth)
                 except:
                     pass
@@ -620,12 +632,13 @@ class VisionPipeline():
             rvec_uncalib = []
             while True:
                 aligned_frames = self.get_frames()    
-                color_frame = self.extract_rgb(aligned_frames)
-                depth_frame = self.extract_depth(aligned_frames)
-                if not depth_frame or not color_frame:
+                self.color_frame = self.extract_rgb(aligned_frames)
+                self.depth_frame_aligned = self.extract_depth(aligned_frames)
+                self.depth_frame_full = self.frames.get_depth_frame()
+                if not self.depth_frame_aligned or not self.color_frame:
                     continue
                 
-                color_img = self.to_image(color_frame)
+                color_img = self.to_image(self.color_frame)
                 marker_corners = self.detect_marker(color_img)
                 
                 if marker_corners is None:
@@ -646,6 +659,130 @@ class VisionPipeline():
             self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
             print(f"YAW Value from Calibration: {self.cam_rvec}")
         
+    def dfs(self, x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y):
+        
+        component_id[x][y]=counter
+        component_size[counter] += 1
+
+        for xx in range(x-1, x+2):
+            for yy in range(y-1, y+2):
+                if xx==x and yy==y or y<start_y or x<start_x or x>=end_x or y>=end_y:
+                    continue
+                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_depth(x,y)>1.2192 and self.depth_frame_full.get_depth(x,y)<2.1336:
+                    if abs(self.depth_frame_full.get_depth(x,y)-self.depth_frame_full.get_depth(xx,yy))< 0.05:
+                        self.dfs(xx,yy,component_id, component_size, counter,start_x,start_y,end_x,end_y)
+
+    def estimate_drone_center_from_depth(self):
+
+        depth_search_region = 100
+        pose_pixel = rs.project_point_to_pixel(self.depth_intrinsics, self.previous_pose)
+
+        start_x = max(0,pose_pixel[0]-depth_search_region)
+        end_x = min(pose_pixel[0]+depth_search_region, self.depth_res[1])
+        start_y = max(0,pose_pixel[1]-depth_search_region)
+        end_y = min(pose_pixel[1]+depth_search_region, self.depth_res[0])   # debug here
+
+        component_id = np.full((end_x-start_x, end_y-start_y), -1, dtype=int)
+        component_size = {}
+        counter=0
+
+        for x in range(start_x, end_x):
+            for y in range(start_y, end_y):    
+                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_depth(x,y)>1.2192 and self.depth_frame_full.get_depth(x,y)<2.1336:
+                    self.dfs(x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y)
+                    counter+=1
+
+        if counter==0:
+            return None
+
+        largest_component_id = 0
+        for i in range(counter):
+            if component_size[i] > component_size[largest_component_id]:
+                largest_component_id = i
+        
+        x_mean, y_mean = 0,0
+
+        for x in range(start_x, end_x):
+            for y in range(start_y, end_y):
+                if component_id[x-start_x][y-start_y] == largest_component_id:
+                    x_mean+=x
+                    y_mean+=y
+
+        return (x_mean//component_size[largest_component_id], y_mean//component_size[largest_component_id])
+
+    def position_from_pixel(self, intrinsics, pixel_x, pixel_y, depth):
+        point_from_rs = rs.rs2_deproject_pixel_to_point(intrinsics, [pixel_x, pixel_y], depth)
+        self.previous_pose = point_from_rs
+        
+        if self.DEBUG:
+            print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+        if self.camera_config['wandb']['use_wandb']:
+            wandb.log({
+                'raw_realsense_x': point_from_rs[0],
+                'raw_realsense_y': point_from_rs[1],
+                'raw_realsense_z': point_from_rs[2], 
+            })    
+
+
+        
+        point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+        point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
+
+        point_from_rs[0] = -point_from_rs[0]
+        self.z_from_realsense = point_from_rs[2]
+
+
+        if self.DEBUG:
+            print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+        if self.camera_config['wandb']['use_wandb']:
+            wandb.log({
+                'realsense_x': point_from_rs[0],
+                'realsense_y': point_from_rs[1],
+                'realsense_z': point_from_rs[2],
+            })
+        return [point_from_rs[0], point_from_rs[1], point_from_rs[2], depth]
+
+    def pose_estimation_from_aruco(self, marker_corners):
+       
+        z_from_realsense = self.depth_from_marker(self.depth_frame_aligned, marker_corners, kernel_size=3)
+        mid_point = np.sum(marker_corners[0], 0) / 4.0
+        mid_point = (mid_point + 0.5).astype(np.int32)
+
+        self.current_midpoint = mid_point.copy()
+
+        return self.position_from_pixel(self.rgb_intrinsics, mid_point[0], mid_point[1], z_from_realsense)
+        
+
+    def pose_estimation_from_depth_camera(self):
+        
+        drone_center = self.estimate_drone_center_from_depth()
+        if drone_center is None:
+            return None
+
+        return self.position_from_pixel(self.depth_intrinsics, drone_center[0], drone_center[1], self.depth_frame_full.get_depth(drone_center[0], drone_center[1]))
+
+    def pose_estimation(self, use_cam=True, use_depth=True, marker_corners=None):
+        
+        aruco_pose = None
+        depth_pose = None
+
+        if use_cam:
+            aruco_pose = self.pose_estimation_from_aruco(marker_corners)
+        if use_depth:
+            depth_pose = self.pose_estimation_from_depth_camera()
+
+        if aruco_pose is not None:
+            return aruco_pose
+        elif depth_pose is not None:
+            return depth_pose
+        else:
+            return []
+
     def cam_process(self, cam_queue):
         """
         Processes video frames to detect and locate Aruco markers, find depth value using the depth frame and then updating the camera data queue with the estimated readings.
@@ -658,10 +795,10 @@ class VisionPipeline():
         """ 
         flag = 0
         aligned_frames = self.get_frames()    
-        color_frame = self.extract_rgb(aligned_frames)
-        depth_frame = self.extract_depth(aligned_frames)
+        self.color_frame = self.extract_rgb(aligned_frames)
+        self.depth_frame_aligned = self.extract_depth(aligned_frames)
 
-        if not depth_frame or not color_frame:
+        if not self.depth_frame_aligned or not self.color_frame:
             return
 
         self.current_time = time.time()
@@ -679,81 +816,28 @@ class VisionPipeline():
                 print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
             
 
-        color_img = self.to_image(color_frame)
+        color_img = self.to_image(self.color_frame)
         marker_corners = self.detect_marker(color_img)
             
         if marker_corners is None:
-            self.counter += 1
-            if self.counter >= 30:
-                flag = 2
-                cam_queue.append([flag])
-                self.counter = 0
-                pass
+            pose_from_depth = self.pose_estimation(use_camera=False, use_depth=True)
+            if len(pose_from_depth):
+                cam_queue.append(pose_from_depth)
+                self.estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
+            else:
+                self.counter += 1
+                if self.counter >= 30:
+                    flag = 2
+                    cam_queue.append([flag])
+                    self.counter = 0
         elif type(marker_corners) == type("None"):
             flag = 1
             cam_queue.append([flag])
         else:
             self.counter = 0
-            aruco_pose = self.estimate_pose(marker_corners)
-            _intrisics = rs.intrinsics()
-            _intrisics.width = self.rgb_res[1]
-            _intrisics.height = self.rgb_res[0]
-            _intrisics.ppx = self.cam_matrix[0][2]
-            _intrisics.ppy = self.cam_matrix[1][2]
-            _intrisics.fx = self.cam_matrix[0][0]
-            _intrisics.fy = self.cam_matrix[1][1]
-
-            z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
-            mid_point = np.sum(marker_corners[0], 0) / 4.0
-            mid_point = (mid_point + 0.5).astype(np.int32)
-
-            self.current_midpoint = mid_point.copy()
-            point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-            
-            if self.DEBUG:
-                print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
-
-
-            if self.camera_config['wandb']['use_wandb']:
-                wandb.log({
-                    'raw_realsense_x': point_from_rs[0],
-                    'raw_realsense_y': point_from_rs[1],
-                    'raw_realsense_z': point_from_rs[2], 
-                })    
-
-
-           
-            point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
-            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
-
-
-            aruco_pose[0] = -aruco_pose[0]
-            point_from_rs[0] = -point_from_rs[0]
-            z_from_realsense = point_from_rs[2]
-
-
-            if self.DEBUG:
-                print("[ARUCO] (meters)--> X:", aruco_pose[0], ", Y:", aruco_pose[1], ", Z:", aruco_pose[2])
-                print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
-
-
-            if self.camera_config['wandb']['use_wandb']:
-                wandb.log({
-                    'aruco_x': aruco_pose[0],
-                    'aruco_y': aruco_pose[1],
-                    'aruco_z': aruco_pose[2],
-
-                    'realsense_x': point_from_rs[0],
-                    'realsense_y': point_from_rs[1],
-                    'realsense_z': point_from_rs[2],
-                })
-
-            
-            if self.camera_config['use_aruco_xy']:
-                cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
-                self.estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]
-            else:
-                cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
-                self.estimated_pose = [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
+            pose_from_camera = self.pose_estimation(use_camera=True, use_depth=False)
+        
+            cam_queue.append([self.current_time, pose_from_camera, pose_from_camera[3]])
+            self.estimated_pose = [pose_from_camera[0], pose_from_camera[1], pose_from_camera[2]]
     
     
