@@ -173,6 +173,12 @@ class PID():
 		self.err_roll_with_sse = self.err_roll[0] - self.cur_steady_state[1]
 		self.err_thrust_with_sse = self.err_thrust[0] - self.cur_steady_state[2]
 			
+	def update_int_err(self):
+		self.err_roll[2] = 0.0
+		self.err_pitch[2] = 0.0
+		self.err_yaw[2] = 0.0
+		self.err_thrust[2] = 0.0
+		print("INTEGRAL ERROR CHANGED!")
 
 	def update_pos(self,curPose):
 		"""

@@ -35,7 +35,7 @@ class VisionPipeline():
                  required_marker_id=1,
                  debug=0,
                  padding=50,
-                 config_file="./config.yaml",
+                 config_file="./vision/config.yaml",
                  fps_moving_window_size=10) -> None:
 
 
@@ -196,7 +196,7 @@ class VisionPipeline():
         
         Parameters:
             None
-        
+        FalseFalse
         Returns:
             aligned frames: Returns frame with depth and RGB frame aligned.
             
@@ -725,6 +725,8 @@ class VisionPipeline():
            
             point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
             point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
+            point_from_rs[2] = -point_from_rs[2]
 
 
             aruco_pose[0] = -aruco_pose[0]

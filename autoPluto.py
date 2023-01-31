@@ -64,9 +64,11 @@ class autoPluto:
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
+        self.axis_move = []
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.mode =  self.config.get("Mode","mode")
+        self.res = self.config.get("Resolution","res")
         self.hover_reached_flag = True
         if self.mode == 'Rectangle':
             self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
@@ -78,7 +80,7 @@ class autoPluto:
         self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
-        self.horizon  = 5
+        self.horizon  = self.config.getint("Horizon","moving_horizon")
         self.data_fr_ma = np.zeros((3,self.horizon))
         self.counter = 0
         ##########
@@ -118,15 +120,27 @@ class autoPluto:
             if first:
                 self.pid.zero_yaw = self.currentState[3]
                 if self.mode == 'Rectangle':
-                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
-                    self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1],  self.rectangle[2]])
-                    self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
-                    self.trajectory.append([self.currentState[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
-                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
-                    self.axis_move = ['z','x','y','x','y']
+                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.currentState[2]+self.rectangle[2]])
+                    self.axis_move.append('z')
+                    self.res = int(self.res)
+                    for j in range(1,self.res):
+                        self.trajectory.append([self.currentState[0]+j*self.rectangle[0]/(self.res-1),  self.currentState[1],  self.currentState[2]+self.rectangle[2]])
+                        self.axis_move.append('x')
+                    for j in range(1,self.res):
+                        self.trajectory.append([self.currentState[0]+self.rectangle[0],  self.currentState[1]+j*self.rectangle[1]/(self.res-1),  self.currentState[2]+self.rectangle[2]])
+                        self.axis_move.append('y')
+                    for j in range(1,self.res):
+                        self.trajectory.append([self.currentState[0]+(self.res-1-j)*self.rectangle[0]/(self.res-1),  self.currentState[1]+self.rectangle[1],  self.currentState[2]+self.rectangle[2]])
+                        self.axis_move.append('x')
+                    for j in range(1,self.res):
+                        self.trajectory.append([self.currentState[0],  self.currentState[1]+(self.res-1-j)*self.rectangle[1]/(self.res-1),  self.currentState[2]+self.rectangle[2]])
+                        self.axis_move.append('y')
+                    # self.axis_move = ['z','x','y','x','y']
+                    print("Trajectory Waypoints:")
+                    print(self.trajectory)
 
                 else:
-                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.hover_z])
+                    self.trajectory.append([self.currentState[0],  self.currentState[1],  self.currentState[2]+self.hover_z])
                     self.axis_move = ['z']
 
                 
@@ -149,9 +163,12 @@ class autoPluto:
                     self.pid.err_thrust[2],self.pid.vel_error)
             self.commandLock.release()
   
-            if self.pid.isReached():
+            if self.pid.isReached():    
                 if self.mode == "Rectangle": 
                     i += 1
+                    i = min(len(self.trajectory),i)
+                    self.pid.update_int_err()
+                    
                 if i == len(self.trajectory) or self.mode !='Rectangle':
                     print("Reached Final Waypoint.")
                     
