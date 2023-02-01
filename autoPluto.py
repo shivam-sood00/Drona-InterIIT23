@@ -94,6 +94,7 @@ class autoPluto:
         self.writeThread.start()
         self.lastTime = time.time()
         self.readThread.start()
+        self.startingThrottle = True
 
     
     def run(self):
@@ -110,11 +111,14 @@ class autoPluto:
             
             if self.debug:
                 print(f"{time.time()-start_time_camera} s for camera")
-    
+
             start_time_pid = time.time()
             self.updateState()
             if self.currentState is None:
+                if self.startingThrottle :
+                    self.takeAction()
                 continue
+            self.startingThrottle = False
             if first:
                 self.pid.zero_yaw = self.currentState[3]
                 if self.mode == 'Rectangle':
@@ -124,11 +128,9 @@ class autoPluto:
                     self.trajectory.append([self.currentState[0],  self.currentState[1]+self.rectangle[1],  self.rectangle[2]])
                     self.trajectory.append([self.currentState[0],  self.currentState[1],  self.rectangle[2]])
                     self.axis_move = ['z','x','y','x','y']
-
                 else:
                     self.trajectory.append([self.currentState[0],  self.currentState[1],  self.hover_z])
                     self.axis_move = ['z']
-
                 
                 self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
                 self.camera.update_waypoint(self.trajectory[i])
@@ -136,7 +138,6 @@ class autoPluto:
                 first = False
             self.updateAction()
             ret = self.takeAction()
-
             self.commandLock.acquire()
             print(self.currentState[0],self.currentState[1],self.currentState[2],
                     self.comms.paramsSet["Roll"],self.comms.paramsSet["Pitch"],
@@ -148,7 +149,7 @@ class autoPluto:
                     self.pid.err_thrust[1],self.pid.err_pitch[2],self.pid.err_roll[2],
                     self.pid.err_thrust[2],self.pid.vel_error)
             self.commandLock.release()
-  
+
             if self.pid.isReached():
                 if self.mode == "Rectangle": 
                     i += 1
@@ -265,6 +266,12 @@ class autoPluto:
         between the threads, to read the states at one timestep.
         """
         self.commandLock.acquire()
+        if self.startingThrottle:
+            if time.time() - self.lastTime < 2:
+                self.comms.paramsSet["currentCommand"] = 1
+            else:
+                self.comms.paramsSet["currentCommand"] = 2
+            return
         if self.outOfBound==0:
             # converting to integer as we can only send integral values via MSP Packets
             self.comms.paramsSet["Roll"] = int(self.action["Roll"])
