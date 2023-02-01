@@ -686,12 +686,13 @@ class VisionPipeline():
             self.counter += 1
             if self.counter >= 30:
                 flag = 2
-                cam_queue.append([flag])
+                # cam_queue.append([flag])
                 self.counter = 0
-                pass
+                return flag
         elif type(marker_corners) == type("None"):
             flag = 1
-            cam_queue.append([flag])
+            # cam_queue.append([flag])
+            return flag
         else:
             self.counter = 0
             aruco_pose = self.estimate_pose(marker_corners)
@@ -750,10 +751,11 @@ class VisionPipeline():
 
             
             if self.camera_config['use_aruco_xy']:
-                cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
-                self.estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]
+                # cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
+                self.estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]                
             else:
-                cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
+                # cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
                 self.estimated_pose = [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
+            return self.estimate_pose
     
     

@@ -78,7 +78,6 @@ class PID():
 		self.waypoint = np.array([0.0, 0.0, 0.0]).reshape(3,1)
 		self.backward_pitch_scale = 1.0         #Unsymmetric dynamics due to arUco
 		self.zero_yaw = None
-		self.useWay = False
 		self.int_moving_win_len = int(config.get(droneNo,"int_moving_win_len"))
 		self.diff_moving_win_len = int(config.get(droneNo,"diff_moving_win_len"))
 		self.total_window = max(self.int_moving_win_len,self.diff_moving_win_len)

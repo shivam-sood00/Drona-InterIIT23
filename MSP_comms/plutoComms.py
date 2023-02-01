@@ -364,7 +364,7 @@ class COMMS:
     Target function to the reading thread
     All the data sent by the drone is received in this function
     """
-    def read(self,IMUQueue,imuLock):
+    def read(self):
         """
         Member Function which is target function to the Reading Thread.
         All the data sent by the drone is received in this function.
@@ -390,9 +390,6 @@ class COMMS:
                 break
             
             buff = self.receiveMSPresponse(buff) 
-            imuLock.acquire()
-            IMUQueue.append(self.paramsReceived)
-            imuLock.release()
             if self.debug:
                 self.printParams()
                 print(f"Read at {time.time()-start_time} s")
