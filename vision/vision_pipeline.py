@@ -35,7 +35,7 @@ class VisionPipeline():
                  required_marker_id=1,
                  debug=0,
                  padding=50,
-                 config_file="./config.yaml",
+                 config_file="./vision/config.yaml",
                  fps_moving_window_size=10) -> None:
 
 
@@ -61,13 +61,13 @@ class VisionPipeline():
         self.fps_moving_window = []
 
         self.do_tracking = self.camera_config['tracking']['enable']
-        self.last_detected_marker = None
         self.tracking_area_th = self.camera_config['tracking']['area_th']
         self.tracking_point_th = self.camera_config['tracking']['centroid_th']
-
-        self.estimated_pose = None
-        self.current_waypoint = None
-        self.current_midpoint = None
+        
+        self.markerCornerEstimates = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
+        self.estimated_pose_all = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
+        self.current_waypoint = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
+        self.current_midpoint = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
 
         self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
@@ -83,7 +83,8 @@ class VisionPipeline():
         
         self.avg_fps = None
         self.cam_rvec = np.array([0.0, 0.0, 0.0])
-        self.raw_calib_yaw = 0.0
+        self.cam_rvecs = {self.required_marker_id[0]:np.array([0.0, 0.0, 0.0]), self.required_marker_id[1]:np.array([0.0, 0.0, 0.0])}
+        self.raw_calib_yaws = {self.required_marker_id[0]:0.0, self.required_marker_id[1]:0.0}
 
         self.rp_correction = Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_matrix()
 
@@ -91,7 +92,8 @@ class VisionPipeline():
             self.calibrate_yaw()
         else:
             self.cam_rvec = np.array(self.camera_extrinsic['default_yaw']) #np.array([0.0, 0.0, 0.0])
-            self.raw_calib_yaw = self.camera_extrinsic['default_yaw'][2] # 0.0
+            self.cam_rvecs = {self.required_marker_id[0]:np.array(self.camera_extrinsic['default_yaw']),self.required_marker_id[1]:np.array(self.camera_extrinsic['default_yaw'])} #np.array([0.0, 0.0, 0.0])
+            self.raw_calib_yaws = {self.required_marker_id[0]:np.array(self.camera_extrinsic['default_yaw'])[2],self.required_marker_id[1]:np.array(self.camera_extrinsic['default_yaw'])[2]} # 0.0
         
         self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
         self.yaw_correction = np.linalg.pinv(self.yaw_correction)
@@ -291,47 +293,53 @@ class VisionPipeline():
             
             if (self.do_tracking == True):
                 
-                if (reject is None) or (self.last_detected_marker is None):
+                if (reject is None):
                     if self.DEBUG:
                         frame = self.plot_rej_markers(frame, reject)
                         rgb_frame = self.plot_rej_markers(rgb_frame, reject)
                         self.show_frame(frame, rgb_frame)
                         print("NO marker detected")
-                    return None
+                    return self.markerCornerEstimates
                 
                 else:
-                    last_area = self.find_area(self.last_detected_marker)
-                    last_center = np.mean(self.last_detected_marker[0], 0) / 4.0
                     
-                    for i, reject_corners in enumerate(reject):
-                        new_center = np.mean(reject_corners[0], 0) / 4.0
-                        new_area = self.find_area(reject_corners)
+                    for (key, last_marker) in self.markerCornerEstimates.items():
+                        if last_marker is None:
+                            frame = self.plot_rej_markers(frame, reject)
+                            rgb_frame = self.plot_rej_markers(rgb_frame, reject)
+                            self.show_frame(frame, rgb_frame)
+                            print("NO marker detected")
+                            return self.markerCornerEstimates
+
+                        last_area = self.find_area(last_marker)
+                        last_center = np.mean(last_marker[0], 0) / 4.0
                         
-                        if((abs(new_area - last_area) <= self.tracking_area_th) and (math.sqrt(np.sum((new_center - last_center) ** 2)) <= self.tracking_point_th)):
-                            self.last_detected_marker = reject_corners.copy()
+                        for i, reject_corners in enumerate(reject):
+                            new_center = np.mean(reject_corners[0], 0) / 4.0
+                            new_area = self.find_area(reject_corners)
                             
-                            if self.DEBUG:
-                                frame = cv2.polylines(frame, [reject_corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
-                                rgb_frame = cv2.polylines(rgb_frame, [reject_corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
-                                self.show_frame(frame, rgb_frame)
+                            if((abs(new_area - last_area) <= self.tracking_area_th) and (math.sqrt(np.sum((new_center - last_center) ** 2)) <= self.tracking_point_th)):
+                                self.markerCornerEstimates[key] = reject_corners.copy().astype(np.int32)
                                 
-                            return reject_corners.astype(np.int32)
-                        
-                        else:
+                                if self.DEBUG:
+                                    frame = cv2.polylines(frame, [reject_corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
+                                    rgb_frame = cv2.polylines(rgb_frame, [reject_corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
+                                    self.show_frame(frame, rgb_frame)
+                                    
+                                # self.reject_corners.astype(np.int32)
                             
-                            if self.DEBUG:
-                                print("NO TRACKING: ", new_area, new_center)
-                                print("LAST: ", last_area, last_center)
-
-
+                            else:
+                                
+                                if self.DEBUG:
+                                    print(f"NO TRACKING {key}: ", new_area, new_center)
+                                    print(f"LAST {key}: ", last_area, last_center)
+                                    
                     if self.DEBUG:
                         frame = self.plot_rej_markers(frame, reject)
                         rgb_frame = self.plot_rej_markers(rgb_frame, reject)
                         print("NO marker detected!")
                         self.show_frame(frame, rgb_frame)
-                    
-                    self.last_detected_marker = None
-                    return None
+                    return self.markerCornerEstimates
             
             else:
                 if (reject is None):
@@ -340,7 +348,7 @@ class VisionPipeline():
                         rgb_frame = self.plot_rej_markers(rgb_frame, reject)
                         self.show_frame(frame, rgb_frame)
                         print("NO marker detected")
-                    return None
+                    return self.markerCornerEstimates
                     
         else:
             if self.DEBUG:
@@ -348,18 +356,20 @@ class VisionPipeline():
                 rgb_frame = self.plot_rej_markers(rgb_frame, reject)
                 self.show_frame(frame, rgb_frame)            
                         
-
             for i, id_ in enumerate(marker_IDs):
-                
-                if id_ == self.required_marker_id:
+                id_ = id_[0]
+                if id_ in self.required_marker_id:
                     mid_point = np.sum(marker_corners[i][0], 0) / 4.0
                     if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
-                        return "None"
-
-                    self.last_detected_marker = marker_corners[i].copy()
-                    return marker_corners[i].astype(np.int32)
-
-        return None
+                        # return "None"
+                        self.markerCornerEstimates[id_] = "Landing"
+                    else:
+                        self.last_detected_marker = marker_corners[i].copy()
+                        # return marker_corners[i].astype(np.int32)
+                        # print(self.markerCornerEstimates,id_,marker_corners)
+                        self.markerCornerEstimates[id_] = marker_corners[i].astype(np.int32)
+            
+        return self.markerCornerEstimates
 
 
 
@@ -378,7 +388,7 @@ class VisionPipeline():
         
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
-            if marker_ids[i] == self.required_marker_id:
+            if marker_ids[i] in self.required_marker_id:
                 frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 0), 4, cv2.LINE_AA)
 
             else:
@@ -404,15 +414,14 @@ class VisionPipeline():
         return frame
 
 
-    def update_waypoint(self, waypoint):
+    def update_waypoint(self, waypoint, id_):
         """
         Updates the waypoint that is plotted on the image frame to be displayed.
         
         Parameters:
             waypoint: this is the new waypoint to be updated         
         """
-        self.current_waypoint = waypoint
-        self.current_waypoint = np.array(self.current_waypoint) * 100.0
+        self.current_waypoint[id_] = np.array(waypoint) * 100.0
 
 
     def show_frame(self, frame, rgb_frame, window_name="Frame"):
@@ -428,26 +437,33 @@ class VisionPipeline():
             None
         """
 
-        if (self.current_waypoint is None):
-            pass
-        else:
-            cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        for i,(key,pos) in enumerate(self.current_waypoint.items()):
+            if pos is not None:
+                cv2.putText(frame, f"Goal {i}(m): [{round(pos[0]/100.0, 2)}, {round(pos[1]/100.0, 2)}, {round(pos[2]/100.0, 2)}]", (50 ,50*i+ 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
-        if self.estimated_pose is None:
-            pass
-        else:
-            cv2.putText(frame, f"Current Estimate (m): [{round(self.estimated_pose[0],2)}, {round(self.estimated_pose[1],2)}, {round(self.estimated_pose[2],2)}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        for i,(key,pos) in enumerate(self.estimated_pose_all.items()):
+            if pos is not None:
+                cv2.putText(frame, f"Current Estimate {i}(m): [{round(pos[0],2)}, {round(pos[1],2)}, {round(pos[2],2)}]", (50, 150 + 50*i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
+        yaw = [round(Rotation.from_rotvec(self.cam_rvecs[self.required_marker_id[0]]).as_euler('xyz', degrees=True)[2], 2), round(Rotation.from_rotvec(self.cam_rvecs[self.required_marker_id[1]]).as_euler('xyz', degrees=True)[2], 2)]
+        cv2.putText(frame, f"Yaw0, Yaw1 (deg): [{yaw[0],yaw[1]}]", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
         camera_yaw = round(Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)[2], 2)
         camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
         camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
-        cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        m = math.tan(self.raw_calib_yaw + np.pi/2.0)
-        if self.current_midpoint is not None:
-            c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+        cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
+        for i, (key,pos) in enumerate(self.current_midpoint.items()):
+            if pos is not None:
+                m = math.tan(yaw[i]*np.pi/180 )
+                c = pos[1] - m * (pos[0])
+                if abs(m) > 1000:
+                    cv2.line(frame, (int(0), int(pos[1])), (int(self.rgb_res[1]), int(pos[1])), (255, 0, 0), 3)    
+                else:
+                    cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
         if not(self.avg_fps is None):
-            cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 350), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
@@ -605,18 +621,107 @@ class VisionPipeline():
         self.init_realsense()
         self.init_aruco_detector()
         
+    # def calibrate_yaw(self):
+    #         """
+    #         Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+            
+    #         Parameters:
+    #             None            
+            
+    #         Returns:
+    #             None
+    #         """
+    #         max_iters = 100
+    #         num_calib_frames = 0
+    #         rvec_uncalib = []
+    #         while True:
+    #             aligned_frames = self.get_frames()    
+    #             color_frame = self.extract_rgb(aligned_frames)
+    #             depth_frame = self.extract_depth(aligned_frames)
+    #             if not depth_frame or not color_frame:
+    #                 continue
+                
+    #             color_img = self.to_image(color_frame)
+    #             marker_corners = self.detect_marker(color_img)
+                
+    #             if marker_corners is None:
+    #                 pass
+    #             elif type(marker_corners) is str:
+    #                 pass
+    #             else:
+    #                 num_calib_frames += 1
+    #                 rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
+    #                 if(num_calib_frames >= max_iters):
+    #                     print("Yaw Calibrated ")
+    #                     break   
+
+    #         rvec_uncalib.sort()
+    #         self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
+    #         temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
+    #         yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+    #         self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
+    #         print(f"YAW Value from Calibration: {self.cam_rvec}")
+    
     def calibrate_yaw(self):
-            """
-            Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+        """
+        Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+        
+        Parameters:
+            None            
+        
+        Returns:
+            None
+        """
+
+        max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
+        yaw_error_threshold = self.camera_config["yaw_error_threshold"]
+        
+        num_calib_frames = 0
+        
+        # For marker 0
+        rvec_uncalib = []
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+            if not depth_frame or not color_frame:
+                continue
             
-            Parameters:
-                None            
+            color_img = self.to_image(color_frame)
+            marker_corners_all = self.detect_marker(color_img)
+            marker_corners = None
+            for (key, mc) in marker_corners_all.items():
+                if key == self.required_marker_id[0]:
+                    marker_corners = mc
+                
+            if marker_corners is None:
+                pass
+            elif type(marker_corners) is str:
+                pass
+            else:
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+
+                self.current_midpoint[self.required_marker_id[0]] = mid_point.copy()
+                
+                num_calib_frames += 1
+                rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
+                if(num_calib_frames >= max_iters):
+                    print(f"Yaw Calibrated for drone 1 with ID: {self.required_marker_id[0]}")
+                    break   
+
+        rvec_uncalib.sort()
+        self.raw_calib_yaws[self.required_marker_id[0]] = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
+        temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaws[self.required_marker_id[0]]])).as_rotvec()[2]
+        yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+        self.cam_rvecs[self.required_marker_id[0]] = np.array([0.0, 0.0, yawTemp_])
+        print(f"YAW Value from Calibration: {self.cam_rvecs}")
             
-            Returns:
-                None
-            """
-            max_iters = 100
+        
+        while True:
             num_calib_frames = 0
+        
+        # For marker 1
             rvec_uncalib = []
             while True:
                 aligned_frames = self.get_frames()    
@@ -626,27 +731,40 @@ class VisionPipeline():
                     continue
                 
                 color_img = self.to_image(color_frame)
-                marker_corners = self.detect_marker(color_img)
-                
+                marker_corners_all = self.detect_marker(color_img)
+                marker_corners = None
+                for (key, mc) in marker_corners_all.items():
+                    if key == self.required_marker_id[1]:
+                        marker_corners = mc
+                    
                 if marker_corners is None:
                     pass
                 elif type(marker_corners) is str:
                     pass
                 else:
+                    mid_point = np.sum(marker_corners[0], 0) / 4.0
+                    mid_point = (mid_point + 0.5).astype(np.int32)
+                    self.current_midpoint[self.required_marker_id[1]] = mid_point.copy()
                     num_calib_frames += 1
                     rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
                     if(num_calib_frames >= max_iters):
-                        print("Yaw Calibrated ")
+                        print(f"Yaw Calibrated for drone 1 with ID: {self.required_marker_id[1]}")
                         break   
 
             rvec_uncalib.sort()
-            self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
-            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
+            self.raw_calib_yaws[self.required_marker_id[1]] = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
+            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaws[self.required_marker_id[1]]])).as_rotvec()[2]
             yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
-            self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
-            print(f"YAW Value from Calibration: {self.cam_rvec}")
+            self.cam_rvecs[self.required_marker_id[1]] = np.array([0.0, 0.0, yawTemp_])
+            print(f"YAW Value from Calibration: {self.cam_rvecs}")
+            
+            if np.linalg.norm(self.cam_rvecs[self.required_marker_id[0]] - self.cam_rvecs[self.required_marker_id[1]])<yaw_error_threshold:
+                break
         
-    def cam_process(self, cam_queue):
+        self.cam_rvec = self.cam_rvecs[self.required_marker_id[0]]        
+            
+        
+    def cam_process(self):
         """
         Processes video frames to detect and locate Aruco markers, find depth value using the depth frame and then updating the camera data queue with the estimated readings.
         
@@ -680,82 +798,82 @@ class VisionPipeline():
             
 
         color_img = self.to_image(color_frame)
-        marker_corners = self.detect_marker(color_img)
-            
-        if marker_corners is None:
-            self.counter += 1
-            if self.counter >= 30:
-                flag = 2
+        marker_corners_all = self.detect_marker(color_img)
+        for (key,marker_corners) in marker_corners_all.items():
+            if marker_corners is None:
+                self.counter += 1
+                if self.counter >= 30:
+                    flag = 2
+                    # cam_queue.append([flag])
+                    self.counter = 0
+                    self.estimated_pose_all[key] = flag
+                    continue
+            elif type(marker_corners) == type("None"):
+                flag = 1
                 # cam_queue.append([flag])
-                self.counter = 0
-                return flag
-        elif type(marker_corners) == type("None"):
-            flag = 1
-            # cam_queue.append([flag])
-            return flag
-        else:
-            self.counter = 0
-            aruco_pose = self.estimate_pose(marker_corners)
-            _intrisics = rs.intrinsics()
-            _intrisics.width = self.rgb_res[1]
-            _intrisics.height = self.rgb_res[0]
-            _intrisics.ppx = self.cam_matrix[0][2]
-            _intrisics.ppy = self.cam_matrix[1][2]
-            _intrisics.fx = self.cam_matrix[0][0]
-            _intrisics.fy = self.cam_matrix[1][1]
-
-            z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
-            mid_point = np.sum(marker_corners[0], 0) / 4.0
-            mid_point = (mid_point + 0.5).astype(np.int32)
-
-            self.current_midpoint = mid_point.copy()
-            point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
-            
-            if self.DEBUG:
-                print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
-
-
-            if self.camera_config['wandb']['use_wandb']:
-                wandb.log({
-                    'raw_realsense_x': point_from_rs[0],
-                    'raw_realsense_y': point_from_rs[1],
-                    'raw_realsense_z': point_from_rs[2], 
-                })    
-
-
-           
-            point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
-            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
-
-
-            aruco_pose[0] = -aruco_pose[0]
-            point_from_rs[0] = -point_from_rs[0]
-            z_from_realsense = point_from_rs[2]
-
-
-            if self.DEBUG:
-                print("[ARUCO] (meters)--> X:", aruco_pose[0], ", Y:", aruco_pose[1], ", Z:", aruco_pose[2])
-                print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
-
-
-            if self.camera_config['wandb']['use_wandb']:
-                wandb.log({
-                    'aruco_x': aruco_pose[0],
-                    'aruco_y': aruco_pose[1],
-                    'aruco_z': aruco_pose[2],
-
-                    'realsense_x': point_from_rs[0],
-                    'realsense_y': point_from_rs[1],
-                    'realsense_z': point_from_rs[2],
-                })
-
-            
-            if self.camera_config['use_aruco_xy']:
-                # cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
-                self.estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]                
+                self.estimated_pose_all[key] = flag
+                continue
             else:
-                # cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
-                self.estimated_pose = [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
-            return self.estimate_pose
-    
-    
+                self.counter = 0
+                aruco_pose = self.estimate_pose(marker_corners)
+                _intrisics = rs.intrinsics()
+                _intrisics.width = self.rgb_res[1]
+                _intrisics.height = self.rgb_res[0]
+                _intrisics.ppx = self.cam_matrix[0][2]
+                _intrisics.ppy = self.cam_matrix[1][2]
+                _intrisics.fx = self.cam_matrix[0][0]
+                _intrisics.fy = self.cam_matrix[1][1]
+
+                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+
+                self.current_midpoint[key] = mid_point.copy()
+                point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+                
+                if self.DEBUG:
+                    print(f"[RAW REALSENSE] {key} (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+                if self.camera_config['wandb']['use_wandb']:
+                    wandb.log({
+                        f'raw_realsense_x_{key}': point_from_rs[0],
+                        f'raw_realsense_y_{key}': point_from_rs[1],
+                        f'raw_realsense_z_{key}': point_from_rs[2], 
+                    })    
+
+                point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+                point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
+
+                aruco_pose[0] = -aruco_pose[0]
+                point_from_rs[0] = -point_from_rs[0]
+                z_from_realsense = point_from_rs[2]
+
+
+                if self.DEBUG:
+                    print(f"[ARUCO] {key} (meters)--> X:", aruco_pose[0], ", Y:", aruco_pose[1], ", Z:", aruco_pose[2])
+                    print(f"[REALSENSE] {key} (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+
+
+                if self.camera_config['wandb']['use_wandb']:
+                    wandb.log({
+                        f'aruco_x_{key}': aruco_pose[0],
+                        f'aruco_y_{key}': aruco_pose[1],
+                        f'aruco_z_{key}': aruco_pose[2],
+
+                        f'realsense_x_{key}': point_from_rs[0],
+                        f'realsense_y_{key}': point_from_rs[1],
+                        f'realsense_z_{key}': point_from_rs[2],
+                    })
+                
+                if self.camera_config['use_aruco_xy']:
+                    # cam_queue.append([self.current_time, aruco_pose, z_from_realsense])
+                    estimated_pose = [aruco_pose[0], aruco_pose[1], z_from_realsense]                
+                else:
+                    # cam_queue.append([self.current_time, point_from_rs, z_from_realsense])
+                    estimated_pose = [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
+                
+                self.estimated_pose_all[key] = estimated_pose
+                
+        return self.estimated_pose_all

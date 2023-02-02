@@ -4,9 +4,16 @@ import time
 from vision.vision_pipeline import VisionPipeline
 import signal
 import cv2
+import numpy as np
 
 class swarmPluto():
-    def __init__(self,debug) :
+    """
+    
+    """
+    def __init__(self,debug=False) :
+        """
+        
+        """
         signal.signal(signal.SIGINT, self.handler)
         self.debug = debug
         self.config = ConfigParser()
@@ -24,6 +31,7 @@ class swarmPluto():
         """
         TODO: 
         1. Add Multi aruco detection based on the list sent
+        
         2. Caliberate Yaw Live
         """
         self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=self.markerIdList,debug=1,padding = 0)
@@ -40,6 +48,9 @@ class swarmPluto():
         pass
     
     def arm(self):
+        """
+        
+        """
         self.drone1.arm()
         self.drone2.arm()
     
@@ -48,50 +59,35 @@ class swarmPluto():
         To Do: rewrite after changes in cam_process()
         """
         xyz = self.camera.cam_process()
-        if type(xyz) == type(1):
-            self.exception = xyz
-        else:
-            xyz1 = xyz[self.droneNo1]
-            xyz2 = xyz[self.droneNo2]
-            
-            self.drone1.updateState(xyz1)
-            self.drone2.updateState(xyz2)
+        
+        xyz1 = xyz[self.markerIdList[0]]
+        xyz2 = xyz[self.markerIdList[1]]
+        if type(xyz1) == type(1):
+            self.exception = xyz1
+            print("Exception due to drone 1")
+            return
+        
+        if type(xyz1) == type(1):
+            self.exception = xyz2
+            print("Exception due to drone 2")
+            return
+        
+        self.drone1.updateState(xyz1)
+        self.drone2.updateState(xyz2)
     
     def takeActions(self):
+        """
+        
+        """
         self.drone1.takeAction(self.exception)
         self.drone2.takeAction(self.exception)
     
     def updateActions(self):
+        """
+        
+        """
         self.drone1.updateAcion()
         self.drone2.updateAcion()
-    
-    def updateTargets(self):
-        if self.drone1.isReached() and self.drone2.isReached():
-            if lastUpdated==2:
-                i_target+=1
-                if i_target==len(self.trajectory):
-                    i_target = 0
-                if i_target%2==1:
-                    dirOfMotion1 = 'x'
-                else:
-                    dirOfMotion1 = 'y'
-                self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)                    
-                self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
-                lastUpdated = 1
-            elif lastUpdated==1:
-                if dirOfMotion1=='x':
-                    self.drone2.updateTarget(self.trajectory[i_target-1],'y')
-                    self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
-                else:
-                    self.drone2.updateTarget(self.trajectory[i_target-1],'x')
-                    self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
-                
-                lastUpdated = 2
-                if i_target==0:
-                    lastUpdated = 0
-            elif lastUpdated==0:
-                self.done = True
-                self.exception = -1
         
     def run(self):
         first = True
@@ -120,7 +116,7 @@ class swarmPluto():
             """
             Make it live not in init
             """
-            if abs(self.camera.cam_rvec[self.markerIdList[0]][2] - self.camera.cam_rvec[self.markerIdList[1]][2]) > 0.01:
+            if np.linalg.norm(self.camera.cam_rvecs[self.markerIdList[0]] - self.camera.cam_rvecs[self.markerIdList[1]]) > 0.01:
                 continue
             
             """
@@ -146,7 +142,32 @@ class swarmPluto():
             """
             Check Conditions for trajectory waypoint update
             """
-            self.updateTargets()
+            if self.drone1.isReached() and self.drone2.isReached():
+                if lastUpdated==2:
+                    i_target+=1
+                    if i_target==len(self.trajectory):
+                        i_target = 0
+                    if i_target%2==1:
+                        dirOfMotion1 = 'x'
+                    else:
+                        dirOfMotion1 = 'y'
+                    self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)                    
+                    self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
+                    lastUpdated = 1
+                elif lastUpdated==1:
+                    if dirOfMotion1=='x':
+                        self.drone2.updateTarget(self.trajectory[i_target-1],'y')
+                        self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
+                    else:
+                        self.drone2.updateTarget(self.trajectory[i_target-1],'x')
+                        self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
+                    
+                    lastUpdated = 2
+                    if i_target==0:
+                        lastUpdated = 0
+                elif lastUpdated==0:
+                    self.done = True
+                    self.exception = -1
             """
             If both drones have completed trajectory then break and land
             """
@@ -188,5 +209,5 @@ class swarmPluto():
 
 if __name__=="__main__":
     swarm = swarmPluto()
-    swarm.arm()
+    # swarm.arm()
     swarm.run()

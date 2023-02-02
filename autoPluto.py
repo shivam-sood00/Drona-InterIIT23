@@ -10,12 +10,11 @@ class autoPluto:
         self.config = config
         self.droneNo = droneNo
         
-        self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
-        self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
-        
-        self.comms = COMMS(self.config.get(self.droneNo,"IP"),self.config.getint)
+        self.comms = COMMS(IP= self.config.get(self.droneNo,"IP"),Port = self.config.getint(self.droneNo,"Port"))
         self.pid = PID(self.config,self.droneNo)
         
+        self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
+        self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
         
         self.commandLock = threading.Lock()
         self.readThread = threading.Thread(target=self.comms.read)
@@ -24,9 +23,9 @@ class autoPluto:
         self.readThread.start()
     
     def updateState(self,xyz):
-        self.currentState['x'] = xyz['x']
-        self.currentState['y'] = xyz['y']
-        self.currentState['z'] = xyz['z']
+        self.currentState['x'] = xyz[0]
+        self.currentState['y'] = xyz[1]
+        self.currentState['z'] = xyz[2]
         
         """
         TODO: 
@@ -34,7 +33,7 @@ class autoPluto:
         """
     
     def updateAcion(self):
-        self.pid.update_pos(self.currentState)
+        self.pid.update_pos(self.currentState.values())
         self.pid.calc_err()
 
         self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
@@ -55,6 +54,8 @@ class autoPluto:
     
     def updateTarget(self,target,axis):
         self.pid.set_target_pose(target,axis)
+        if axis=='z':
+            self.pid.zero_yaw = self.comms.paramsReceived["Yaw"]
     
     def isReached(self):
         return self.pid.isReached()

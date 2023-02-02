@@ -130,6 +130,7 @@ class COMMS:
         self.Port = Port
         self.debug=debug
         self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # print(self.TCP_IP,self.Port,type(self.TCP_IP),type(self.Port))
         self.mySocket.connect((self.TCP_IP, self.Port))
         self.waitTime = 0.17
         if(self.debug):
