@@ -748,7 +748,7 @@ class VisionPipeline():
         point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
         point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
 
-
+        point_from_rs[2] = -point_from_rs[2]
         point_from_rs[0] = -point_from_rs[0]
         self.z_from_realsense = point_from_rs[2]
 

@@ -1,5 +1,17 @@
 import time
-file = open('debug.txt', 'r')
+import numpy as np
+
+plotval = "graphs"
+# plotval = "aruco"
+# plotval = "realsense"
+if plotval=="graphs":
+    file = open('debug.txt', 'r')
+
+if plotval=="aruco":
+    file = open('aruco.txt', 'r')
+
+if plotval=="realsense":
+    file = open('realsense.txt', 'r')
 # This will print every line one by one in the file
 ''''
 Utilites for parsing flight data and making required plots.
@@ -36,24 +48,17 @@ err_intZ=[]
 vel = []
 
 
-stateCont = 3
 i= 0
 for each in file:
     i += 1
-    print(i)
+    # print(i)
     if each.strip()=="":
-        continue
-    if stateCont<3:
-        stateCont-=1
-        if stateCont==0:
-            stateCont==3
         continue
     if len(each) > len("Landing") and each.startswith('Landing'):
         break
     elif (each[0]>="A" and each[0]<="Z") or (each[0]>="a" and each[0]<="z"):
         continue
-    elif each[0]=='[' and each[1]=='[':
-        stateCont -=1
+    elif each[0]=='[' :
         continue
     elif each[:2] == "--":
         continue
@@ -103,7 +108,10 @@ for each in file:
     
     # msg.append(q)
     
-    print(msg)
+    # print(msg)
+
+    if not (np.abs(msg[0]) < 5.0 and np.abs(msg[1]) < 5.0 and np.abs(msg[2]) < 5.0 ):
+        continue
     x.append(msg[0])
     y.append(msg[1])
     z.append(msg[2])
@@ -147,7 +155,7 @@ import shutil
 
 
 folder_name = datetime.now().strftime("%m-%d, %H:%M:%S")
-folder_name = join("graphs",folder_name)
+folder_name = join(plotval,folder_name)
 makedirs(folder_name)
 
 # config = yaml.load(open("controls/config.yaml"), Loader=yaml.FullLoader)

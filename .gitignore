@@ -3,6 +3,9 @@ controls/__pycache__/
 MSP_comms/__pycache__/
 vision/__pycache__/
 
+
+**/aruco/**
+**/realsense/**
 **/graphs/**
 
 **/aruco/**

@@ -24,7 +24,6 @@ camera:
       calibrate_yaw: False
       default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
 
-
 camera_params:
   enable_auto_exposure: 0
   enable_auto_white_balance: 0
