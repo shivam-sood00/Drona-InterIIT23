@@ -1,4 +1,5 @@
 import time
+import numpy as np
 
 plotval = "graphs"
 # plotval = "aruco"
@@ -50,7 +51,7 @@ vel = []
 i= 0
 for each in file:
     i += 1
-    print(i)
+    # print(i)
     if each.strip()=="":
         continue
     if len(each) > len("Landing") and each.startswith('Landing'):
@@ -107,7 +108,10 @@ for each in file:
     
     # msg.append(q)
     
-    print(msg)
+    # print(msg)
+
+    if not (np.abs(msg[0]) < 5.0 and np.abs(msg[1]) < 5.0 and np.abs(msg[2]) < 5.0 ):
+        continue
     x.append(msg[0])
     y.append(msg[1])
     z.append(msg[2])

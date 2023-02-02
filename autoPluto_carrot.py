@@ -60,7 +60,7 @@ class autoPluto:
         self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
-        self.config.read('controls/droneData.ini')  
+        self.config.read('controls/droneData_carrot.ini')  
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
@@ -68,8 +68,8 @@ class autoPluto:
         self.currentState = None
         self.action = {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.mode =  self.config.get("Mode","mode")
-        self.res_x = self.config.get("Resolution","res_x")
-        self.res_y = self.config.get("Resolution","res_y")
+        self.res_x = 2
+        self.res_y = 2
         self.hover_reached_flag = True
         if self.mode == 'Rectangle':
             self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
@@ -97,7 +97,24 @@ class autoPluto:
         self.writeThread.start()
         self.lastTime = time.time()
         self.readThread.start()
+        self.carrot_res = {}
+        self.carrot_res['x'] = float(self.config.get("Carrot","res_x"))
+        self.carrot_res['y'] = float(self.config.get("Carrot","res_y"))
+        self.carrot_res['z'] = float(self.config.get("Carrot","res_z"))
 
+    
+    def set_carrot_wp(self,target,cur,res):
+        if target > cur:
+            return min(cur+res,target) 
+        else:
+            return max(cur-res,target)
+
+    def set_carrot_wps(self,target,cur):
+        carrot_target = []
+        for i,axes in enumerate(['x','y','z']):
+            carrot_target.append(self.set_carrot_wp(target[i],cur[i],self.carrot_res[axes]))
+        return carrot_target
+        
     
     def run(self):
         """
@@ -145,9 +162,9 @@ class autoPluto:
                     self.trajectory.append([self.currentState[0],  self.currentState[1],  self.currentState[2]+self.hover_z])
                     self.axis_move = ['z']
 
-                
-                self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
-                self.camera.update_waypoint(self.trajectory[i])
+                carrot_wp = self.set_carrot_wps(self.trajectory[i],self.currentState[:3])
+                self.pid.set_target_pose(carrot_wp,self.axis_move[i])
+                self.camera.update_waypoint(carrot_wp)
                 
                 first = False
             self.updateAction()
@@ -183,9 +200,12 @@ class autoPluto:
                             self.hover_reached_flag = False
                 else:
                     self.pid.useWay = True
-                    self.pid.set_target_pose(self.trajectory[i],self.axis_move[i])
-                    self.camera.update_waypoint(self.trajectory[i])
-                    print("IS Reached True")
+                print("IS Reached True")
+            if i < len(self.trajectory):
+                carrot_wp = self.set_carrot_wps(self.trajectory[i],self.currentState[:3])
+
+                self.pid.set_target_pose(carrot_wp,self.axis_move[i])
+                self.camera.update_waypoint(carrot_wp)
             
             if self.debug:
                 print(f"{time.time()-start_time_pid} s for pid")
