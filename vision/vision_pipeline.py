@@ -11,6 +11,9 @@ import yaml
 from math import isnan
 import wandb
 
+def trackChaned(x):
+    pass
+
 class VisionPipeline():
     """
         This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
@@ -40,7 +43,13 @@ class VisionPipeline():
                  config_file="./vision/config.yaml",
                  fps_moving_window_size=10) -> None:
 
+        cv2.namedWindow("drone center", cv2.WINDOW_NORMAL)
 
+        # cv2.createTrackbar("x", "drone center",690,750,trackChaned)
+        # cv2.createTrackbar("y", "drone center",0,100,trackChaned)
+        
+        sys.setrecursionlimit(1000000)
+        self.DEPTH_DETECTION_THRESHOLD = 1.75
         self.depth_res = depth_res
         self.rgb_res = rgb_res
         self.align_to = align_to
@@ -48,7 +57,6 @@ class VisionPipeline():
         self.marker_type = marker_type
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
         self.required_marker_id = required_marker_id
-
         with open(config_file, 'r') as f:
             self.camera_config = yaml.load(f)
         
@@ -65,14 +73,17 @@ class VisionPipeline():
         self.last_detected_marker = None
         self.tracking_area_th = self.camera_config['tracking']['area_th']
         self.tracking_point_th = self.camera_config['tracking']['centroid_th']
+        
 
         self.estimated_pose = None
+        self.depth_estimated_pose = [0,0,0]
         self.previous_pose = [0.0,0.0,10.0]
         self.current_waypoint = None
         self.current_midpoint = None
 
         self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
+        self.color_depth_extrinsic = self.camera_extrinsic['camera_depth_translation']
 
         self.cam_init()
 
@@ -167,8 +178,14 @@ class VisionPipeline():
         self.rgb_intrinsics.ppy = self.cam_matrix[1][2]
         self.rgb_intrinsics.fx = self.cam_matrix[0][0]
         self.rgb_intrinsics.fy = self.cam_matrix[1][1]
+        
+        aligned_frames = self.get_frames()    
+        self.color_frame = self.extract_rgb(aligned_frames)
+        self.depth_frame_aligned = self.extract_depth(aligned_frames)
+        self.depth_frame_full = self.frames.get_depth_frame()
 
-        self.depth_intrinsics = self.frames.get_depth_frame().profile.as_video_stream_profile().intrinsics
+        self.color_intrinsics = self.color_frame.profile.as_video_stream_profile().intrinsics
+        self.depth_intrinsics = self.depth_frame_full.profile.as_video_stream_profile().intrinsics
     
     def init_aruco_detector(self):
         """
@@ -451,17 +468,18 @@ class VisionPipeline():
             pass
         else:
             cv2.putText(frame, f"Current Estimate (m): [{round(self.estimated_pose[0],2)}, {round(self.estimated_pose[1],2)}, {round(self.estimated_pose[2],2)}]", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Depth Estimate (m): [{round(self.depth_estimated_pose[0],2)}, {round(self.depth_estimated_pose[1],2)}, {round(self.depth_estimated_pose[2],2)}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         camera_yaw = round(Rotation.from_rotvec(self.cam_rvec).as_euler('xyz', degrees=True)[2], 2)
         camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
         camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
-        cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
             cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
         if not(self.avg_fps is None):
-            cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
@@ -670,26 +688,26 @@ class VisionPipeline():
             for yy in range(y-1, y+2):
                 if (xx==x and yy==y) or yy<start_y or xx<start_x or xx>=end_x or yy>=end_y:
                     continue
-                if component_id[xx-start_x][yy-start_y] == -1 and self.depth_frame_full.get_distance(xx,yy)<2.5:
+                if component_id[xx-start_x][yy-start_y] == -1 and self.depth_frame_full.get_distance(xx,yy)<self.DEPTH_DETECTION_THRESHOLD:
                     if abs(self.depth_frame_full.get_distance(x,y)-self.depth_frame_full.get_distance(xx,yy))< 0.02:
                         self.dfs(xx,yy,component_id, component_size, counter,start_x,start_y,end_x,end_y)
 
     def estimate_drone_center_from_depth(self):
 
-        depth_search_region = 50
+        depth_search_region = 30
         pose_pixel = rs.rs2_project_point_to_pixel(self.depth_intrinsics, self.previous_pose)
         if isnan(pose_pixel[0]):
-            self.previous_pose = [0.0,0.0,10.0]
+            # self.previous_pose = [0.0,0.0,10.0]
             return None
         print(pose_pixel)
         start_x = max(0,int(pose_pixel[0])-depth_search_region)
         end_x = min(int(pose_pixel[0])+depth_search_region, int(self.depth_res[1]))
         start_y = max(0,int(pose_pixel[1])-depth_search_region)
         end_y = min(int(pose_pixel[1])+depth_search_region, int(self.depth_res[0]))  
-        # print(type(start_x))
-        # print(type(start_y))
-        # print(type(end_x))
-        # print(type(end_y))
+        print(start_x)
+        print(start_y)
+        print(end_x)
+        print(end_y)
         # print(pose_pixel)
         # print(self.depth_res)
         component_id = np.full((end_x-start_x, end_y-start_y), -1, dtype=int)
@@ -698,7 +716,7 @@ class VisionPipeline():
         for x in range(start_x, end_x):
             for y in range(start_y, end_y):    
                 # print(self.depth_frame_full.get_distance(x,y))
-                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_distance(x,y)<2.5:
+                if component_id[x-start_x][y-start_y] == -1 and self.depth_frame_full.get_distance(x,y)<self.DEPTH_DETECTION_THRESHOLD:
                     component_size[counter]=0
                     # print("dfs")
                     self.dfs(x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y)
@@ -714,6 +732,9 @@ class VisionPipeline():
         
         x_mean, y_mean = 0,0
 
+        if component_size[largest_component_id] < 100:
+            return None
+
         drone_image = 10*np.asarray(self.depth_frame_full.get_data())
         print(drone_image)
         for x in range(start_x, end_x):
@@ -721,16 +742,28 @@ class VisionPipeline():
                 if component_id[x-start_x][y-start_y] == largest_component_id:
                     x_mean+=x
                     y_mean+=y
-                    drone_image[y][x] = 100000
+                    drone_image[y][x] = 30000
         print(component_size[largest_component_id])
         cv2.imshow("drone_segmented", drone_image)
         cv2.waitKey(1)
+        x_mean//=component_size[largest_component_id]
+        y_mean//=component_size[largest_component_id]
+        
+        # for tt in range(-3,4):
+        #     for ttt in range(-3,4):
+        #         drone_image[x_mean+tt][y_mean+ttt]=100000
+        print("-------------------------------------------"+str((x_mean, y_mean))+" ++++++ "+str(self.depth_frame_full.get_distance(x_mean,y_mean)))
+        return (x_mean, y_mean)
 
-        return (x_mean//component_size[largest_component_id], y_mean//component_size[largest_component_id])
-
-    def position_from_pixel(self, intrinsics, pixel_x, pixel_y, depth):
-        point_from_rs = rs.rs2_deproject_pixel_to_point(intrinsics, [pixel_x, pixel_y], depth)
-        self.previous_pose = point_from_rs
+    def position_from_pixel(self, intrinsics_, pixel_x, pixel_y, depth, update_previous_pose=True):
+        point_from_rs = rs.rs2_deproject_pixel_to_point(intrinsics_, [pixel_x, pixel_y], depth)
+        
+        if update_previous_pose and abs(point_from_rs[2]) > 1e-6:
+            self.previous_pose = point_from_rs.copy()
+            for i in range(3):
+                self.previous_pose[i] -= self.color_depth_extrinsic[i]
+            # print("point_from_rs "+ str(point_from_rs))
+            # self.previous_pose[1] *= -1
         
         if self.DEBUG:
             print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
@@ -772,8 +805,8 @@ class VisionPipeline():
         mid_point = (mid_point + 0.5).astype(np.int32)
 
         self.current_midpoint = mid_point.copy()
-
-        return self.position_from_pixel(self.rgb_intrinsics, mid_point[0], mid_point[1], z_from_realsense)
+        print("aruco estimate: "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
+        return self.position_from_pixel(self.color_intrinsics, mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))
         
 
     def pose_estimation_from_depth_camera(self):
@@ -781,14 +814,43 @@ class VisionPipeline():
         drone_center = self.estimate_drone_center_from_depth()
         if drone_center is None:
             return None
-
         return self.position_from_pixel(self.depth_intrinsics, drone_center[0], drone_center[1], self.depth_frame_full.get_distance(drone_center[0], drone_center[1]))
+
+    # def pose_estimation_from_depth_camera(self):
+    #     # return None
+    #     if self.DEBUG:
+    #         print("==================> self.previous_pose"+ str(self.previous_pose))
+    #         pose_pixel = rs.rs2_project_point_to_pixel(self.depth_intrinsics, self.previous_pose)
+    #         print("==================> pose_pixel"+ str(pose_pixel))
+
+    #     # hx = cv2.getTrackbarPos("x", "drone center")
+    #     # hy = cv2.getTrackbarPos("y", "drone center")
+
+    #     if pose_pixel[0]:
+    #         # px =(921, 511)
+    #         # ppx = rs.rs2_deproject_pixel_to_point(self.color_intrinsics, [px[0], px[1]], self.depth_frame_aligned.get_distance(px[0],px[1]))
+    #         # print("px:   "+str(px)+" "+str(self.depth_frame_aligned.get_distance(px[0],px[1])))
+    #         # print("ppx:   "+str(ppx))
+    #         # pppx = rs.rs2_project_point_to_pixel(self.color_intrinsics, ppx)
+    #         # pppx = tuple(int(x) for x in pppx)
+    #         # print("pppx: "+str(pppx))
+    #         pose_pixel = (int(pose_pixel[0]), int(pose_pixel[1]))
+
+    #         drone_image = 100*np.asarray(self.depth_frame_full.get_data())
+    #         # drone_image = np.asarray(self.color_frame.get_data())
+    #         # cv2.circle(drone_image, pose_pixel, 7, (255,255,255), -1)
+    #         # cv2.circle(drone_image, px, 7, (255,0,0), -1)
+    #         # cv2.circle(drone_image, pppx, 7, (0,0,255), -1)
+
+    #         cv2.imshow("drone center", drone_image)
+
 
     def pose_estimation(self, use_cam=True, use_depth=True, marker_corners=None):
         
         aruco_pose = None
         depth_pose = None
-
+        # print(">>>>>>>>>>>>>>"+str(self.depth_frame_full.get_distance(640,360)))
+        # print(">>>>>>>>>>>>>>"+str(self.depth_frame_aligned.get_distance(980,550)))
         if use_cam:
             aruco_pose = self.pose_estimation_from_aruco(marker_corners)
         if use_depth:
@@ -796,7 +858,7 @@ class VisionPipeline():
 
         if aruco_pose is not None:
             return aruco_pose
-        elif depth_pose is not None:
+        elif depth_pose is not None and abs(depth_pose[0])>1e-6:
             print("depth_pose: " + str(depth_pose))
             return depth_pose
         else:
@@ -816,6 +878,7 @@ class VisionPipeline():
         aligned_frames = self.get_frames()    
         self.color_frame = self.extract_rgb(aligned_frames)
         self.depth_frame_aligned = self.extract_depth(aligned_frames)
+
         self.depth_frame_full = self.frames.get_depth_frame()
 
         if not self.depth_frame_aligned or not self.color_frame:
@@ -842,7 +905,7 @@ class VisionPipeline():
         if marker_corners is None:
             # pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
             # if len(pose_from_depth):
-            #     cam_queue.append(pose_from_depth)
+            #     cam_queue.append([self.current_time, pose_from_depth, pose_from_depth[2]])
             #     self.estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
             # else:
                 self.counter += 1
@@ -851,13 +914,22 @@ class VisionPipeline():
                     cam_queue.append([flag])
                     self.counter = 0
         elif type(marker_corners) == type("None"):
+            pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
+            if len(pose_from_depth):
+                cam_queue.append([self.current_time, pose_from_depth, pose_from_depth[2]])
+                self.estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
             flag = 1
             cam_queue.append([flag])
         else:
             self.counter = 0
             pose_from_camera = self.pose_estimation(use_cam=True, use_depth=False, marker_corners=marker_corners)
-        
-            cam_queue.append([self.current_time, pose_from_camera, pose_from_camera[3]])
-            self.estimated_pose = [pose_from_camera[0], pose_from_camera[1], pose_from_camera[2]]
-    
+            if len(pose_from_camera):
+                cam_queue.append([self.current_time, pose_from_camera, pose_from_camera[2]])
+                self.estimated_pose = [pose_from_camera[0], pose_from_camera[1], pose_from_camera[2]]
+        # pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
+        # if len(pose_from_depth):
+        #     # cam_queue.append([self.current_time, pose_from_depth, pose_from_depth[2]])
+        #     self.depth_estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
+        # else:
+        #     self.depth_estimated_pose = [0,0,0]
     
