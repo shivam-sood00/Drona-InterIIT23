@@ -86,8 +86,8 @@ class swarmPluto():
         """
         
         """
-        self.drone1.updateAcion()
-        self.drone2.updateAcion()
+        self.drone1.updateAction()
+        self.drone2.updateAction()        
         
     def run(self):
         first = True
@@ -138,13 +138,21 @@ class swarmPluto():
                 else:
                     self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)
                     self.drone2.updateTarget(self.trajectory[i_target-1],dirOfMotion1)
-                    self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
-                    self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
                     inputVal = input("Enter 's' to start: ")
                     if inputVal=='s':
                         first = False
+                        self.arm()
                     else:
                         continue
+            
+            self.updateActions()
+
+            """
+            Move this line somewhere else
+            """
+            self.camera.update_waypoint(self.drone1.pid.target_pose,self.markerIdList[0])
+            self.camera.update_waypoint(self.drone2.pid.target_pose,self.markerIdList[1])
+
             """
             Check Conditions for trajectory waypoint update
             """
@@ -158,15 +166,15 @@ class swarmPluto():
                     else:
                         dirOfMotion1 = 'y'
                     self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)                    
-                    self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
+                    # self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
                     lastUpdated = 1
                 elif lastUpdated==1:
                     if dirOfMotion1=='x':
                         self.drone2.updateTarget(self.trajectory[i_target-1],'y')
-                        self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
+                        # self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
                     else:
                         self.drone2.updateTarget(self.trajectory[i_target-1],'x')
-                        self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
+                        # self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
                     lastUpdated = 2
                     if i_target==0:
                         lastUpdated = 0
@@ -181,7 +189,6 @@ class swarmPluto():
             """
             Update and Take Actions
             """
-            self.updateActions()
             self.takeActions()
             
             loop_time = time.time() - start_time_camera
@@ -214,5 +221,4 @@ class swarmPluto():
 
 if __name__=="__main__":
     swarm = swarmPluto()
-    swarm.arm()
     swarm.run()

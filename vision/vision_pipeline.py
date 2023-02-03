@@ -306,24 +306,24 @@ class VisionPipeline():
                     # print(f"MID POINT {id_}: ",mid_point)
                     if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
                         # return "None"
-                        print("in out of bound")
+                        # print("in out of bound")
                         self.markerCornerEstimates[id_] = "Landing"
                     else:
-                        print("in correct corner")
+                        # print("in correct corner")
                         self.markerCornerEstimates[id_] = marker_corners[i].astype(np.int32)
                 else:
-                    print("setting to none ")
+                    # print("setting to none ")
                     self.markerCornerEstimates[id_] = self.marker_tracking(reject,id_)
             
         else:
             if reject is None:
                 for id in self.required_marker_id:
                     self.markerCornerEstimates[id] = None
-                print("setting all to none")
+                # print("setting all to none")
                 if self.DEBUG:
                     print("NO marker detected")
             else:
-                print("setting all to none")
+                # print("setting all to none")
                 for id in self.required_marker_id:
                     self.markerCornerEstimates[id] = self.marker_tracking(reject,id)
         if self.DEBUG:
@@ -501,7 +501,7 @@ class VisionPipeline():
         Parameters:
             waypoint: this is the new waypoint to be updated         
         """
-        self.current_waypoint[id_] = np.array(waypoint) * 100.0
+        self.current_waypoint[id_] = np.array(waypoint).flatten() * 100.0
 
 
     def show_frame(self, frame, rgb_frame, window_name="Frame"):
