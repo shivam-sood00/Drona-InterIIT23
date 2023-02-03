@@ -64,6 +64,7 @@ class VisionPipeline():
         self.tracking_area_th = self.camera_config['tracking']['area_th']
         self.tracking_point_th = self.camera_config['tracking']['centroid_th']
         
+        self.tracked_corners = []
         self.markerCornerEstimates = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
         self.estimated_pose_all = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
         self.current_waypoint = {self.required_marker_id[0]:None,self.required_marker_id[1]:None}
@@ -262,6 +263,22 @@ class VisionPipeline():
         area = (corners[0][0] * corners[1][1] + corners[1][0] * corners[2][1] + corners[2][0] * corners[3][1] + corners[3][0] * corners[0][1])
         area = area - (corners[1][0] * corners[0][1] + corners[2][0] * corners[1][1] + corners[3][0] * corners[2][1] + corners[0][0] * corners[3][1])
         return area
+    
+    def marker_tracking(self,rejects,id):
+        last_marker = self.markerCornerEstimates[id]
+        if last_marker is None:
+            return None
+        
+        last_area = self.find_area(last_marker)
+        last_center = np.mean(last_marker[0], 0) / 4.0
+        for i, reject_corners in enumerate(rejects):
+            new_center = np.mean(reject_corners[0], 0) / 4.0
+            new_area = self.find_area(reject_corners)
+            if((abs(new_area - last_area) <= self.tracking_area_th) and (math.sqrt(np.sum((new_center - last_center) ** 2)) <= self.tracking_point_th)):
+                self.tracked_corners.append(i)
+                return reject_corners.copy().astype(np.int32)
+        return None
+
     def detect_marker(self,frame):
         """
         Doc Strings
@@ -272,17 +289,9 @@ class VisionPipeline():
             gray_frame, self.marker_dict, parameters=self.param_markers
         )
 
-        if self.DEBUG:
-            frame = self.plot_markers(frame, marker_corners, marker_IDs)
-            rgb_frame = self.plot_markers(frame.copy(), marker_corners, marker_IDs)
-
+        self.tracked_corners.clear()
         if marker_IDs is not None:
             
-            if self.DEBUG:
-                frame = self.plot_rej_markers(frame, reject)
-                rgb_frame = self.plot_rej_markers(rgb_frame, reject)
-                self.show_frame(frame, rgb_frame)   
-
             for id_ in self.required_marker_id:
                 update = False
                 i = -1
@@ -293,20 +302,18 @@ class VisionPipeline():
                         
                 if update:
                     mid_point = np.sum(marker_corners[i][0], 0) / 4.0
-                    print("MID POINT: ",mid_point)
+                    # print(f"MARKER CORNERS {id_} :  ", marker_corners[i], marker_corners[i].shape)
+                    # print(f"MID POINT {id_}: ",mid_point)
                     if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
                         # return "None"
                         print("in out of bound")
                         self.markerCornerEstimates[id_] = "Landing"
                     else:
-                        self.last_detected_marker = marker_corners[i].copy()
-                        # return marker_corners[i].astype(np.int32)
-                        # print(self.markerCornerEstimates,id_,marker_corners)
                         print("in correct corner")
                         self.markerCornerEstimates[id_] = marker_corners[i].astype(np.int32)
                 else:
                     print("setting to none ")
-                    self.markerCornerEstimates[id_] = None
+                    self.markerCornerEstimates[id_] = self.marker_tracking(reject,id_)
             
         else:
             if reject is None:
@@ -314,16 +321,18 @@ class VisionPipeline():
                     self.markerCornerEstimates[id] = None
                 print("setting all to none")
                 if self.DEBUG:
-                    frame = self.plot_rej_markers(frame, reject)
-                    rgb_frame = self.plot_rej_markers(rgb_frame, reject)
-                    self.show_frame(frame, rgb_frame)
                     print("NO marker detected")
             else:
                 print("setting all to none")
                 for id in self.required_marker_id:
-                    self.markerCornerEstimates[id] = None
-                
-        
+                    self.markerCornerEstimates[id] = self.marker_tracking(reject,id)
+        if self.DEBUG:
+            frame = self.plot_markers(frame, marker_corners, marker_IDs)
+            rgb_frame = self.plot_markers(frame.copy(), marker_corners, marker_IDs)
+    
+            frame = self.plot_rej_markers(frame, reject)
+            rgb_frame = self.plot_rej_markers(rgb_frame, reject)
+            self.show_frame(frame, rgb_frame)   
         return self.markerCornerEstimates
     
     def detect_markers(self, frame):
@@ -477,7 +486,10 @@ class VisionPipeline():
         """
         frame = frame.copy()
         for i, corners in enumerate(marker_corners):
-            frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)
+            if i in self.tracked_corners:
+                frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (255, 0, 0), 4, cv2.LINE_AA)
+            else:
+                frame = cv2.polylines(frame, [corners.astype(np.int32)], True, (0, 255, 255), 4, cv2.LINE_AA)
 
         return frame
 
@@ -577,11 +589,12 @@ class VisionPipeline():
         Returns:
             6-DOF pose estimate of aruco marker in world frame    
         """  
+        zer = False
         rVec, tVec, _ = aruco.estimatePoseSingleMarkers(
                 [marker_corners.astype(np.float32)], self.marker_size, self.cam_matrix, self.dist_coef
             )
 
-        if self.DEBUG:
+        if self.DEBUG and zer:
             print("[RAW ARUCO] (meters)--> X:", tVec[0, 0, 0] / 100.0, ", Y:", tVec[0, 0, 1] / 100.0, "Z:", tVec[0, 0, 2] / 100.0)
             
         if self.camera_config['wandb']['use_wandb']:
@@ -842,6 +855,7 @@ class VisionPipeline():
         Returns:
             None
         """ 
+        zer = False
         flag = 0
         aligned_frames = self.get_frames()    
         color_frame = self.extract_rgb(aligned_frames)
@@ -860,7 +874,7 @@ class VisionPipeline():
             
         self.last_time = self.current_time
 
-        if self.DEBUG:
+        if self.DEBUG and zer:
             if not(self.avg_fps is None):
                 print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
             
@@ -899,7 +913,7 @@ class VisionPipeline():
                 self.current_midpoint[key] = mid_point.copy()
                 point_from_rs = rs.rs2_deproject_pixel_to_point(_intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
                 
-                if self.DEBUG:
+                if self.DEBUG and zer:
                     print(f"[RAW REALSENSE] {key} (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
 
 
@@ -920,7 +934,7 @@ class VisionPipeline():
                 z_from_realsense = point_from_rs[2]
 
 
-                if self.DEBUG:
+                if self.DEBUG and zer:
                     print(f"[ARUCO] {key} (meters)--> X:", aruco_pose[0], ", Y:", aruco_pose[1], ", Z:", aruco_pose[2])
                     print(f"[REALSENSE] {key} (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
 

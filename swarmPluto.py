@@ -140,7 +140,11 @@ class swarmPluto():
                     self.drone2.updateTarget(self.trajectory[i_target-1],dirOfMotion1)
                     self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
                     self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
-                    first = False
+                    inputVal = input("Enter 's' to start: ")
+                    if inputVal=='s':
+                        first = False
+                    else:
+                        continue
             """
             Check Conditions for trajectory waypoint update
             """
@@ -210,5 +214,5 @@ class swarmPluto():
 
 if __name__=="__main__":
     swarm = swarmPluto()
-    # swarm.arm()
+    swarm.arm()
     swarm.run()

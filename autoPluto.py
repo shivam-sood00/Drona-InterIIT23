@@ -24,6 +24,8 @@ class autoPluto:
     
     def updateState(self,xyz):
         print(xyz)
+        if xyz is None:
+            return
         self.currentState['x'] = xyz[0]
         self.currentState['y'] = xyz[1]
         self.currentState['z'] = xyz[2]
