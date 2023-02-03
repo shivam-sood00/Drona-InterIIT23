@@ -79,7 +79,7 @@ class VisionPipeline():
 
         self.last_time = None
         self.current_time = None
-        self.counter = 0
+        self.counter = {self.required_marker_id[0]:0, self.required_marker_id[1]:0}
         
         self.avg_fps = None
         self.cam_rvec = np.array([0.0, 0.0, 0.0])
@@ -262,9 +262,71 @@ class VisionPipeline():
         area = (corners[0][0] * corners[1][1] + corners[1][0] * corners[2][1] + corners[2][0] * corners[3][1] + corners[3][0] * corners[0][1])
         area = area - (corners[1][0] * corners[0][1] + corners[2][0] * corners[1][1] + corners[3][0] * corners[2][1] + corners[0][0] * corners[3][1])
         return area
+    def detect_marker(self,frame):
+        """
+        Doc Strings
+        """
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        marker_corners, marker_IDs, reject = aruco.detectMarkers(
+            gray_frame, self.marker_dict, parameters=self.param_markers
+        )
 
+        if self.DEBUG:
+            frame = self.plot_markers(frame, marker_corners, marker_IDs)
+            rgb_frame = self.plot_markers(frame.copy(), marker_corners, marker_IDs)
+
+        if marker_IDs is not None:
+            
+            if self.DEBUG:
+                frame = self.plot_rej_markers(frame, reject)
+                rgb_frame = self.plot_rej_markers(rgb_frame, reject)
+                self.show_frame(frame, rgb_frame)   
+
+            for id_ in self.required_marker_id:
+                update = False
+                i = -1
+                for idx,id in enumerate(marker_IDs):
+                    if id[0]==id_:
+                        i = idx
+                        update = True
+                        
+                if update:
+                    mid_point = np.sum(marker_corners[i][0], 0) / 4.0
+                    print("MID POINT: ",mid_point)
+                    if (mid_point[0] >= self.rgb_res[1] - self.padding) or (mid_point[0] <= self.padding) or (mid_point[1] >= self.rgb_res[0] - self.padding) or (mid_point[1] <= self.padding):
+                        # return "None"
+                        print("in out of bound")
+                        self.markerCornerEstimates[id_] = "Landing"
+                    else:
+                        self.last_detected_marker = marker_corners[i].copy()
+                        # return marker_corners[i].astype(np.int32)
+                        # print(self.markerCornerEstimates,id_,marker_corners)
+                        print("in correct corner")
+                        self.markerCornerEstimates[id_] = marker_corners[i].astype(np.int32)
+                else:
+                    print("setting to none ")
+                    self.markerCornerEstimates[id_] = None
+            
+        else:
+            if reject is None:
+                for id in self.required_marker_id:
+                    self.markerCornerEstimates[id] = None
+                print("setting all to none")
+                if self.DEBUG:
+                    frame = self.plot_rej_markers(frame, reject)
+                    rgb_frame = self.plot_rej_markers(rgb_frame, reject)
+                    self.show_frame(frame, rgb_frame)
+                    print("NO marker detected")
+            else:
+                print("setting all to none")
+                for id in self.required_marker_id:
+                    self.markerCornerEstimates[id] = None
+                
+        
+        return self.markerCornerEstimates
     
-    def detect_marker(self, frame):
+    def detect_markers(self, frame):
         """
         Detection of ArUco markers returning its corners.
         
@@ -294,6 +356,8 @@ class VisionPipeline():
             if (self.do_tracking == True):
                 
                 if (reject is None):
+                    for id in self.required_marker_id:
+                        self.markerCornerEstimates[id] = None
                     if self.DEBUG:
                         frame = self.plot_rej_markers(frame, reject)
                         rgb_frame = self.plot_rej_markers(rgb_frame, reject)
@@ -305,6 +369,9 @@ class VisionPipeline():
                     
                     for (key, last_marker) in self.markerCornerEstimates.items():
                         if last_marker is None:
+                            for id in self.required_marker_id:
+                                self.markerCornerEstimates[id] = None
+                            
                             frame = self.plot_rej_markers(frame, reject)
                             rgb_frame = self.plot_rej_markers(rgb_frame, reject)
                             self.show_frame(frame, rgb_frame)
@@ -368,7 +435,8 @@ class VisionPipeline():
                         # return marker_corners[i].astype(np.int32)
                         # print(self.markerCornerEstimates,id_,marker_corners)
                         self.markerCornerEstimates[id_] = marker_corners[i].astype(np.int32)
-            
+                else:
+                    self.markerCornerEstimates[id_] = None
         return self.markerCornerEstimates
 
 
@@ -442,7 +510,7 @@ class VisionPipeline():
                 cv2.putText(frame, f"Goal {i}(m): [{round(pos[0]/100.0, 2)}, {round(pos[1]/100.0, 2)}, {round(pos[2]/100.0, 2)}]", (50 ,50*i+ 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         for i,(key,pos) in enumerate(self.estimated_pose_all.items()):
-            if pos is not None:
+            if pos is not None and type(pos) != type(1):
                 cv2.putText(frame, f"Current Estimate {i}(m): [{round(pos[0],2)}, {round(pos[1],2)}, {round(pos[2],2)}]", (50, 150 + 50*i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         yaw = [round(Rotation.from_rotvec(self.cam_rvecs[self.required_marker_id[0]]).as_euler('xyz', degrees=True)[2], 2), round(Rotation.from_rotvec(self.cam_rvecs[self.required_marker_id[1]]).as_euler('xyz', degrees=True)[2], 2)]
@@ -801,11 +869,11 @@ class VisionPipeline():
         marker_corners_all = self.detect_marker(color_img)
         for (key,marker_corners) in marker_corners_all.items():
             if marker_corners is None:
-                self.counter += 1
-                if self.counter >= 30:
+                self.counter[key] += 1
+                if self.counter[key] >= 30:
                     flag = 2
                     # cam_queue.append([flag])
-                    self.counter = 0
+                    self.counter[key] = 0
                     self.estimated_pose_all[key] = flag
                     continue
             elif type(marker_corners) == type("None"):
@@ -814,7 +882,7 @@ class VisionPipeline():
                 self.estimated_pose_all[key] = flag
                 continue
             else:
-                self.counter = 0
+                self.counter[key] = 0
                 aruco_pose = self.estimate_pose(marker_corners)
                 _intrisics = rs.intrinsics()
                 _intrisics.width = self.rgb_res[1]
@@ -848,6 +916,7 @@ class VisionPipeline():
 
                 aruco_pose[0] = -aruco_pose[0]
                 point_from_rs[0] = -point_from_rs[0]
+                point_from_rs[2] = -point_from_rs[2]
                 z_from_realsense = point_from_rs[2]
 
 

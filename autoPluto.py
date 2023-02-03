@@ -23,17 +23,23 @@ class autoPluto:
         self.readThread.start()
     
     def updateState(self,xyz):
+        print(xyz)
         self.currentState['x'] = xyz[0]
         self.currentState['y'] = xyz[1]
         self.currentState['z'] = xyz[2]
-        
         """
         TODO: 
         1. Apply some kind of  filter here. Ex Moving Average or Exponential Weighted Average
         """
     
     def updateAcion(self):
-        self.pid.update_pos(self.currentState.values())
+        curPose = []
+        curPose.extend(self.currentState.values())
+        curPose.append(self.comms.paramsReceived["Yaw"])
+        curPose.append(self.comms.paramsReceived["Roll"])
+        curPose.append(self.comms.paramsReceived["Pitch"])
+        self.pid.update_pos(curPose=curPose)
+
         self.pid.calc_err()
 
         self.action["Pitch"], self.action['Roll'] = self.pid.set_pitch_and_roll()
@@ -50,6 +56,7 @@ class autoPluto:
             self.comms.paramsSet["Yaw"] = int(self.action["Yaw"])
         else:
             self.comms.paramsSet["currentCommand"] = 2
+            print("landing due to exception: ",exception)
         self.commandLock.release()
     
     def updateTarget(self,target,axis):

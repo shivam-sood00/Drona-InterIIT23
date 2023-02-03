@@ -42,7 +42,7 @@ class swarmPluto():
         self.drone1 = autoPluto(config=self.config,droneNo=self.droneNo1)
         self.drone2 = autoPluto(config=self.config,droneNo=self.droneNo2)
         
-        
+        self.runLoopWaitTime = 0.04
         self.done = False
         
         pass
@@ -59,7 +59,7 @@ class swarmPluto():
         To Do: rewrite after changes in cam_process()
         """
         xyz = self.camera.cam_process()
-        
+        print(xyz)
         xyz1 = xyz[self.markerIdList[0]]
         xyz2 = xyz[self.markerIdList[1]]
         if type(xyz1) == type(1):
@@ -67,7 +67,7 @@ class swarmPluto():
             print("Exception due to drone 1")
             return
         
-        if type(xyz1) == type(1):
+        if type(xyz2) == type(1):
             self.exception = xyz2
             print("Exception due to drone 2")
             return
@@ -116,22 +116,24 @@ class swarmPluto():
             """
             Make it live not in init
             """
-            if np.linalg.norm(self.camera.cam_rvecs[self.markerIdList[0]] - self.camera.cam_rvecs[self.markerIdList[1]]) > 0.01:
+            if np.linalg.norm(self.camera.cam_rvecs[self.markerIdList[0]] - self.camera.cam_rvecs[self.markerIdList[1]]) > 0.1:
                 continue
             
+            if self.exception!=0:
+                self.takeActions()
             """
             Planning Trajectory
             """
             if first:
                 if self.mode == "Rectangle":
-                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'],  self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y'],  self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y']+self.rectangle[1],  self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y']+self.rectangle[1],  self.rectangle[2]])
+                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
+                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
+                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
+                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
                 else:
                     print("WHYYY HOVERRRR?? (Switch to rectange)")
                 
-                if abs(self.drone2.currentState['x'] - self.trajectory[-1][0])>0.01 and abs(self.drone2.currentState['y'] - self.trajectory[-1][1])>0.01:
+                if abs(self.drone2.currentState['x'] - self.trajectory[-1][0])>0.1 or abs(self.drone2.currentState['y'] - self.trajectory[-1][1])>0.10:
                     continue
                 else:
                     self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)
@@ -161,18 +163,17 @@ class swarmPluto():
                     else:
                         self.drone2.updateTarget(self.trajectory[i_target-1],'x')
                         self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
-                    
                     lastUpdated = 2
                     if i_target==0:
                         lastUpdated = 0
                 elif lastUpdated==0:
-                    self.done = True
+                    # self.done = True
                     self.exception = -1
             """
             If both drones have completed trajectory then break and land
             """
-            if self.done:
-                break
+            # if self.done:
+            #     break
             """
             Update and Take Actions
             """

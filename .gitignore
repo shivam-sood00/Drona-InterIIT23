@@ -4,6 +4,8 @@ MSP_comms/__pycache__/
 vision/__pycache__/
 
 **/graphs/**
+**/aruco/**
+**/realsense/**
 
 dronePass.py
 debug.txt
