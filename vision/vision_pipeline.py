@@ -727,7 +727,7 @@ class VisionPipeline():
                             # print("component_id[xx-start_x][yy-start_y] "+str(component_id[xx-start_x][yy-start_y]))
                             qu.put((xx,yy))
 
-        return (x_t//component_size[counter], y_t//component_size[counter])
+        return (x_mean//component_size[counter], y_mean//component_size[counter])
 
     def estimate_drone_center_from_depth(self):
 
