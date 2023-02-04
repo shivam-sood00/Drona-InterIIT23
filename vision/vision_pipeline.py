@@ -91,6 +91,7 @@ class VisionPipeline():
         self.counter = {self.required_marker_id[0]:0, self.required_marker_id[1]:0}
         
         self.avg_fps = None
+        self.now_fps = None
         self.cam_rvec = np.array([0.0, 0.0, 0.0])
         self.cam_rvecs = {self.required_marker_id[0]:np.array([0.0, 0.0, 0.0]), self.required_marker_id[1]:np.array([0.0, 0.0, 0.0])}
         self.raw_calib_yaws = {self.required_marker_id[0]:0.0, self.required_marker_id[1]:0.0}
@@ -570,10 +571,10 @@ class VisionPipeline():
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 350), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-
+            cv2.putText(frame, f"Now FPS: {round(self.now_fps,2)}", (50, 400), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
-
         # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
         # cv2.imshow("RGB Image", rgb_frame)
         key = cv2.waitKey(1)
@@ -1076,7 +1077,8 @@ class VisionPipeline():
                 self.fps_moving_window.append(1/time_diff)
                 self.fps_moving_window[-self.fps_moving_window_size:]
                 self.avg_fps = np.mean(self.fps_moving_window)
-            
+                self.now_fps = 1/time_diff
+
         self.last_time = self.current_time
 
         if self.DEBUG and zer:
