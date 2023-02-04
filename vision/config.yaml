@@ -13,6 +13,7 @@ camera:
       calibrate_yaw: True
       max_iters: 10
       default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
+      camera_depth_translation: [0.014949, 0.0002385, 0.0002678]
   2: #(KRSSG)
     intrinsics:
       cam_matrix: [[1347.090250261588, 0, 906.3662801147559],[0, 1332.103727995465, 561.2820445300187],[0,0,1]]
@@ -25,6 +26,7 @@ camera:
       calibrate_yaw: False
       max_iters: 100
       default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
+      camera_depth_translation: [0.014949, 0.0002385, 0.0002678]
 
 
 camera_params:

@@ -77,6 +77,7 @@ class VisionPipeline():
 
         self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
+        self.color_depth_extrinsic = self.camera_extrinsic['camera_depth_translation']
 
         self.cam_init()
         
