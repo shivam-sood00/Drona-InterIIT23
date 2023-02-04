@@ -54,7 +54,9 @@ class VisionPipeline():
         self.camera_id = self.camera_config['active_camera']
         self.camera_intrinsic = self.camera_config['camera'][self.camera_id]['intrinsics']
         self.camera_extrinsic = self.camera_config['camera'][self.camera_id]['extrinsics']
-        
+        self.point_x = np.array([0.0,0.0],dtype=int)
+        self.point_y = np.array([0.0,0.0],dtype=int)
+        self.mid_point = np.array([0.0,0.0],dtype=int)
         self.DEBUG = debug
         self.padding = padding
         self.fps_moving_window_size = fps_moving_window_size
@@ -99,15 +101,62 @@ class VisionPipeline():
         self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
         self.yaw_correction = np.linalg.pinv(self.yaw_correction)
         self.rpy_correction = self.yaw_correction @ self.rp_correction 
+        if debug:
+            self.axisplot()
 
-
+    def point_to_pixel(self,point):
+        point[:3] = point[:3] + np.array(self.camera_extrinsic['realsense_origin'])
+        point[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point[0], point[1], point[2]])
+        point_2d = rs.rs2_project_point_to_pixel(self._intrisics,[point[0],point[1],point[2]])
+        return point_2d
 
     def wandb_init(self):
         wandb.init(project="inter-iit", config=self.camera_config)
         pass        
 
 
-    
+    def axisplot(self):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+            if not depth_frame or not color_frame:
+                continue
+            
+            color_img = self.to_image(color_frame)
+            marker_corners_all = self.detect_marker(color_img)
+            marker_corners = None
+            for (key, mc) in marker_corners_all.items():
+                if key == self.required_marker_id[1]:
+                    marker_corners = mc
+                
+            if marker_corners is None:
+                pass
+            elif type(marker_corners) is str:
+                pass
+            else:
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+                self.current_midpoint[self.required_marker_id[1]] = mid_point.copy()
+                self._intrisics = rs.intrinsics()
+                self._intrisics.width = self.rgb_res[1]
+                self._intrisics.height = self.rgb_res[0]
+                self._intrisics.ppx = self.cam_matrix[0][2]
+                self._intrisics.ppy = self.cam_matrix[1][2]
+                self._intrisics.fx = self.cam_matrix[0][0]
+                self._intrisics.fy = self.cam_matrix[1][1]
+                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                self.mid_point = mid_point
+                point_from_rs = rs.rs2_deproject_pixel_to_point(self._intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+                point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+                point_from_rs_x = point_from_rs[:]
+                point_from_rs_x[0] = point_from_rs[0]+0.5
+                point_from_rs_x[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_x[0], point_from_rs_x[1], point_from_rs_x[2]])
+                self.point_x = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_x[0],point_from_rs_x[1],point_from_rs_x[2]])
+                point_from_rs_y = point_from_rs[:]
+                point_from_rs_y[1] = point_from_rs[1]+0.5
+                point_from_rs_y[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_y[0], point_from_rs_y[1], point_from_rs_y[2]])
+                self.point_y = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_y[0],point_from_rs_y[1],point_from_rs_y[2]])
     def init_realsense(self):
         """
         Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
@@ -520,7 +569,7 @@ class VisionPipeline():
         for i,(key,pos) in enumerate(self.current_waypoint.items()):
             if pos is not None:
                 cv2.putText(frame, f"Goal {i}(m): [{round(pos[0]/100.0, 2)}, {round(pos[1]/100.0, 2)}, {round(pos[2]/100.0, 2)}]", (50 ,50*i+ 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        
+                cv2.circle(frame,np.array(self.point_to_pixel(pos)).astype(int))
         for i,(key,pos) in enumerate(self.estimated_pose_all.items()):
             if pos is not None and type(pos) != type(1):
                 cv2.putText(frame, f"Current Estimate {i}(m): [{round(pos[0],2)}, {round(pos[1],2)}, {round(pos[2],2)}]", (50, 150 + 50*i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -532,7 +581,6 @@ class VisionPipeline():
         camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
         camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
         cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        
         for i, (key,pos) in enumerate(self.current_midpoint.items()):
             if pos is not None:
                 m = math.tan(yaw[i]*np.pi/180 )
@@ -541,7 +589,11 @@ class VisionPipeline():
                     cv2.line(frame, (int(0), int(pos[1])), (int(self.rgb_res[1]), int(pos[1])), (255, 0, 0), 3)    
                 else:
                     cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
-
+        # print("Midpoint:",self.mid_point)
+        # print("X::",self.point_x)
+        # print("Y:",self.point_y)
+        cv2.line(frame,np.array(self.mid_point).astype(int),np.array(self.point_x).astype(int), (0,0,255),3)
+        cv2.line(frame,np.array(self.mid_point).astype(int),np.array(self.point_y).astype(int),(0,255,0),3)
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 350), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
