@@ -748,12 +748,12 @@ class VisionPipeline():
         rvec_uncalib = []
         while True:
             aligned_frames = self.get_frames()    
-            color_frame = self.extract_rgb(aligned_frames)
-            depth_frame = self.extract_depth(aligned_frames)
-            if not depth_frame or not color_frame:
+            self.color_frame = self.extract_rgb(aligned_frames)
+            self.depth_frame = self.extract_depth(aligned_frames)
+            if not self.depth_frame or not self.color_frame:
                 continue
             
-            color_img = self.to_image(color_frame)
+            color_img = self.to_image(self.color_frame)
             marker_corners_all = self.detect_marker(color_img)
             marker_corners = None
             for (key, mc) in marker_corners_all.items():
@@ -1054,10 +1054,13 @@ class VisionPipeline():
         zer = False
         flag = 0
         aligned_frames = self.get_frames()    
-        color_frame = self.extract_rgb(aligned_frames)
-        depth_frame = self.extract_depth(aligned_frames)
+        self.color_frame = self.extract_rgb(aligned_frames)
+        self.depth_frame_aligned = self.extract_depth(aligned_frames)
+        self.depth_full_distances = np.asfarray(self.depth_frame_full.get_data())/1000
 
-        if not depth_frame or not color_frame:
+        self.depth_frame_full = self.frames.get_depth_frame()
+
+        if not self.depth_frame_aligned or not self.color_frame:
             return
 
         self.current_time = time.time()
@@ -1075,7 +1078,7 @@ class VisionPipeline():
                 print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
             
 
-        color_img = self.to_image(color_frame)
+        color_img = self.to_image(self.color_frame)
         marker_corners_all = self.detect_marker(color_img)
         for (key,marker_corners) in marker_corners_all.items():
             if marker_corners is None:
