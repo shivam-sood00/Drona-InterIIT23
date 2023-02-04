@@ -574,8 +574,8 @@ class VisionPipeline():
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
-        cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
-        cv2.imshow("RGB Image", rgb_frame)
+        # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
+        # cv2.imshow("RGB Image", rgb_frame)
         key = cv2.waitKey(1)
 
 
@@ -873,15 +873,15 @@ class VisionPipeline():
         if math.isnan(pose_pixel[0]):
             # self.previous_pose = [0.0,0.0,10.0]
             return None
-        print("pose_pixel "+str(pose_pixel))
+        print("pose_pixel "+str(key)+str(pose_pixel))
         start_x = max(0,int(pose_pixel[0])-self.DEPTH_SEARCH_REGION)
         end_x = min(int(pose_pixel[0])+self.DEPTH_SEARCH_REGION, int(self.depth_res[1]))
         start_y = max(0,int(pose_pixel[1])-self.DEPTH_SEARCH_REGION)
         end_y = min(int(pose_pixel[1])+self.DEPTH_SEARCH_REGION, int(self.depth_res[0]))  
-        # print(start_x)
-        # print(start_y)
-        # print(end_x)
-        # print(end_y)
+        print(start_x)
+        print(start_y)
+        print(end_x)
+        print(end_y)
         # print(pose_pixel)
         # print(self.depth_res)
         component_id = np.full((end_x-start_x, end_y-start_y), -1, dtype=int)
@@ -890,6 +890,8 @@ class VisionPipeline():
         counter=0
         comp_points=[]
 
+        drone_image = 10*np.asarray(self.depth_frame_full.get_data())
+        
         # x=int(pose_pixel[0])
         # y=int(pose_pixel[1])
         for i in range(100):
@@ -902,7 +904,7 @@ class VisionPipeline():
             if y<start_y:
                 y+=2
         # print(self.depth_frame_full.get_distance(x,y))
-            if component_id[x-start_x][y-start_y] == -1 and self.get_distance(x,y)>1.0 and self.get_distance(x,y)<2.05: # parameters
+            if component_id[x-start_x][y-start_y] == -1 and self.get_distance(x,y)>1.0 and self.get_distance(x,y)<2.2: # parameters
                 component_size = np.append(component_size, 0)
                 # print("component_size "+ str(component_size))
                 comp_points.append([])
@@ -913,6 +915,10 @@ class VisionPipeline():
 
         print("counter "+str(counter))
         if counter==0:
+            if(self.DEBUG):
+                cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
+                cv2.imshow("drone_segmented", drone_image)
+                cv2.waitKey(1)
             return None
         largest_component_id = 0
         for i in range(counter):
@@ -921,19 +927,19 @@ class VisionPipeline():
         
         (x_mean, y_mean) = coordinates[largest_component_id]
 
-        # print(component_size[largest_component_id])
-        # print("component_size[largest_component_id] "+str(component_size[largest_component_id]))
-        # print("component_size "+str(component_size))
+        print(component_size[largest_component_id])
+        print("component_size[largest_component_id] "+str(component_size[largest_component_id]))
+        print("component_size "+str(component_size))
         if component_size[largest_component_id] < 30:
             return None
 
         if self.DEBUG:
-            drone_image = 10*np.asarray(self.depth_frame_full.get_data())
             # print(drone_image)
 
             for (x,y) in comp_points[largest_component_id]:
                 drone_image[y][x] = 100000
             cv2.circle(drone_image, (x_mean, y_mean), 7, 0, -1)
+            cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
             cv2.imshow("drone_segmented", drone_image)
             cv2.waitKey(1)
         # for tt in range(-3,4):
@@ -1008,7 +1014,7 @@ class VisionPipeline():
         mid_point = (mid_point + 0.5).astype(np.int32)
 
         self.current_midpoint[key] = mid_point.copy()
-        print("aruco estimate: "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
+        print("aruco estimate: "+str(key)+" "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
         return self.position_from_pixel(self.color_intrinsics, mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]), key)
         
 
@@ -1016,7 +1022,7 @@ class VisionPipeline():
         # return None
         drone_center = self.estimate_drone_center_from_depth(key)
 
-        print("DRNOE CENTER "+str(drone_center))
+        print("DRNOE CENTER "+str(key)+str(drone_center))
         if drone_center is None:
             return None
         # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -1080,12 +1086,13 @@ class VisionPipeline():
 
         color_img = self.to_image(self.color_frame)
         marker_corners_all = self.detect_marker(color_img)
+        print("marker corners all",marker_corners_all)
         for (key,marker_corners) in marker_corners_all.items():
             if marker_corners is None:
-                pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
+                pose_from_depth = self.pose_estimation(key,use_cam=False, use_depth=True)
                 if len(pose_from_depth):
                     estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
-                    depth_estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
+                    self.depth_estimated_pose[key] = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
                     self.estimated_pose_all[key] = estimated_pose
                 else:
                     self.counter[key] += 1
@@ -1095,10 +1102,10 @@ class VisionPipeline():
                         self.counter[key] = 0
                         self.estimated_pose_all[key] = flag
             elif type(marker_corners) == type("None"):
-                pose_from_depth = self.pose_estimation(use_cam=False, use_depth=True)
+                pose_from_depth = self.pose_estimation(key, use_cam=False, use_depth=True)
                 if len(pose_from_depth):
                     estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
-                    depth_estimated_pose = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
+                    self.depth_estimated_pose[key] = [pose_from_depth[0], pose_from_depth[1], pose_from_depth[2]]
                     self.estimated_pose_all[key] = estimated_pose
                 else:
                     flag = 1

@@ -234,5 +234,4 @@ class swarmPluto():
 
 if __name__=="__main__":
     swarm = swarmPluto()
-    # swarm.arm()
     swarm.run()
