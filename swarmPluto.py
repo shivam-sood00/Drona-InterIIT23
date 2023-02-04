@@ -24,6 +24,7 @@ class swarmPluto():
         self.hover_reached_flag = True
         if self.mode == 'Rectangle':
             self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
+            self.align = self.config.get("Rectangle","align")
         else:
             self.hover_z = float(self.config.get("Hover","z"))
         
@@ -126,14 +127,21 @@ class swarmPluto():
             """
             if first:
                 if self.mode == "Rectangle":
-                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
-                    self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
+                    if self.align == "y":
+                        self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x']+self.rectangle[0],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
+                    elif self.align == "x":
+                        self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'],self.drone1.currentState['z'] +  self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x'],  self.drone1.currentState['y'] + self.rectangle[1],self.drone1.currentState['z'] +  self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x']-self.rectangle[0],  self.drone1.currentState['y']+self.rectangle[1], self.drone1.currentState['z'] + self.rectangle[2]])
+                        self.trajectory.append([self.drone1.currentState['x']-self.rectangle[0],  self.drone1.currentState['y'], self.drone1.currentState['z'] + self.rectangle[2]])
+                    
                 else:
                     print("WHYYY HOVERRRR?? (Switch to rectange)")
                 
-                if abs(self.drone2.currentState['x'] - self.trajectory[-1][0])>0.1 or abs(self.drone2.currentState['y'] - self.trajectory[-1][1])>0.10:
+                if abs(self.drone2.currentState['x'] - self.trajectory[-1][0])>0.10 or abs(self.drone2.currentState['y'] - self.trajectory[-1][1])>0.10:
                     continue
                 else:
                     self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)
@@ -146,7 +154,6 @@ class swarmPluto():
                         continue
             
             self.updateActions()
-
             """
             Move this line somewhere else
             """
@@ -162,9 +169,15 @@ class swarmPluto():
                     if i_target==len(self.trajectory):
                         i_target = 0
                     if i_target%2==1:
-                        dirOfMotion1 = 'x'
+                        if self.align == 'y':
+                            dirOfMotion1 = 'x'
+                        elif self.align == 'x':
+                            dirOfMotion1 = 'y'
                     else:
-                        dirOfMotion1 = 'y'
+                        if self.align == 'x':
+                            dirOfMotion1 = 'y'
+                        elif self.align == 'x':
+                            dirOfMotion1 = 'x'
                     self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)                    
                     # self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
                     lastUpdated = 1
@@ -221,4 +234,5 @@ class swarmPluto():
 
 if __name__=="__main__":
     swarm = swarmPluto()
+    # swarm.arm()
     swarm.run()
