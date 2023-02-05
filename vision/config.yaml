@@ -50,4 +50,4 @@ wandb:
 
 use_aruco_xy: False
 
-yaw_error_threshold: 0.1
+yaw_error_threshold: 0.04

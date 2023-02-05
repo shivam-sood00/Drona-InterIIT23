@@ -209,8 +209,8 @@ class PID():
 		self.pitch = pitch
 		self.roll= roll
 		yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
-		self.pitch = 1500 + np.clip(self.pitch, -250, 250) 
-		self.roll = 1500 - np.clip(self.roll, -250, 250)
+		self.pitch = 1500 + np.clip(self.pitch, -32, 32) 
+		self.roll = 1500 - np.clip(self.roll, -32, 32)
 		return self.pitch, self.roll  
 	
 	def set_yaw(self):
