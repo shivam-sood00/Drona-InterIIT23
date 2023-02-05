@@ -20,7 +20,7 @@ if __name__ == '__main__':
     align_to="rgb"
     marker_size=3.62 #13.8
     marker_type=aruco.DICT_4X4_50
-    required_marker_id = 0
+    required_marker_id = 8
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, debug=DEBUG)
     temp_queue = []

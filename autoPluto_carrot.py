@@ -77,6 +77,8 @@ class autoPluto:
             self.hover_z = float(self.config.get("Hover","z"))
         self.trajectory = []
         self.outOfBound = 0
+        self.start_traversal = 0
+        self.end_traversal = 0
         droneNumber = self.config.getint("Drone Number","droneNumber")
         self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
@@ -166,7 +168,13 @@ class autoPluto:
                 self.pid.set_target_pose(carrot_wp,self.axis_move[i])
                 self.camera.update_waypoint(carrot_wp)
                 
-                first = False
+                inputVal = input("Enter 's' to start: ")
+                if inputVal=='s':
+                    first = False
+                    self.comms.arm()
+                    self.start_traversal = time.time()
+                else:
+                    continue
             self.updateAction()
             ret = self.takeAction()
 
@@ -194,6 +202,8 @@ class autoPluto:
                     if self.mode =='Rectangle':
                         print("Now Landing")
                         self.outOfBound = 3
+                        self.end_traversal = time.time()
+                        print(f"{self.end_traversal - self.start_traversal}s for traversal")
                     else:
                         if self.hover_reached_flag:
                             print("Hovering")
@@ -335,5 +345,5 @@ class autoPluto:
 
 if __name__ == '__main__':
     drone1 = autoPluto()
-    drone1.comms.arm()
+    # drone1.comms.arm()
     drone1.run()

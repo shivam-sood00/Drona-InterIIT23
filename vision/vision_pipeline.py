@@ -478,7 +478,11 @@ class VisionPipeline():
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+            if abs(m) > 1000:
+                cv2.line(frame, (int(0), int(self.current_midpoint[1])), (int(self.rgb_res[1]), int(self.current_midpoint[1])), (255, 0, 0), 3)    
+            else:
+                cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+            # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -651,7 +655,7 @@ class VisionPipeline():
             Returns:
                 None
             """
-            max_iters = 100
+            max_iters = 30
             num_calib_frames = 0
             rvec_uncalib = []
             while True:
@@ -670,6 +674,9 @@ class VisionPipeline():
                     pass
                 else:
                     num_calib_frames += 1
+                    mid_point = np.sum(marker_corners[0], 0) / 4.0
+                    mid_point = (mid_point + 0.5).astype(np.int32)
+                    self.current_midpoint = mid_point.copy()
                     rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
                     if(num_calib_frames >= max_iters):
                         print("Yaw Calibrated ")
