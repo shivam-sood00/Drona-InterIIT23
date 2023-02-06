@@ -129,8 +129,11 @@ class COMMS:
         self.TCP_IP = IP
         self.Port = Port
         self.debug=debug
-        self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.mySocket.connect((self.TCP_IP, self.Port))
+        # self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.mySocket.connect((self.TCP_IP, self.Port))
+        
+        self.mySocket = self.connect_to_socket()
+
         self.waitTime = 0.17
         if(self.debug):
             print("Socket Connected")
@@ -151,6 +154,55 @@ class COMMS:
         # Dictionary of all the parameters we read from the pluto drone
         self.paramsReceived = {"timeOfLastUpdate":-1,"Roll":-1,"Pitch":-1,"Yaw":-1,"Altitude":-1,"Vario":-1,"AccX":-1,"AccY":-1,"AccZ":-1,"GyroX":-1,"GyroY":-1,"GyroZ":-1,"MagX":-1,"MagY":-1,"MagZ":-1,"trimRoll":-1,"trimPitch":-1,"rcRoll":-1,"rcPitch":-1, "rcYaw":-1, "rcThrottle" :-1, "rcAUX1":-1, "rcAUX2":-1, "rcAUX3":-1, "rcAUX4":-1,"currentCommand":-1,"commandStatus":-1 }
     
+
+    def connect_to_socket(self):
+        
+        connected = False
+        mySocket = None
+
+        num_iters = 5
+        counter_ = 0
+
+        while not connected:
+            
+            counter_ += 1
+
+            try:
+                mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                mySocket.connect((self.TCP_IP, self.Port))
+
+                # Msg to disArm
+                msgLen = 16
+                typeOfPayload = 200
+                msgData = []
+                msgData.extend(getBytes(self.paramsSet["Roll"]))
+                msgData.extend(getBytes(self.paramsSet["Pitch"]))
+                msgData.extend(getBytes(1300)) # Throttle == 1300
+                msgData.extend(getBytes(self.paramsSet["Yaw"]))
+                msgData.extend(getBytes(self.paramsSet["Aux1"]))
+                msgData.extend(getBytes(self.paramsSet["Aux2"]))
+                msgData.extend(getBytes(self.paramsSet["Aux3"]))
+                msgData.extend(getBytes(1000)) # Aux 4 == 1000
+                
+                msgToBeSent = MSPPacket().getInMsgRequest(msgLen,typeOfPayload,msgData)
+                mySocket.send(bytearray(msgToBeSent))
+                connected = True
+            
+            except:
+                mySocket.close()
+                del mySocket
+                mySocket = None
+
+            time.sleep(1.0)
+
+            if counter_ >= num_iters:
+                print("Socket Connection Failed! Please Reconnect.")
+                exit()
+
+        return mySocket
+
+
+
     def arm(self):
         """
         Member Function to Arm the drone.
