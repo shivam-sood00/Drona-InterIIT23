@@ -527,20 +527,18 @@ class VisionPipeline():
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
-<<<<<<< HEAD
-            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
-        
-        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
-        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
-       
-=======
+            # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
             if abs(m) > 1000:
                 cv2.line(frame, (int(0), int(self.current_midpoint[1])), (int(self.rgb_res[1]), int(self.current_midpoint[1])), (255, 0, 0), 3)    
             else:
                 cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+        
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
+       
+
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
->>>>>>> 6d1b294784f2b44ff07859084dec028a86231456
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             cv2.putText(frame, f"Now FPS: {round(self.now_fps,2)}", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -716,7 +714,7 @@ class VisionPipeline():
             Returns:
                 None
             """
-            max_iters = 30
+            max_iters = 100
             num_calib_frames = 0
             rvec_uncalib = []
             while True:
@@ -744,6 +742,7 @@ class VisionPipeline():
                         break   
 
             rvec_uncalib.sort()
+            # print(rvec_uncalib)
             self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
             temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
             yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi

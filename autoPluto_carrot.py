@@ -203,7 +203,7 @@ class autoPluto:
                         print("Now Landing")
                         self.outOfBound = 3
                         self.end_traversal = time.time()
-                        print(f"{self.end_traversal - self.start_traversal}s for traversal")
+                        print("for traversal", self.end_traversal - self.start_traversal, "s")
                     else:
                         if self.hover_reached_flag:
                             print("Hovering")
