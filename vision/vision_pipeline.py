@@ -38,7 +38,8 @@ class VisionPipeline():
                  debug=0,
                  padding=50,
                  config_file="./vision/config.yaml",
-                 fps_moving_window_size=10) -> None:
+                 fps_moving_window_size=10,
+                 debug_calib=False) -> None:
 
         self.DEPTH_DETECTION_THRESHOLD = 2
         self.depth_res = depth_res
@@ -47,7 +48,7 @@ class VisionPipeline():
         self.marker_size = marker_size
         self.marker_type = marker_type
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
-
+        self.debug_calib = debug_calib
         self.required_marker_id = required_marker_id
 
         with open(config_file, 'r') as f:
@@ -56,6 +57,11 @@ class VisionPipeline():
         self.camera_id = self.camera_config['active_camera']
         self.camera_intrinsic = self.camera_config['camera'][self.camera_id]['intrinsics']
         self.camera_extrinsic = self.camera_config['camera'][self.camera_id]['extrinsics']
+        
+        self.calib_aruco_x = np.array([0.0,0.0],dtype=int)
+        self.calib_aruco_y = np.array([0.0,0.0],dtype=int)
+        self.calib_aruco_mid = np.array([0.0,0.0],dtype=int)
+        self._intrisics = 0
         
         self.DEBUG = debug
         self.padding = padding
@@ -78,7 +84,6 @@ class VisionPipeline():
         self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
         self.color_depth_extrinsic = self.camera_extrinsic['camera_depth_translation']
-
         self.cam_init()
         
         self.init_intrinsics()
@@ -97,8 +102,8 @@ class VisionPipeline():
         self.raw_calib_yaws = {self.required_marker_id[0]:0.0, self.required_marker_id[1]:0.0}
 
         self.rp_correction = Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_matrix()
-
-        if self.calib_yaw_at_start:
+        
+        if self.calib_yaw_at_start and (not debug_calib):
             self.calibrate_yaw()
         else:
             self.cam_rvec = np.array(self.camera_extrinsic['default_yaw']) #np.array([0.0, 0.0, 0.0])
@@ -108,6 +113,8 @@ class VisionPipeline():
         self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
         self.yaw_correction = np.linalg.pinv(self.yaw_correction)
         self.rpy_correction = self.yaw_correction @ self.rp_correction 
+        if debug:
+            self.axisplot()
 
 
 
@@ -134,7 +141,59 @@ class VisionPipeline():
 
         self.color_intrinsics = self.color_frame.profile.as_video_stream_profile().intrinsics # TODO TEST
         self.depth_intrinsics = self.depth_frame_full.profile.as_video_stream_profile().intrinsics
+
+    def point_to_pixel(self,point):
+        point[0] = -point[0]
+        point[2] = -point[2]
+        point[:3] = point[:3] + np.array(self.camera_extrinsic['realsense_origin'])
+        point[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point[0], point[1], point[2]])
+        point_2d = rs.rs2_project_point_to_pixel(self._intrisics,[point[0],point[1],point[2]])
+        return point_2d
     
+    def axisplot(self):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+            if not depth_frame or not color_frame:
+                continue
+            
+            color_img = self.to_image(color_frame)
+            marker_corners_all = self.detect_marker(color_img)
+            marker_corners = None
+            for (key, mc) in marker_corners_all.items():
+                if key == self.required_marker_id[0]:
+                    marker_corners = mc
+                
+            if marker_corners is None:
+                pass
+            elif type(marker_corners) is str:
+                pass
+            else:
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+                self.current_midpoint[self.required_marker_id[1]] = mid_point.copy()
+                self._intrisics = rs.intrinsics()
+                self._intrisics.width = self.rgb_res[1]
+                self._intrisics.height = self.rgb_res[0]
+                self._intrisics.ppx = self.cam_matrix[0][2]
+                self._intrisics.ppy = self.cam_matrix[1][2]
+                self._intrisics.fx = self.cam_matrix[0][0]
+                self._intrisics.fy = self.cam_matrix[1][1]
+                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                self.calib_aruco_mid = mid_point
+                point_from_rs = rs.rs2_deproject_pixel_to_point(self._intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+                point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+                point_from_rs_x = point_from_rs[:]
+                point_from_rs_x[0] = point_from_rs[0]-0.5
+                point_from_rs_x[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_x[0], point_from_rs_x[1], point_from_rs_x[2]])
+                self.calib_aruco_x = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_x[0],point_from_rs_x[1],point_from_rs_x[2]])
+                point_from_rs_y = point_from_rs[:]
+                point_from_rs_y[1] = point_from_rs[1]+0.5
+                point_from_rs_y[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_y[0], point_from_rs_y[1], point_from_rs_y[2]])
+                self.calib_aruco_y = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_y[0],point_from_rs_y[1],point_from_rs_y[2]])
+                break
+
     def init_realsense(self):
         """
         Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
@@ -544,10 +603,6 @@ class VisionPipeline():
             None
         """
 
-        for i,(key,pos) in enumerate(self.current_waypoint.items()):
-            if pos is not None:
-                cv2.putText(frame, f"Goal {i}(m): [{round(pos[0]/100.0, 2)}, {round(pos[1]/100.0, 2)}, {round(pos[2]/100.0, 2)}]", (50 ,50*i+ 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        
         for i,(key,pos) in enumerate(self.estimated_pose_all.items()):
             if pos is not None and type(pos) != type(1):
                 cv2.putText(frame, f"Current Estimate {i}(m): [{round(pos[0],2)}, {round(pos[1],2)}, {round(pos[2],2)}]", (50, 150 + 50*i), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
@@ -568,11 +623,19 @@ class VisionPipeline():
                     cv2.line(frame, (int(0), int(pos[1])), (int(self.rgb_res[1]), int(pos[1])), (255, 0, 0), 3)    
                 else:
                     cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+        
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 350), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             cv2.putText(frame, f"Now FPS: {round(self.now_fps,2)}", (50, 400), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
+        for i,(key,pos) in enumerate(self.current_waypoint.items()):
+            if pos is not None:
+                cv2.putText(frame, f"Goal {i}(m): [{round(pos[0]/100.0, 2)}, {round(pos[1]/100.0, 2)}, {round(pos[2]/100.0, 2)}]", (50 ,50*i+ 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                cv2.circle(frame,np.array(self.point_to_pixel(pos / 100.0)).astype(int), 10, (0, 0 + i * 200, 0 + i * 200), -1)
+
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
         # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
@@ -728,18 +791,8 @@ class VisionPipeline():
         """
         self.init_realsense()
         self.init_aruco_detector()
-    
-    def calibrate_yaw(self):
-        """
-        Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
-        
-        Parameters:
-            None            
-        
-        Returns:
-            None
-        """
 
+    def calib_drone1(self):
         max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
         yaw_error_threshold = self.camera_config["yaw_error_threshold"]
         
@@ -783,10 +836,12 @@ class VisionPipeline():
         yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
         self.cam_rvecs[self.required_marker_id[0]] = np.array([0.0, 0.0, yawTemp_])
         print(f"YAW Value from Calibration: {self.cam_rvecs}")
-            
-        
+
+    def calib_drone2(self):
         while True:
             num_calib_frames = 0
+            max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
+            yaw_error_threshold = self.camera_config["yaw_error_threshold"]
         
         # For marker 1
             rvec_uncalib = []
@@ -809,13 +864,14 @@ class VisionPipeline():
                 elif type(marker_corners) is str:
                     pass
                 else:
+                    # print("HERE 2")
                     mid_point = np.sum(marker_corners[0], 0) / 4.0
                     mid_point = (mid_point + 0.5).astype(np.int32)
                     self.current_midpoint[self.required_marker_id[1]] = mid_point.copy()
                     num_calib_frames += 1
                     rvec_uncalib.append(self.estimate_uncalib_pose(marker_corners))
                     if(num_calib_frames >= max_iters):
-                        print(f"Yaw Calibrated for drone 1 with ID: {self.required_marker_id[1]}")
+                        print(f"Yaw Calibrated for drone 2 with ID: {self.required_marker_id[1]}")
                         break   
 
             rvec_uncalib.sort()
@@ -827,6 +883,21 @@ class VisionPipeline():
             
             if np.linalg.norm(self.cam_rvecs[self.required_marker_id[0]] - self.cam_rvecs[self.required_marker_id[1]])<yaw_error_threshold:
                 break
+
+    
+    def calibrate_yaw(self):
+        """
+        Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+        
+        Parameters:
+            None            
+        
+        Returns:
+            None
+        """
+
+        self.calib_drone1()
+        self.calib_drone2()
         
         self.cam_rvec = self.cam_rvecs[self.required_marker_id[0]]        
             

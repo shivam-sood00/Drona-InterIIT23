@@ -201,10 +201,11 @@ class swarmPluto():
                     lastUpdated = 2
                     if i_target==0:
                         lastUpdated = 0
-                elif lastUpdated==0:
+                if lastUpdated==0:
                     # self.done = True
                     self.exception = -1
                     self.endTime = time.time()
+                    print("time: ",self.endTime-self.startTime)
             """
             If both drones have completed trajectory then break and land
             """
