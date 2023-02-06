@@ -365,7 +365,7 @@ class COMMS:
     Target function to the reading thread
     All the data sent by the drone is received in this function
     """
-    def read(self):
+    def read(self,ImuLock):
         """
         Member Function which is target function to the Reading Thread.
         All the data sent by the drone is received in this function.
@@ -390,7 +390,7 @@ class COMMS:
             if not ready[0]:
                 break
             
-            buff = self.receiveMSPresponse(buff) 
+            buff = self.receiveMSPresponse(buff,ImuLock) 
             if self.debug:
                 self.printParams()
                 print(f"Read at {time.time()-start_time} s")
@@ -405,7 +405,7 @@ class COMMS:
         # print(list(self.paramsReceived.values()))
     
     # function to update the received parameters
-    def updateParams(self,out,idx):
+    def updateParams(self,out,idx,ImuLock):
         """
         Member Function to update the received parameters.
         :param out: Decoded Values
@@ -413,6 +413,7 @@ class COMMS:
         :param idx: value of type of payload 
         :type idx: int
         """
+        ImuLock.acquire()
         self.paramsReceived["timeOfLastUpdate"] = time.time()
         if idx==self.outServices["MSP_ATTITUDE"]: #MSP_ATTITUDE
             self.paramsReceived["Roll"]=out[0]
@@ -446,7 +447,7 @@ class COMMS:
         elif idx==self.outServices["MSP_COMMAND"]:
             self.paramsReceived["currentCommand"] = out[0]
             self.paramsReceived["commandStatus"] = out[1]
-        
+        ImuLock.release()
         if self.debug:
             self.printParams()
     
@@ -575,7 +576,7 @@ class COMMS:
             return [],0,buff
     
     # function to receive data and process it to return decoded values and updated buffer
-    def receiveMSPresponse(self,buff): 
+    def receiveMSPresponse(self,buff,ImuLock): 
         """
         Member Function to receive data and process it to return decoded values and updated buffer.
         """        
@@ -586,7 +587,7 @@ class COMMS:
             if i<0:
                 break
             out,idx,buff = self.processBuffer(buff) 
-            self.updateParams(out,idx) 
+            self.updateParams(out,idx,ImuLock) 
         return buff
 
     # function to disconnect with the communication

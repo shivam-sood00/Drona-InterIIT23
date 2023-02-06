@@ -25,7 +25,8 @@ class autoPluto:
         self.carrot_res['z'] = float(self.config.get("Carrot","res_z"))
         
         self.commandLock = threading.Lock()
-        self.readThread = threading.Thread(target=self.comms.read)
+        self.ImuLock = threading.Lock()
+        self.readThread = threading.Thread(target=self.comms.read,args=[self.ImuLock])
         self.writeThread = threading.Thread(target=self.comms.write,args=[self.commandLock])
         self.writeThread.start()
         self.readThread.start()
@@ -45,9 +46,11 @@ class autoPluto:
     def updateAction(self):
         curPose = []
         curPose.extend(self.currentState.values())
+        self.ImuLock.acquire()
         curPose.append(self.comms.paramsReceived["Yaw"])
         curPose.append(self.comms.paramsReceived["Roll"])
         curPose.append(self.comms.paramsReceived["Pitch"])
+        self.ImuLock.release()
         self.pid.update_pos(curPose=curPose)
 
 
@@ -75,7 +78,9 @@ class autoPluto:
         self.target = target
         self.axis = axis
         if axis=='z':
+            self.ImuLock.acquire()
             self.pid.zero_yaw = self.comms.paramsReceived["Yaw"]
+            self.ImuLock.release()
     
     def isReached(self):
         return self.pid.isReached()
