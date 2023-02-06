@@ -64,7 +64,10 @@ class VisionPipeline():
         self.camera_id = self.camera_config['active_camera']
         self.camera_intrinsic = self.camera_config['camera'][self.camera_id]['intrinsics']
         self.camera_extrinsic = self.camera_config['camera'][self.camera_id]['extrinsics']
-        
+        self.calib_aruco_x = np.array([0.0,0.0],dtype=int)
+        self.calib_aruco_y = np.array([0.0,0.0],dtype=int)
+        self.calib_aruco_mid = np.array([0.0,0.0],dtype=int)
+        self._intrisics = 0
         self.DEBUG = debug
         self.padding = padding
         self.fps_moving_window_size = fps_moving_window_size
@@ -114,14 +117,60 @@ class VisionPipeline():
         self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
         self.yaw_correction = np.linalg.pinv(self.yaw_correction)
         self.rpy_correction = self.yaw_correction @ self.rp_correction 
-
+        if debug:
+            self.axisplot()
 
 
     def wandb_init(self):
         wandb.init(project="inter-iit", config=self.camera_config)
         pass        
 
-
+    def point_to_pixel(self,point):
+        point[0] = -point[0]
+        point[2] = -point[2]
+        point[:3] = point[:3] + np.array(self.camera_extrinsic['realsense_origin'])
+        point[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point[0], point[1], point[2]])
+        point_2d = rs.rs2_project_point_to_pixel(self._intrisics,[point[0],point[1],point[2]])
+        return point_2d
+    
+    def axisplot(self):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+            if not depth_frame or not color_frame:
+                continue
+            
+            color_img = self.to_image(color_frame)
+            marker_corners = self.detect_marker(color_img)
+            if marker_corners is None:
+                pass
+            elif type(marker_corners) is str:
+                pass
+            else:
+                mid_point = np.sum(marker_corners[0], 0) / 4.0
+                mid_point = (mid_point + 0.5).astype(np.int32)
+                self.current_midpoint = mid_point.copy()
+                self._intrisics = rs.intrinsics()
+                self._intrisics.width = self.rgb_res[1]
+                self._intrisics.height = self.rgb_res[0]
+                self._intrisics.ppx = self.cam_matrix[0][2]
+                self._intrisics.ppy = self.cam_matrix[1][2]
+                self._intrisics.fx = self.cam_matrix[0][0]
+                self._intrisics.fy = self.cam_matrix[1][1]
+                z_from_realsense = self.depth_from_marker(depth_frame, marker_corners, kernel_size=3)
+                self.calib_aruco_mid = mid_point
+                point_from_rs = rs.rs2_deproject_pixel_to_point(self._intrisics, [mid_point[0], mid_point[1]], z_from_realsense)
+                point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+                point_from_rs_x = point_from_rs[:]
+                point_from_rs_x[0] = point_from_rs[0]-0.5
+                point_from_rs_x[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_x[0], point_from_rs_x[1], point_from_rs_x[2]])
+                self.calib_aruco_x = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_x[0],point_from_rs_x[1],point_from_rs_x[2]])
+                point_from_rs_y = point_from_rs[:]
+                point_from_rs_y[1] = point_from_rs[1]+0.5
+                point_from_rs_y[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_y[0], point_from_rs_y[1], point_from_rs_y[2]])
+                self.calib_aruco_y = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_y[0],point_from_rs_y[1],point_from_rs_y[2]])
+                break
     
     def init_realsense(self):
         """
@@ -461,10 +510,10 @@ class VisionPipeline():
             None
         """
 
-        if (self.current_waypoint is None):
-            pass
-        else:
-            cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        # if (self.current_waypoint is None):
+        #     pass
+        # else:
+        #     cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         
         if self.estimated_pose is None:
             pass
@@ -478,16 +527,28 @@ class VisionPipeline():
         m = math.tan(self.raw_calib_yaw + np.pi/2.0)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
+<<<<<<< HEAD
+            cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+        
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
+       
+=======
             if abs(m) > 1000:
                 cv2.line(frame, (int(0), int(self.current_midpoint[1])), (int(self.rgb_res[1]), int(self.current_midpoint[1])), (255, 0, 0), 3)    
             else:
                 cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
 
+>>>>>>> 6d1b294784f2b44ff07859084dec028a86231456
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             cv2.putText(frame, f"Now FPS: {round(self.now_fps,2)}", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
+        if self.current_waypoint is not None:
+            cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            cv2.circle(frame,np.array(self.point_to_pixel(self.current_waypoint / 100.0)).astype(int), 10, (0, 0, 0), -1)
+        
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
