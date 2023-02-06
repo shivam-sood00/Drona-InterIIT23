@@ -14,6 +14,12 @@ class swarmPluto():
         """
         
         """
+        import csv
+        # open the file in the write mode
+        self.f = open('debug.csv', 'w')
+        # create the csv writer
+        self.writer = csv.writer(self.f)
+        
         signal.signal(signal.SIGINT, self.handler)
         self.debug = debug
         self.config = ConfigParser()
@@ -22,6 +28,8 @@ class swarmPluto():
         self.droneNo2 = "Drone " + str(self.config.getint("Drone Number","drone2"))
         self.mode =  self.config.get("Mode","mode")
         self.hover_reached_flag = True
+        self.startTime = None
+        self.endTime = None
         if self.mode == 'Rectangle':
             self.rectangle = [float(i) for i in self.config.get("Rectangle","xyz").split(',')]
             self.align = self.config.get("Rectangle","align")
@@ -149,10 +157,12 @@ class swarmPluto():
                     inputVal = input("Enter 's' to start: ")
                     if inputVal=='s':
                         first = False
+                        self.startTime = time.time()
                         self.arm()
                     else:
                         continue
             
+            self.writer.writerow([self.drone1.currentState['x'],self.drone1.currentState['y'],self.drone1.currentState['z'],self.drone2.currentState['x'],self.drone2.currentState['y'],self.drone2.currentState['z']])
             self.updateActions()
             """
             Move this line somewhere else
@@ -194,6 +204,7 @@ class swarmPluto():
                 elif lastUpdated==0:
                     # self.done = True
                     self.exception = -1
+                    self.endTime = time.time()
             """
             If both drones have completed trajectory then break and land
             """
@@ -228,10 +239,14 @@ class swarmPluto():
         self.drone1.closeThreads()
         self.drone2.closeThreads()
         cv2.destroyAllWindows()
+        print("total time taken: ",self.endTime-self.startTime)
         print(msg)
+        self.f.close()
+        
         exit()
 
 
 if __name__=="__main__":
     swarm = swarmPluto()
     swarm.run()
+    
