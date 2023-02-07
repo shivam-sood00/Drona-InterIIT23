@@ -1,5 +1,5 @@
 # for camera 1
-active_camera: 2
+active_camera: 1
 camera: 
   1:
     intrinsics:
@@ -10,7 +10,7 @@ camera:
       global_origin:  [0.0, 0.0, 0.0] #[32.09, 3.832, 280.2] #[0.0, 0.0, 0.0] #[46.22983901,   1.60285046, 278.0799618] # From aruco
       realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
       imu_correction: [-0.04298656,  0.01464409,  0.        ]
-      calibrate_yaw: True
+      calibrate_yaw: False
       max_iters: 30
       default_yaw: [0.0, 0.0, 0.0] # Yaw used if calibrate yaw is set to false
       camera_depth_translation: [0.014949, 0.0002385, 0.0002678]

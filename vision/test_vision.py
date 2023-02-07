@@ -22,6 +22,6 @@ if __name__ == '__main__':
     required_marker_id = [6,8]
 
     pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, debug=DEBUG)
-    
+    # pipeline.update_waypoint([0, 0, -2.4], 6)
     while True:
         pipeline.cam_process()
