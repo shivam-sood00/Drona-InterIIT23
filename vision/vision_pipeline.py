@@ -524,7 +524,7 @@ class VisionPipeline():
         camera_roll = round(self.imu_calib_data[0] * 180.0 / np.pi, 2)
         camera_pitch = round(self.imu_calib_data[1] * 180.0 / np.pi, 2)
         cv2.putText(frame, f"Cam RPY (deg): [{camera_roll, camera_pitch, camera_yaw}]", (50, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        m = math.tan(self.raw_calib_yaw + np.pi/2.0)
+        m = math.tan(self.raw_calib_yaw)
         if self.current_midpoint is not None:
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
@@ -556,6 +556,12 @@ class VisionPipeline():
         key = cv2.waitKey(1)
 
 
+    def process_yaw(self, yaw):
+        yaw += math.pi
+        yaw %= math.pi / 2.0
+        if yaw > math.pi / 4.0:
+            yaw -= math.pi / 2.0
+        return yaw
     
 
     def estimate_uncalib_pose(self, marker_corners):
@@ -577,7 +583,7 @@ class VisionPipeline():
         aruco_rot = np.linalg.pinv(aruco_rot)
 
         uncalib_rot = Rotation.from_matrix(aruco_rot).as_euler('xyz')
-        return uncalib_rot[2]
+        return self.process_yaw(uncalib_rot[2])
 
 
 
@@ -744,8 +750,8 @@ class VisionPipeline():
             rvec_uncalib.sort()
             # print(rvec_uncalib)
             self.raw_calib_yaw = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
-            temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
-            yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+            yawTemp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaw])).as_rotvec()[2]
+            # yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
             self.cam_rvec = np.array([0.0, 0.0, yawTemp_])
             print(f"YAW Value from Calibration: {self.cam_rvec}")
         
