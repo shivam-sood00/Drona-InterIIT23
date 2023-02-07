@@ -641,6 +641,12 @@ class VisionPipeline():
         key = cv2.waitKey(1)
 
 
+    def process_yaw(self, yaw):
+        yaw += math.pi
+        yaw %= math.pi / 2.0
+        if yaw > math.pi / 4.0:
+            yaw -= math.pi / 2.0
+        return yaw
     
 
     def estimate_uncalib_pose(self, marker_corners):
@@ -662,7 +668,7 @@ class VisionPipeline():
         aruco_rot = np.linalg.pinv(aruco_rot)
 
         uncalib_rot = Rotation.from_matrix(aruco_rot).as_euler('xyz')
-        return uncalib_rot[2]
+        return self.process_yaw(uncalib_rot[2])
 
 
 
@@ -831,7 +837,7 @@ class VisionPipeline():
         rvec_uncalib.sort()
         self.raw_calib_yaws[self.required_marker_id[0]] = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
         temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaws[self.required_marker_id[0]]])).as_rotvec()[2]
-        yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+        yawTemp_ = (np.pi+temp_)%(2*np.pi)-np.pi
         self.cam_rvecs[self.required_marker_id[0]] = np.array([0.0, 0.0, yawTemp_])
         print(f"YAW Value from Calibration: {self.cam_rvecs}")
 
@@ -873,9 +879,10 @@ class VisionPipeline():
                         break   
 
             rvec_uncalib.sort()
+            # print("DRONE 2 YAWs: ", rvec_uncalib)
             self.raw_calib_yaws[self.required_marker_id[1]] = rvec_uncalib[int(len(rvec_uncalib) / 2.0)]
             temp_ = Rotation.from_euler('xyz', np.array([0.0, 0.0, self.raw_calib_yaws[self.required_marker_id[1]]])).as_rotvec()[2]
-            yawTemp_ = (np.pi+temp_+np.pi/2)%(2*np.pi)-np.pi
+            yawTemp_ = (np.pi+temp_)%(2*np.pi)-np.pi
             self.cam_rvecs[self.required_marker_id[1]] = np.array([0.0, 0.0, yawTemp_])
             print(f"YAW Value from Calibration: {self.cam_rvecs}")
             
