@@ -42,7 +42,7 @@ class VisionPipeline():
                  required_marker_id=1,
                  debug=0,
                  padding=50,
-                 config_file="./vision/config.yaml",
+                 config_file="./task2/vision/config.yaml",
                  fps_moving_window_size=10) -> None:
 
         # cv2.namedWindow("drone center", cv2.WINDOW_NORMAL)

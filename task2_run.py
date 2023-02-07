@@ -1,9 +1,9 @@
-from MSP_comms.plutoComms import COMMS
+from task2.MSP_comms.plutoComms import COMMS
 import threading
-from vision.vision_pipeline import VisionPipeline
+from task2.vision.vision_pipeline import VisionPipeline
 import time
 import numpy as np
-from controls.pid_pluto import PID
+from task2.controls.pid_pluto import PID
 from configparser import ConfigParser
 import signal
 import cv2
@@ -60,7 +60,7 @@ class autoPluto:
         self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
-        self.config.read('controls/droneData_carrot.ini')  
+        self.config.read('task2/controls/droneData_carrot.ini')  
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
