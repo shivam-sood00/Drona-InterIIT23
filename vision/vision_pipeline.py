@@ -38,8 +38,7 @@ class VisionPipeline():
                  debug=0,
                  padding=50,
                  config_file="./vision/config.yaml",
-                 fps_moving_window_size=10,
-                 debug_calib=False) -> None:
+                 fps_moving_window_size=10,debug_calib=False) -> None:
 
         self.DEPTH_DETECTION_THRESHOLD = 2
         self.depth_res = depth_res
@@ -110,11 +109,11 @@ class VisionPipeline():
             self.cam_rvecs = {self.required_marker_id[0]:np.array(self.camera_extrinsic['default_yaw']),self.required_marker_id[1]:np.array(self.camera_extrinsic['default_yaw'])} #np.array([0.0, 0.0, 0.0])
             self.raw_calib_yaws = {self.required_marker_id[0]:np.array(self.camera_extrinsic['default_yaw'])[2],self.required_marker_id[1]:np.array(self.camera_extrinsic['default_yaw'])[2]} # 0.0
         
-        self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
-        self.yaw_correction = np.linalg.pinv(self.yaw_correction)
-        self.rpy_correction = self.yaw_correction @ self.rp_correction 
-        if debug:
-            self.axisplot()
+            self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
+            self.yaw_correction = np.linalg.pinv(self.yaw_correction)
+            self.rpy_correction = self.yaw_correction @ self.rp_correction 
+            if debug:
+                self.axisplot()
 
 
 
@@ -172,7 +171,7 @@ class VisionPipeline():
             else:
                 mid_point = np.sum(marker_corners[0], 0) / 4.0
                 mid_point = (mid_point + 0.5).astype(np.int32)
-                self.current_midpoint[self.required_marker_id[1]] = mid_point.copy()
+                self.current_midpoint[self.required_marker_id[0]] = mid_point.copy()
                 self._intrisics = rs.intrinsics()
                 self._intrisics.width = self.rgb_res[1]
                 self._intrisics.height = self.rgb_res[0]
@@ -193,7 +192,6 @@ class VisionPipeline():
                 point_from_rs_y[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point_from_rs_y[0], point_from_rs_y[1], point_from_rs_y[2]])
                 self.calib_aruco_y = rs.rs2_project_point_to_pixel(self._intrisics,[point_from_rs_y[0],point_from_rs_y[1],point_from_rs_y[2]])
                 break
-
     def init_realsense(self):
         """
         Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
@@ -620,9 +618,9 @@ class VisionPipeline():
                 m = math.tan(yaw[i]*np.pi/180 )
                 c = pos[1] - m * (pos[0])
                 if abs(m) > 1000:
-                    cv2.line(frame, (int(0), int(pos[1])), (int(self.rgb_res[1]), int(pos[1])), (255, 0, 0), 3)    
+                    cv2.line(frame, (int(0), int(pos[1])), (int(self.rgb_res[1]), int(pos[1])), (255, 0 + i * 200, 0), 3)    
                 else:
-                    cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+                    cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0 + i * 200, 0), 3)
         
         cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
         cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
@@ -838,11 +836,11 @@ class VisionPipeline():
         print(f"YAW Value from Calibration: {self.cam_rvecs}")
 
     def calib_drone2(self):
+        num_calib_frames = 0
+        max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
+        yaw_error_threshold = self.camera_config["yaw_error_threshold"]
         while True:
-            num_calib_frames = 0
-            max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
-            yaw_error_threshold = self.camera_config["yaw_error_threshold"]
-        
+                    
         # For marker 1
             rvec_uncalib = []
             while True:
@@ -899,7 +897,12 @@ class VisionPipeline():
         self.calib_drone1()
         self.calib_drone2()
         
-        self.cam_rvec = self.cam_rvecs[self.required_marker_id[0]]        
+        self.cam_rvec = self.cam_rvecs[self.required_marker_id[0]]    
+        self.yaw_correction = Rotation.from_rotvec(self.cam_rvec).as_matrix()
+        self.yaw_correction = np.linalg.pinv(self.yaw_correction)
+        self.rpy_correction = self.yaw_correction @ self.rp_correction 
+        if self.DEBUG:
+            self.axisplot()    
             
         
     def get_distance(self,x,y):

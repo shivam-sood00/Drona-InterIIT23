@@ -11,8 +11,8 @@ camera:
       realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
       imu_correction: [-0.04298656,  0.01464409,  0.        ]
       calibrate_yaw: True
-      max_iters: 10
-      default_yaw: [0.0, 0.0, 0.1505385] # Yaw used if calibrate yaw is set to false
+      max_iters: 30
+      default_yaw: [0.0, 0.0, 0.0] # Yaw used if calibrate yaw is set to false
       camera_depth_translation: [0.014949, 0.0002385, 0.0002678]
   2: #(KRSSG)
     intrinsics:
@@ -50,4 +50,4 @@ wandb:
 
 use_aruco_xy: False
 
-yaw_error_threshold: 0.04
+yaw_error_threshold: 0.035
