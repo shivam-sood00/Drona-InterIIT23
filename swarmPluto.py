@@ -15,11 +15,9 @@ class swarmPluto():
         
         """
         import csv
-        # open the file in the write mode
         self.f = open('debug.csv', 'w')
-        # create the csv writer
         self.writer = csv.writer(self.f)
-        
+        self.writer.writerow(["x1","y1","z1","x2","y2","z2"])
         signal.signal(signal.SIGINT, self.handler)
         self.debug = debug
         self.config = ConfigParser()
@@ -68,7 +66,7 @@ class swarmPluto():
         To Do: rewrite after changes in cam_process()
         """
         xyz = self.camera.cam_process()
-        print(xyz)
+        # print(xyz)
         xyz1 = xyz[self.markerIdList[0]]
         xyz2 = xyz[self.markerIdList[1]]
         if type(xyz1) == type(1):
@@ -174,6 +172,13 @@ class swarmPluto():
             Check Conditions for trajectory waypoint update
             """
             if self.drone1.isReached() and self.drone2.isReached():
+
+                if lastUpdated==0:
+                    # self.done = True
+                    self.exception = -1
+                    self.endTime = time.time()
+                    print("time: ",self.endTime-self.startTime)
+                
                 if lastUpdated==2:
                     i_target+=1
                     if i_target==len(self.trajectory):
@@ -201,11 +206,6 @@ class swarmPluto():
                     lastUpdated = 2
                     if i_target==0:
                         lastUpdated = 0
-                if lastUpdated==0:
-                    # self.done = True
-                    self.exception = -1
-                    self.endTime = time.time()
-                    print("time: ",self.endTime-self.startTime)
             """
             If both drones have completed trajectory then break and land
             """
@@ -248,6 +248,6 @@ class swarmPluto():
 
 
 if __name__=="__main__":
-    swarm = swarmPluto()
+    swarm = swarmPluto(debug=0)
     swarm.run()
     

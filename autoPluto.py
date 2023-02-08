@@ -32,7 +32,7 @@ class autoPluto:
         self.readThread.start()
     
     def updateState(self,xyz):
-        print(xyz)
+        # print(xyz)
         if xyz is None:
             return
         self.currentState['x'] = xyz[0]
