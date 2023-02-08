@@ -87,6 +87,9 @@ class swarmPluto():
         """
         self.drone1.takeAction(self.exception)
         self.drone2.takeAction(self.exception)
+
+        if self.exception != 0:
+            self.exit_land()
     
     def updateActions(self):
         """
@@ -231,6 +234,20 @@ class swarmPluto():
         """
         self.takeActions()
         time.sleep(3)
+    
+    def exit_land(self):
+        msg = "Complete + Land"
+        self.drone1.comms.paramsSet["currentCommand"] = 2
+        self.drone2.comms.paramsSet["currentCommand"] = 2
+        time.sleep(3)
+        self.drone1.closeThreads()
+        self.drone2.closeThreads()
+        cv2.destroyAllWindows()
+        print("total time taken: ",self.endTime-self.startTime)
+        print(msg)
+        self.f.close()
+        
+        exit()
     
     def handler(self, sigma, frame):
         msg = "Exit + Land"

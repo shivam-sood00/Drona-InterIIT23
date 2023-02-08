@@ -332,8 +332,20 @@ class autoPluto:
             self.comms.paramsSet["currentCommand"] = 2
             self.commandLock.release()
             print("Landing: ",self.outOfBound)
+            time.sleep(2)
+            self.exit_land()
             return 1
         
+    def exit_land(self):
+        msg = "Complete + Land"
+        self.comms.readLoop = False
+        self.comms.writeLoop = False
+        self.readThread.join()
+        self.writeThread.join()
+        cv2.destroyAllWindows()
+        print(msg)
+        exit()
+    
     def handler(self, sigma, frame):
         """
         If the pose estimation for the drone is not recieved for a specified time, it lands the drone and the two threads for        
