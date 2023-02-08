@@ -1,0 +1,7 @@
+autoPluto module
+================
+
+.. automodule:: autoPluto
+    :members:
+    :undoc-members:
+    :show-inheritance:

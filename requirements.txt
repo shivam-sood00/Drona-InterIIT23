@@ -1,0 +1,6 @@
+pyrealsense2
+opencv-contrib-python==4.6.0.66
+numpy
+scipy
+wandb
+pyyaml==5.4.1

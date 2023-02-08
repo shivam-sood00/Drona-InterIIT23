@@ -1,0 +1,7 @@
+vision\_pipeline2 module
+========================
+
+.. automodule:: vision_pipeline2
+    :members:
+    :undoc-members:
+    :show-inheritance:
