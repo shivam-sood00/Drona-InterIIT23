@@ -15,7 +15,7 @@ class autoPluto:
         state estimation modules and it is an easy-to-use class.
 
         Attributes:
-            DEBUG: flag to enable prints in code for debugging. Default is False.
+            debug: flag to enable prints in code for debugging. Default is False.
     """
     def __init__(self,debug = False):
         """
@@ -107,12 +107,34 @@ class autoPluto:
 
     
     def set_carrot_wp(self,target,cur,res):
+        """
+        Updates the target waypoint according to carrot approach.
+        
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            res: fixed distance values for carrot approach
+            
+        Returns:
+           carrot_target: target waypoint for carrot approach
+        """
         if target > cur:
             return min(cur+res,target) 
         else:
             return max(cur-res,target)
 
     def set_carrot_wps(self,target,cur):
+        """
+        Set the waypoints through carrot approach.
+        Carrot Approach: The target state of the drone is at a fixed distance from the current state of the drone, it keep updating at each instant.
+
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            
+        Returns:
+           carrot_target: target waypoint at fixed distance from drone
+        """
         carrot_target = []
         for i,axes in enumerate(['x','y','z']):
             carrot_target.append(self.set_carrot_wp(target[i],cur[i],self.carrot_res[axes]))
@@ -337,6 +359,9 @@ class autoPluto:
             return 1
         
     def exit_land(self):
+        """
+        Function to land the drones and safely close the threads when it completes a full rectangle.
+        """
         msg = "Complete + Land"
         self.comms.readLoop = False
         self.comms.writeLoop = False
