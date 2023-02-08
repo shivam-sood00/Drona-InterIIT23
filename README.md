@@ -43,7 +43,8 @@ The idea is to get one drone to follow the other, given a specified set of endpo
 2. [How to Connect](#how-to-connect)
 2. [How To Run](#how-to-run)
 3. [Code Structure](#code-structure)
-4. [Runs : Path Tracking and Swarm Flight](#pathtracking-swarm)
+4. [Fail Safe](#fail-safe)
+4. [Results](#results)
 
 # Installation
 
@@ -102,36 +103,56 @@ The following procedure needs to be followed to connect the Pluto Drone / Drones
 
     
 # Code Structure
-
+### NEEDS TO BE UPDATED
 ![](docs/code_struct.jpg)
 
-2. When the drone moves out of the Field of View of the overhead camera for a pre-set time duration, the drone once again lands safely. 
+# Fail Safe
+When the drone moves out of the Field of View of the overhead camera for a pre-set time duration, the drone lands safely. 
 <p align = "center">
-<img src="docs/outofFOV_task2.gif" width="512">
+<img src="docs/outofFOV.gif" width="512">
 </p>  
 
-# Runs : Path Tracking and Swarm
+# Results
 
 #### We show results in two cases -
 
-2. Following a rectangle of dimensions [1m X 2m]
+1. Following a rectangle of dimensions [1m X 2m]
 <p align = "center">
-<img src="docs/rect.gif" width="720">
+<img src="docs/task_2_rectangular.gif" width="720">
 </p>
 
 The following metrics were used to ensure that our path tracking was as close to ideal as possible -
 <table align = "center">
   <tr>
     <td>     Cross Track Error   </td>
-    <td>        Error in Z co-ordinate         </td>
+    <td>        Error in Z co-ordinate  </td>
   </tr>
   <tr>
-    <td><img src="docs/cross track.png" width=500></td>
-    <td><img src="docs/errZ_rect.png" width=406></td>
+    <td><img src="docs/xvsy_Single.png" width=420></td>
+    <td><img src="docs/errZ_Single.png" width=420></td>
+  </tr>
+ </table>
+
+The first plot [Left] shows the x vs y coordinate of the drone, which clearly shows the drone following a tight rectangular trajectory. The second plot [Right] shows the variation in z coordinate with time. There is a maximum error of 10cm over the course of the trajectory. The average time of flight is 29 seconds.
+ 
+ 2. Swarm Flight  [1m X 2m]
+<p align = "center">
+<img src="docs/Needs to Be Updated" width="720">
+</p>
+
+The results were obtained when flying the two drones simultaneously -
+<table align = "center">
+  <tr>
+    <td>     X Coordinates Vs Time   </td>
+    <td>     Y Coordinates Vs Time   </td>
+  </tr>
+  <tr>
+    <td><img src="docs/X1vsX2.png" width=500></td>
+    <td><img src="docs/y1vsy2.png" width=500></td>
   </tr>
  </table>
  
-The first plot [Left] shows the cross track error, which shows how accurately the rectangle is being tracked. The oscillations are expected to some extent when flying tight trajectories indoors. The second plot [Right] shows the variation of error along z-axis which stabilises and indicates that the drone tries to maintain a fixed height while flying in the rectangular path.
+The first plot [Left] shows the variation in x coordinate with time, which shows the phase difference between the two drones while ensuring they track the correct trajectory. The second plot [Right] shows the variation in y coordinate with time. The two results together show both the drones effectively tracking rectangular trajectories individually while also following each others trajectory. The average time of flight in this case is around 76 seconds.
 
-### To view the entire video submission click on the following link : [Videos](https://onedrive.live.com/?authkey=%21APR%5FCHhG%5FCglJ0k&cid=2EF2901C605A77BE&id=2EF2901C605A77BE%21105&parId=root&o=OneUp)
+### To view the entire video submission click on the following link : [Videos](Update Links in Final Repositories)
 
