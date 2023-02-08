@@ -57,11 +57,10 @@ class autoPluto:
             self.readThread.start(): To start the reading thread.
         """
         signal.signal(signal.SIGINT, self.handler)
+        self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
         self.config.read('task2/controls/droneData.ini')  
-        self.droneNo = "Drone " + str(self.config.getint("Drone Number","dronenumber"))
-        self.comms = COMMS()
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
@@ -80,6 +79,8 @@ class autoPluto:
         self.outOfBound = 0
         self.start_traversal = 0
         self.end_traversal = 0
+        droneNumber = self.config.getint("Drone Number","droneNumber")
+        self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
         self.horizon  = self.config.getint("Horizon","moving_horizon")
@@ -102,6 +103,7 @@ class autoPluto:
         self.carrot_res['x'] = float(self.config.get("Carrot","res_x"))
         self.carrot_res['y'] = float(self.config.get("Carrot","res_y"))
         self.carrot_res['z'] = float(self.config.get("Carrot","res_z"))
+        self.state_filter_thresh = float(self.config.get("State","thresh"))
 
     
     def set_carrot_wp(self,target,cur,res):
@@ -170,7 +172,7 @@ class autoPluto:
                 inputVal = input("Enter 's' to start: ")
                 if inputVal=='s':
                     first = False
-                    # self.comms.arm()
+                    self.comms.arm()
                     self.start_traversal = time.time()
                 else:
                     continue
@@ -255,6 +257,8 @@ class autoPluto:
                 if self.currentState is  None:
                     self.currentState = list(sensorData[1][:2]) + [sensorData[2]]
                 else:
+                    if (abs(sensorData[1][0] - self.currentState[0]) > self.state_filter_thresh) or (abs(sensorData[1][1] - self.currentState[1]) > self.state_filter_thresh) or (abs(sensorData[2] - self.currentState[2]) > self.state_filter_thresh):
+                        return
                     self.currentState[:3] = list(sensorData[1][:2]) + [sensorData[2]]
                     
         self.imuLock.acquire()
