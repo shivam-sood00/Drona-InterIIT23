@@ -103,6 +103,7 @@ class autoPluto:
         self.carrot_res['x'] = float(self.config.get("Carrot","res_x"))
         self.carrot_res['y'] = float(self.config.get("Carrot","res_y"))
         self.carrot_res['z'] = float(self.config.get("Carrot","res_z"))
+        self.state_filter_thresh = float(self.config.get("State","thresh"))
 
     
     def set_carrot_wp(self,target,cur,res):
@@ -256,6 +257,8 @@ class autoPluto:
                 if self.currentState is  None:
                     self.currentState = list(sensorData[1][:2]) + [sensorData[2]]
                 else:
+                    if (abs(sensorData[1][0] - self.currentState[0]) > self.state_filter_thresh) or (abs(sensorData[1][1] - self.currentState[1]) > self.state_filter_thresh) or (abs(sensorData[2] - self.currentState[2]) > self.state_filter_thresh):
+                        return
                     self.currentState[:3] = list(sensorData[1][:2]) + [sensorData[2]]
                     
         self.imuLock.acquire()
@@ -277,6 +280,7 @@ class autoPluto:
         
         
         if self.currentState is not None:
+
             
             # Apply Moving Average on sensor data x y
             self.data_fr_ma[:,0:self.horizon-1] = self.data_fr_ma[:,1:self.horizon]

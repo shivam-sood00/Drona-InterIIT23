@@ -130,7 +130,7 @@ class VisionPipeline():
         point[2] = -point[2]
         point[:3] = point[:3] + np.array(self.camera_extrinsic['realsense_origin'])
         point[:3] = np.linalg.inv(self.rpy_correction) @ np.array([point[0], point[1], point[2]])
-        point_2d = rs.rs2_project_point_to_pixel(self._intrisics,[point[0],point[1],point[2]])
+        point_2d = rs.rs2_project_point_to_pixel(self.color_intrinsics,[point[0],point[1],point[2]])
         return point_2d
     
     def axisplot(self):
@@ -402,6 +402,7 @@ class VisionPipeline():
                         else:
                             
                             if self.DEBUG:
+                                self.show_frame(frame,rgb_frame)
                                 print("NO TRACKING: ", new_area, new_center)
                                 print("LAST: ", last_area, last_center)
 
@@ -529,12 +530,12 @@ class VisionPipeline():
             c = self.current_midpoint[1] - m * (self.current_midpoint[0])
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
             if abs(m) > 1000:
-                cv2.line(frame, (int(0), int(self.current_midpoint[1])), (int(self.rgb_res[1]), int(self.current_midpoint[1])), (255, 0, 0), 3)    
+                cv2.line(frame, (int(0), int(self.current_midpoint[1])), (int(self.rgb_res[1]), int(self.current_midpoint[1])), (255, 0, 0), 1)    
             else:
-                cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+                cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 1)
         
-        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),3)
-        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),3)
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_x).astype(int), (0,0,255),1)
+        cv2.line(frame,np.array(self.calib_aruco_mid).astype(int),np.array(self.calib_aruco_y).astype(int),(0,255,0),1)
        
 
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
@@ -545,14 +546,14 @@ class VisionPipeline():
 
         if self.current_waypoint is not None:
             cv2.putText(frame, f"Goal (m): [{round(self.current_waypoint[0]/100.0, 2)}, {round(self.current_waypoint[1]/100.0, 2)}, {round(self.current_waypoint[2]/100.0, 2)}]", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-            cv2.circle(frame,np.array(self.point_to_pixel(self.current_waypoint / 100.0)).astype(int), 10, (0, 0, 0), -1)
+            cv2.circle(frame,np.array(self.point_to_pixel(self.current_waypoint / 100.0)).astype(int), 20, (0, 0, 0), -1)
         
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         cv2.imshow(window_name, frame)
 
         # cv2.namedWindow("RGB Image", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
-        # cv2.imshow("RGB Image", rgb_frame)
+        # cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
+        # # cv2.imshow("RGB Image", rgb_frame)
         key = cv2.waitKey(1)
 
 
@@ -869,10 +870,10 @@ class VisionPipeline():
             drone_image = 10*np.asarray(self.depth_frame_full.get_data())
             # print(drone_image)
 
-            for (x,y) in comp_points[largest_component_id]:
-                drone_image[y][x] = 100000
-            cv2.circle(drone_image, (x_mean, y_mean), 7, 0, -1)
-            cv2.imshow("drone_segmented", drone_image)
+            # for (x,y) in comp_points[largest_component_id]:
+            #     drone_image[y][x] = 100000
+            # cv2.circle(drone_image, (x_mean, y_mean), 7, 0, -1)
+            # cv2.imshow("drone_segmented", drone_image)
             cv2.waitKey(1)
         # for tt in range(-3,4):
         #     for ttt in range(-3,4):
