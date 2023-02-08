@@ -25,6 +25,7 @@ with open(join(folder_name,"DroneData.ini"), 'w') as configfile:
 
 shutil.copy2('debug.txt',folder_name)
 
+shutil.copy2('debug.csv',folder_name)
 
 
 df = pd.read_csv("debug.csv")

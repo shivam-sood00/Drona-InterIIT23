@@ -57,10 +57,11 @@ class autoPluto:
             self.readThread.start(): To start the reading thread.
         """
         signal.signal(signal.SIGINT, self.handler)
-        self.comms = COMMS()
         self.debug = debug      
         self.config = ConfigParser()
-        self.config.read('task2/controls/droneData_carrot.ini')  
+        self.config.read('task2/controls/droneData.ini')  
+        self.droneNo = "Drone " + str(self.config.getint("Drone Number","dronenumber"))
+        self.comms = COMMS()
         self.runLoopWaitTime = 0.04
         self.IMUQueue = []
         self.CamQueue = []
@@ -79,8 +80,6 @@ class autoPluto:
         self.outOfBound = 0
         self.start_traversal = 0
         self.end_traversal = 0
-        droneNumber = self.config.getint("Drone Number","droneNumber")
-        self.droneNo = self.config.sections()[droneNumber]
         self.pid = PID(config=self.config,droneNo=self.droneNo)
         ##########
         self.horizon  = self.config.getint("Horizon","moving_horizon")
@@ -171,7 +170,7 @@ class autoPluto:
                 inputVal = input("Enter 's' to start: ")
                 if inputVal=='s':
                     first = False
-                    self.comms.arm()
+                    # self.comms.arm()
                     self.start_traversal = time.time()
                 else:
                     continue
