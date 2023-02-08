@@ -18,7 +18,8 @@ class autoPluto:
         
         self.comms.paramsSet["trimRoll"] = self.config.getint(self.droneNo,"trimRoll")
         self.comms.paramsSet["trimPitch"] = self.config.getint(self.droneNo,"trimPitch")
-        
+
+        self.state_filter_thresh = float(self.config.get("State","thresh"))
         self.carrot_res = {}
         self.carrot_res['x'] = float(self.config.get("Carrot","res_x"))
         self.carrot_res['y'] = float(self.config.get("Carrot","res_y"))
@@ -35,6 +36,10 @@ class autoPluto:
         # print(xyz)
         if xyz is None:
             return
+        if self.currentState['x'] is not None:
+            if (abs(xyz[0] - self.currentState['x']) > self.state_filter_thresh) or (abs(xyz[1] - self.currentState['y']) > self.state_filter_thresh) or (abs(xyz[2] - self.currentState['z']) > self.state_filter_thresh):
+                return
+        
         self.currentState['x'] = xyz[0]
         self.currentState['y'] = xyz[1]
         self.currentState['z'] = xyz[2]

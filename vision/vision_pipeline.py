@@ -36,7 +36,7 @@ class VisionPipeline():
                  marker_type=aruco.DICT_4X4_50,
                  required_marker_id=1,
                  debug=0,
-                 padding=50,
+                 padding=0,
                  config_file="./vision/config.yaml",
                  fps_moving_window_size=10,
                  debug_calib=False) -> None:
@@ -87,6 +87,12 @@ class VisionPipeline():
         self.calib_yaw_at_start = self.camera_extrinsic['calibrate_yaw']
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
         self.color_depth_extrinsic = self.camera_extrinsic['camera_depth_translation']
+
+        self.point1_2d = None
+        self.point2_2d = None
+        self.point3_2d = None
+        self.point4_2d = None
+
         self.cam_init()
         
         self.init_intrinsics()
@@ -119,6 +125,39 @@ class VisionPipeline():
         if debug or True:
             self.axisplot_marker1()
             self.axisplot_marker2()
+        
+
+        self.draw_waypoints()
+    
+
+    def draw_waypoints(self):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+
+            if not depth_frame or not color_frame:
+                continue
+            
+            color_img = self.to_image(color_frame)
+            mid_point = (int(self.rgb_res[0] / 2.0 + 0.5), int(self.rgb_res[1] / 2.0 + 0.5))
+
+            z_ = depth_frame.get_distance(mid_point[0], mid_point[1])
+            point_from_rs = rs.rs2_deproject_pixel_to_point(self.color_intrinsics, [mid_point[1], mid_point[0]], z_)
+            point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
+
+            point_from_rs[0] = -point_from_rs[0]
+            point_from_rs[2] = -point_from_rs[2]
+
+            self.point1_2d = self.point_to_pixel([point_from_rs[0] - 1.0, point_from_rs[1] - 0.5, point_from_rs[2]])
+            self.point2_2d = self.point_to_pixel([point_from_rs[0] - 1.0, point_from_rs[1] + 0.5, point_from_rs[2]])
+            self.point3_2d = self.point_to_pixel([point_from_rs[0] + 1.0, point_from_rs[1] + 0.5, point_from_rs[2]])
+            self.point4_2d = self.point_to_pixel([point_from_rs[0] + 1.0, point_from_rs[1] - 0.5, point_from_rs[2]])
+            break
+
+        pass
 
 
 
@@ -679,6 +718,12 @@ class VisionPipeline():
         cv2.line(frame,np.array(self.calib_aruco_mid1).astype(int),np.array(self.calib_aruco_x1).astype(int), (0,0,255),1)
         cv2.line(frame,np.array(self.calib_aruco_mid1).astype(int),np.array(self.calib_aruco_y1).astype(int),(0,255,0),1)
         
+
+        if self.point1_2d is not None:
+            cv2.circle(frame, np.array(self.point1_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point2_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point3_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point4_2d).astype(int), 10, (0, 0, 255), -1)
         
 
         if not(self.avg_fps is None):
@@ -745,7 +790,7 @@ class VisionPipeline():
             )
 
         if self.DEBUG and zer:
-            print("[RAW ARUCO] (meters)--> X:", tVec[0, 0, 0] / 100.0, ", Y:", tVec[0, 0, 1] / 100.0, "Z:", tVec[0, 0, 2] / 100.0)
+            pass
             
         if self.camera_config['wandb']['use_wandb']:
             wandb.log({
@@ -1042,16 +1087,13 @@ class VisionPipeline():
                 # print("component_size "+ str(component_size))
                 comp_points.append([])
                 # print("dfs")
-                print("X<Y "+str(x)+" "+str(y))
                 coordinates.append(self.get_components(x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y, comp_points, debug=True))
                 counter+=1
 
         # print("counter "+str(counter))
         if counter==0:
             if(self.DEBUG):
-                cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
-                cv2.imshow("drone_segmented", drone_image)
-                cv2.waitKey(1)
+                pass
             return None
         largest_component_id = 0
         for i in range(counter):
@@ -1068,13 +1110,9 @@ class VisionPipeline():
 
         if self.DEBUG:
             # print(drone_image)
-
+            pass
             # for (x,y) in comp_points[largest_component_id]:
             #     drone_image[y][x] = 100000
-            cv2.circle(drone_image, (x_mean, y_mean), 7, 0, -1)
-            cv2.namedWindow("drone_segmented", cv2.WINDOW_NORMAL)
-            cv2.imshow("drone_segmented", drone_image)
-            cv2.waitKey(1)
         # for tt in range(-3,4):
         #     for ttt in range(-3,4):
         #         drone_image[x_mean+tt][y_mean+ttt]=100000
@@ -1177,7 +1215,6 @@ class VisionPipeline():
         if aruco_pose is not None:
             return aruco_pose
         elif depth_pose is not None and abs(depth_pose[0])>1e-6:
-            print("depth_pose: " + str(depth_pose))
             return depth_pose
         else:
             return []
@@ -1217,13 +1254,12 @@ class VisionPipeline():
 
         if self.DEBUG and zer:
             if not(self.avg_fps is None):
-                print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
+                pass
             
 
         color_img = self.to_image(self.color_frame)
         startTime = time.time()
         marker_corners_all = self.detect_marker(color_img)
-        print("time in detecting markers: ",time.time()-startTime)
         # print("marker corners all",marker_corners_all)0
         startTime =time.time()
         for (key,marker_corners) in marker_corners_all.items():
@@ -1253,7 +1289,6 @@ class VisionPipeline():
             else:
                 self.counter[key] = 0
                 self.estimated_pose_all[key] = self.pose_estimation(key, use_cam=True, use_depth=False, marker_corners=marker_corners)
-            print(f"{key} time: ",time.time()-startTime)
             startTime = time.time()
                 
         return self.estimated_pose_all
