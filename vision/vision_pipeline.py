@@ -812,7 +812,7 @@ class VisionPipeline():
         if isnan(pose_pixel[0]):
             # self.previous_pose = [0.0,0.0,10.0]
             return None
-        print("pose_pixel "+str(pose_pixel))
+        # print("pose_pixel "+str(pose_pixel))
         start_x = max(0,int(pose_pixel[0])-self.DEPTH_SEARCH_REGION)
         end_x = min(int(pose_pixel[0])+self.DEPTH_SEARCH_REGION, int(self.depth_res[1]))
         start_y = max(0,int(pose_pixel[1])-self.DEPTH_SEARCH_REGION)
