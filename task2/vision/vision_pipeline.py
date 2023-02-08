@@ -459,6 +459,7 @@ class VisionPipeline():
                         self.show_frame(frame, rgb_frame)
                         print("NO marker detected")
                     return None
+                
                     
         else:
             if self.DEBUG:
@@ -476,6 +477,9 @@ class VisionPipeline():
 
                     self.last_detected_marker = marker_corners[i].copy()
                     return marker_corners[i].astype(np.int32)
+
+        if self.DEBUG:
+            self.show_frame(frame, rgb_frame)
 
         return None
 

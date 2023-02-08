@@ -52,7 +52,7 @@ camera_params:
 
 
 tracking:
-  enable: False
+  enable: True
   area_th: 160
   centroid_th: 12
 
