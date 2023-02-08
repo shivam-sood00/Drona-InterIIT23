@@ -89,6 +89,11 @@ class VisionPipeline():
         self.imu_calib_data = self.camera_extrinsic['imu_correction']
         self.color_depth_extrinsic = self.camera_extrinsic['camera_depth_translation']
 
+        self.point1_2d = None
+        self.point2_2d = None
+        self.point3_2d = None
+        self.point4_2d = None
+
         self.cam_init()
 
         self.get_frames()
@@ -119,6 +124,36 @@ class VisionPipeline():
         self.rpy_correction = self.yaw_correction @ self.rp_correction 
         if debug:
             self.axisplot()
+
+        self.draw_waypoints()
+    
+
+    def draw_waypoints(self):
+        while True:
+            aligned_frames = self.get_frames()    
+            color_frame = self.extract_rgb(aligned_frames)
+            depth_frame = self.extract_depth(aligned_frames)
+
+            if not depth_frame or not color_frame:
+                continue
+            
+            mid_point = (int(self.rgb_res[0] / 2.0 + 0.5), int(self.rgb_res[1] / 2.0 + 0.5))
+
+            z_ = depth_frame.get_distance(mid_point[0], mid_point[1])
+            point_from_rs = rs.rs2_deproject_pixel_to_point(self.color_intrinsics, [mid_point[1], mid_point[0]], z_)
+            point_from_rs[:3] = self.rpy_correction @ np.array([point_from_rs[0], point_from_rs[1], point_from_rs[2]])
+            point_from_rs[:3] = point_from_rs[:3] - np.array(self.camera_extrinsic['realsense_origin'])
+
+
+            point_from_rs[0] = -point_from_rs[0]
+            point_from_rs[2] = -point_from_rs[2]
+
+            self.point1_2d = self.point_to_pixel([point_from_rs[0] - 1.0, point_from_rs[1] - 0.5, point_from_rs[2]])
+            self.point2_2d = self.point_to_pixel([point_from_rs[0] - 1.0, point_from_rs[1] + 0.5, point_from_rs[2]])
+            self.point3_2d = self.point_to_pixel([point_from_rs[0] + 1.0, point_from_rs[1] + 0.5, point_from_rs[2]])
+            self.point4_2d = self.point_to_pixel([point_from_rs[0] + 1.0, point_from_rs[1] - 0.5, point_from_rs[2]])
+            break
+
 
 
     def wandb_init(self):
@@ -539,6 +574,13 @@ class VisionPipeline():
        
 
             # cv2.line(frame, (int(0), int(c)), (int(self.rgb_res[1]), int(m * self.rgb_res[1] + c)), (255, 0, 0), 3)
+
+        if self.point1_2d is not None:
+            cv2.circle(frame, np.array(self.point1_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point2_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point3_2d).astype(int), 10, (0, 0, 255), -1)
+            cv2.circle(frame, np.array(self.point4_2d).astype(int), 10, (0, 0, 255), -1)
+        
 
         if not(self.avg_fps is None):
             cv2.putText(frame, f"Average FPS: {round(self.avg_fps,2)}", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
