@@ -190,6 +190,7 @@ class PID():
 	def set_target_pose(self,point,axis):
 		"""
         Updating the target position using the carrot approach.
+        Carrot Approach: The target state of the drone is at a fixed distance from the current state of the drone, it keep updating at each instant.
         """
 		self.target_pose = np.array(point).reshape(3,1)                                          
 		self.cur_steady_state = self.move[axis]

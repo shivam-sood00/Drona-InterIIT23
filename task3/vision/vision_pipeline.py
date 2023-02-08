@@ -120,13 +120,31 @@ class VisionPipeline():
             self.axisplot_marker1()
             self.axisplot_marker2()
 
-
-
     def wandb_init(self):
+        """
+        WandB is a central dashboard to keep track of your hyperparameters, system metrics, and predictions so we can 
+        compare models, graphs etc live.
+
+        Parameter:
+            None         
+        
+        Returns:
+            None
+
+        """
         wandb.init(project="inter-iit", config=self.camera_config)
         pass        
 
     def init_intrinsics(self):
+        """
+        Setup the intrinsics parameters of the camera.
+        
+        Parameter:
+            None         
+        
+        Returns:
+            None
+        """
 
         self.get_frames()
 
@@ -147,6 +165,15 @@ class VisionPipeline():
         self.depth_intrinsics = self.depth_frame_full.profile.as_video_stream_profile().intrinsics
 
     def point_to_pixel(self,point):
+        """
+        Converts coordinates in camera frame to image frame and returns the projected point.
+        
+        Parameter:
+            point: x,y,z position from camera frame        
+        
+        Returns:
+            point_2d:  x,y pixel location in image frame
+        """
         point[0] = -point[0]
         point[2] = -point[2]
         point[:3] = point[:3] + np.array(self.camera_extrinsic['realsense_origin'])
@@ -154,7 +181,16 @@ class VisionPipeline():
         point_2d = rs.rs2_project_point_to_pixel(self.rgb_intrinsics,[point[0],point[1],point[2]])
         return point_2d
     
-    def axisplot_marker1(self):
+    def axisplot(self):
+        """
+        Plots the axis determined by the initial pose of aruco.
+        
+        Parameter:
+            None         
+        
+        Returns:
+            None
+        """
         while True:
             aligned_frames = self.get_frames()    
             color_frame = self.extract_rgb(aligned_frames)
@@ -198,6 +234,15 @@ class VisionPipeline():
                 break
 
     def axisplot_marker2(self):
+        """
+        Plots the axis determined by the initial pose of aruco.
+        
+        Parameter:
+            None         
+        
+        Returns:
+            None
+        """
         while True:
             aligned_frames = self.get_frames()    
             color_frame = self.extract_rgb(aligned_frames)
@@ -240,10 +285,9 @@ class VisionPipeline():
                 self.calib_aruco_y1 = rs.rs2_project_point_to_pixel(_intrisics,[point_from_rs_y[0],point_from_rs_y[1],point_from_rs_y[2]])
                 break
 
-
     def init_realsense(self):
         """
-        Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.
+        Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure.
         
         Parameter:
             None         
@@ -289,9 +333,7 @@ class VisionPipeline():
             self.align_frames = rs.align(rs.stream.depth)
         else:
             raise NotImplementedError(f"Align to {self.align_to} not implemented!")
-
-
-    
+ 
     def init_aruco_detector(self):
         """
         Initializes camera Intrinsic and Extrinsic Parameters and generates Aruco detector parameters.
@@ -312,7 +354,6 @@ class VisionPipeline():
 
         self.param_markers = aruco.DetectorParameters_create()
         
-
     def stop(self):
         """
         Stops the pipeline.
@@ -324,7 +365,6 @@ class VisionPipeline():
             None
         """
         self.pipeline.stop()
-
 
     def get_frames(self):
         """
@@ -341,8 +381,7 @@ class VisionPipeline():
         self.aligned_frames = self.align_frames.process(self.frames)
 
         return self.aligned_frames
-
-    
+ 
     def extract_depth(self, frame):
         """
         Returns depth frame from Realsense Depth Camera.
@@ -355,7 +394,6 @@ class VisionPipeline():
         """
         return frame.get_depth_frame()
 
-    
     def extract_rgb(self, frame):
         """
         Extracts RGB frame from Realsense RGB Camera.
@@ -368,7 +406,6 @@ class VisionPipeline():
         """
         return frame.get_color_frame()
 
-
     def to_image(self, frame):
         """
         Converts pyrealsense2.frame to np.array.
@@ -380,7 +417,6 @@ class VisionPipeline():
             np.asarray(frame.get_data())
         """
         return np.asarray(frame.get_data())
-    
     
     def find_area(self, corners):
         """
@@ -398,6 +434,16 @@ class VisionPipeline():
         return area
     
     def marker_tracking(self,rejects,id):
+        """
+        Function to detect corners of aruco via tracking ( using rejected corners )
+        
+        Parameters:
+            rejects: list of marker candidates, i.e. shapes that were found and considered but did not contain a valid marker.
+            id: id of required marker 
+        
+        Returns:
+            markerCornerEstimates: coordinates of the detected Aruco corners
+        """
         last_marker = self.markerCornerEstimates[id]
         if last_marker is None:
             return None
@@ -414,7 +460,13 @@ class VisionPipeline():
 
     def detect_marker(self,frame):
         """
-        Doc Strings
+        Detect corners of Aruco Markers which is used to estimate x,y coordinate through tracking
+        
+        Parameters:
+            frame: RGB image frame
+        
+        Returns:
+            markerCornerEstimates: coordinates of the detected Aruco corners
         """
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
@@ -581,8 +633,6 @@ class VisionPipeline():
                     self.markerCornerEstimates[id_] = None
         return self.markerCornerEstimates
 
-
-
     def plot_markers(self, frame, marker_corners, marker_ids):
         """
         Draws lines around the detected frames.
@@ -626,7 +676,6 @@ class VisionPipeline():
 
         return frame
 
-
     def update_waypoint(self, waypoint, id_):
         """
         Updates the waypoint that is plotted on the image frame to be displayed.
@@ -635,7 +684,6 @@ class VisionPipeline():
             waypoint: this is the new waypoint to be updated         
         """
         self.current_waypoint[id_] = np.array(waypoint).flatten() * 100.0
-
 
     def show_frame(self, frame, rgb_frame, window_name="Frame"):
         """
@@ -696,15 +744,22 @@ class VisionPipeline():
         # cv2.imshow("RGB Image", rgb_frame)
         key = cv2.waitKey(1)
 
-
     def process_yaw(self, yaw):
+        """
+        Processes Yaw of the drone at the current state. This is a minor fix when sometimes yaw is wrongly estimated.
+        
+        Parameter:
+            yaw: Initial yaw obtained from IMU readings       
+        
+        Returns:
+            yaw: Final yaw calculated by the function
+        """
         yaw += math.pi
         yaw %= math.pi / 2.0
         if yaw > math.pi / 4.0:
             yaw -= math.pi / 2.0
         return yaw
     
-
     def estimate_uncalib_pose(self, marker_corners):
         """
         Returns attitude of Aruco to estimate initial yaw (used by calibrate_yaw() method).
@@ -725,8 +780,6 @@ class VisionPipeline():
 
         uncalib_rot = Rotation.from_matrix(aruco_rot).as_euler('xyz')
         return self.process_yaw(uncalib_rot[2])
-
-
 
     def estimate_pose(self, marker_corners, frame_of_ref="camera"):  
         """
@@ -760,7 +813,6 @@ class VisionPipeline():
 
         return output
 
-
     def make_tf_matrix(self, rvec, tvec):
         """
         Creates the transormation matrix using the rotation and translational vectors.
@@ -778,7 +830,6 @@ class VisionPipeline():
         tf[:3, 3] = tvec
         return tf
 
-    
     def tf_to_outformat(self, tf):
         """
         Converts the transformation matrix to a list.
@@ -793,7 +844,6 @@ class VisionPipeline():
         out_vec[3:, 0] = Rotation.from_matrix(tf[:3, :3]).as_euler('xyz')
         out_vec[:3, 0] = tf[:3, 3]
         return out_vec
-
 
     def outformat_to_tf(self, input):
         """
@@ -810,12 +860,11 @@ class VisionPipeline():
         tf[:3, 3] = input[:3, 0]
         return tf
 
-
     def depth_from_marker(self, depth_frame, marker_corners, kernel_size=1):
         """
         Finds depth from the estimated pose obtained from the ArUco tag.
         Parameters:
-            depth_frame:
+            depth_frame: depth frame
             marker_corners: contains the list of aruco marker corners
             kernel_size: contains the size of the kernel
         Returns:
@@ -853,6 +902,15 @@ class VisionPipeline():
         self.init_aruco_detector()
 
     def calib_drone1(self):
+        """
+        Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+        
+        Parameters:
+            None            
+        
+        Returns:
+            None
+        """
         max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
         yaw_error_threshold = self.camera_config["yaw_error_threshold"]
         
@@ -898,6 +956,15 @@ class VisionPipeline():
         print(f"YAW Value from Calibration: {self.cam_rvecs}")
 
     def calib_drone2(self):
+        """
+        Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
+        
+        Parameters:
+            None            
+        
+        Returns:
+            None
+        """
         while True:
             num_calib_frames = 0
             max_iters = self.camera_config["camera"][self.camera_id]["extrinsics"]["max_iters"]
@@ -944,8 +1011,7 @@ class VisionPipeline():
             break
             if np.linalg.norm(self.cam_rvecs[self.required_marker_id[0]] - self.cam_rvecs[self.required_marker_id[1]])<yaw_error_threshold:
                 break
-
-    
+ 
     def calibrate_yaw(self):
         """
         Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.
@@ -961,13 +1027,41 @@ class VisionPipeline():
         self.calib_drone2()
         
         self.cam_rvec = self.cam_rvecs[self.required_marker_id[0]]        
-            
-        
+                
     def get_distance(self,x,y):
+        """
+        Gets the depth from depth camera corresponding to x,y coordinate in image frame.
+        
+        Parameter:
+            x: x coordinate of pixel
+            y: y coordinate of pixel        
+        
+        Returns:
+            depth corresponding x,y pixel
+            
+        """
         # print(self.depth_full_distances)
         return self.depth_full_distances[y][x]
 
     def get_components(self, x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y, comp_points, debug=False):
+        """
+        Using Connected Components Algorithm to find the cluster of connected points in depth frame (points together with almost same depth)
+        to detect drone via depth frame.
+        
+        Parameter:
+            x: x pixel coordinate where connected components algorithm is applied
+            y: y pixel coordinate where connected components algorithm is applied
+            component_id: cluster ID
+            component_size: Size of the cluster
+            counter: cluster ID
+            start_x: starting x pixel coordinate of ROI
+            start_y: starting y pixel coordinate of ROI
+            end_x: ending x pixel coordinate of ROI
+            end_y: ending y pixel coordinate of ROI        
+        
+        Returns:
+            centroid of the cluster
+        """
 
         (x_mean,y_mean) = (0,0)
         qu = Queue()
@@ -999,8 +1093,17 @@ class VisionPipeline():
 
         return (x_mean//component_size[counter], y_mean//component_size[counter])
 
-    def estimate_drone_center_from_depth(self, key):
-
+    def estimate_drone_center_from_depth(self):
+        """
+        Gets the center of drone which is estimated from the depth camera. This is required as it provides extra FOV which enables us to track it,
+        even after it goes out of field of vision of RGB Camera.
+        
+        Parameter:
+            None         
+        
+        Returns:
+            x,y pixel coordinate of center of aruco
+        """
         self.DEPTH_SEARCH_REGION = 50
         pose_pixel = rs.rs2_project_point_to_pixel(self.depth_intrinsics, self.previous_pose[key])
         if math.isnan(pose_pixel[0]):
@@ -1081,8 +1184,20 @@ class VisionPipeline():
         # print("-------------------------------------------"+str((x_mean, y_mean))+" ++++++ "+str(self.depth_frame_full.get_distance(x_mean,y_mean)))
         return (x_mean, y_mean)
 
-    def position_from_pixel(self, intrinsics_, pixel_x, pixel_y, depth, key, update_previous_pose=True):
+    def position_from_pixel(self, intrinsics_, pixel_x, pixel_y, depth, update_previous_pose=True):
+        """
+        Gets x,y camera frame coordinate from realsense camera.
         
+        Parameter:
+            intrinsics_: Intrinsics parameters of the camera
+            pixel_x: x coordinate of pixel, whose position needs to be estimated
+            pixel_y: y coordinate of pixel, whose position needs to be estimated
+            depth: Depth at pixel_x, pixel_y      
+        
+        Returns:
+            Position of Drone along with depth
+            
+        """
         point_from_rs = rs.rs2_deproject_pixel_to_point(intrinsics_, [pixel_x, pixel_y], depth)
         
         if update_previous_pose and abs(point_from_rs[2]) > 1e-6:
@@ -1139,8 +1254,16 @@ class VisionPipeline():
 
         return [point_from_rs[0], point_from_rs[1], point_from_rs[2]]
 
-
-    def pose_estimation_from_aruco(self, key, marker_corners):
+    def pose_estimation_from_aruco(self, marker_corners):
+        """
+        Estimates the x,y position of Aruco Markers in camera frame whose corners are detected via RGB Camera.
+        
+        Parameter:
+            marker_corners: Pixel coordinates of corners of detected aruco markers        
+        
+        Returns:
+            aruco_estimate: x,y camera frame coordinate of aruco Marker
+        """
        
         z_from_realsense = self.depth_from_marker(self.depth_frame_aligned, marker_corners, kernel_size=3)
         mid_point = np.sum(marker_corners[0], 0) / 4.0
@@ -1150,8 +1273,16 @@ class VisionPipeline():
         print("aruco estimate: "+str(key)+" "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
         return self.position_from_pixel(self.color_intrinsics, mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]), key)
         
-
     def pose_estimation_from_depth_camera(self, key):
+        """
+        Estimates the x,y position of drone in camera frame using depth camera intrinsics.
+        
+        Parameter:
+            None       
+        
+        Returns:
+            depth_estimate_: x,y camera frame coordinate (claculated using region with least depth) 
+        """
         # return None
         drone_center = self.estimate_drone_center_from_depth(key)
 
@@ -1162,7 +1293,19 @@ class VisionPipeline():
         return self.position_from_pixel(self.depth_intrinsics, drone_center[0], drone_center[1], self.depth_frame_full.get_distance(drone_center[0], drone_center[1]), key)
 
     def pose_estimation(self, key, use_cam=True, use_depth=True, marker_corners=None):
+        """
+        Estimates position using the Depth Camera and Aruco Marker. Returns position calculated using Depth Camera when Aruco Data is 
+        not available ( happens when Aruco Marker goes out of FOV of RGB Camera ).
         
+        Parameter:
+            use_cam: Whether to perform position estimation using Aruco. Default is True.
+            use_depth: Whether to perform position estimation using Depth Camera. Default is True.
+            marker_corners: Location of corners of detected aruco.        
+        
+        Returns:
+            depth_pose: Return pose estimated from depth if Depth Cam Estimation enabled and Aruco is not detected
+            aruco_pose: Return pose estimated from Aruco
+        """
         aruco_pose = None
         depth_pose = None
         # print(">>>>>>>>>>>>>>"+str(self.depth_frame_full.get_distance(640,360)))
@@ -1182,7 +1325,8 @@ class VisionPipeline():
 
     def cam_process(self):
         """
-        Processes video frames to detect and locate Aruco markers, find depth value using the depth frame and then updating the camera data queue with the estimated readings.
+        Processes video frames to detect and locate Aruco markers, find depth value using the depth frame and then updating 
+        the camera data queue with the estimated readings.
         
         Parameters:
             cam_queue: a queue that is storing camera data where the latest reading is accessed by its last element            

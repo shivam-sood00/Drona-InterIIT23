@@ -15,13 +15,13 @@ class autoPluto:
         state estimation modules and it is an easy-to-use class.
 
         Attributes:
-            DEBUG: flag to enable prints in code for debugging. Default is False.
+            debug: flag to enable prints in code for debugging. Default is False.
     """
     def __init__(self,debug = False):
         """
             self.comms: Object of the class COMMS that handles all communication with the pluto drone.
             self.debug: To enable debugging.
-            self.config: Object of ConfigParser used to parse data from configuration files (in this case, from droneData.ini).   
+            self.config: Object of ConfigParser used to parse data from configuration files (in this case, from droneData_carrot.ini).   
             
             self.runLoopWaitTime: Variable to control the time period of the run loop that updates the states and take action based on PID output.
             self.IMUQueue: Stores all the incoming IMU data in a queue and is updated by COMMS.read method.
@@ -35,7 +35,7 @@ class autoPluto:
             self.trajectory: Depending on the mode, stores the data of self.rectangle or self.hover_z.
 
             self.outOfBound: Flag to trigger, if drone goes out of frame, and hence take necessary action.
-            self.droneNo: Stores the drone no, assigned in droneData.ini.
+            self.droneNo: Stores the drone no, assigned in droneData_carrot.ini.
             self.pid: Creates object of PID Controller to control the drone.
             
             self.horizon: Horizon to consider while performing moving average filter.
@@ -106,12 +106,34 @@ class autoPluto:
 
     
     def set_carrot_wp(self,target,cur,res):
+        """
+        Updates the target waypoint according to carrot approach.
+        
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            res: fixed distance values for carrot approach
+            
+        Returns:
+           carrot_target: target waypoint for carrot approach
+        """
         if target > cur:
             return min(cur+res,target) 
         else:
             return max(cur-res,target)
 
     def set_carrot_wps(self,target,cur):
+        """
+        Set the waypoints through carrot approach.
+        Carrot Approach: The target state of the drone is at a fixed distance from the current state of the drone, it keep updating at each instant.
+
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            
+        Returns:
+           carrot_target: target waypoint at fixed distance from drone
+        """
         carrot_target = []
         for i,axes in enumerate(['x','y','z']):
             carrot_target.append(self.set_carrot_wp(target[i],cur[i],self.carrot_res[axes]))

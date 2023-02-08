@@ -4,7 +4,40 @@ import threading
 
 
 class autoPluto:
+    """
+        This is a class integrating communication and controls module and sending
+        the data to the drone using MSP Packets.It provides easy to use class to 
+        setup multiple drones by setting multiple objects of the class.
+
+        Attributes:
+            config: configuration parameters of a drone 
+            droneNo: user defined drone number
+    """
     def __init__(self,config,droneNo) :
+        """
+            self.currentState: Stores the current state of the drone, obtained after filtering.
+            self.action: Dictionary of the control inputs to be given to the drone.
+            self.config: Object of ConfigParser used to parse data from configuration files.   
+            self.droneNo: Stores the drone no, assigned in droneData_carrot.ini.
+           
+            self.comms: Object of the class COMMS that handles all communication with the pluto drone.
+            
+            self.pid: Creates object of PID Controller to control the drone.
+            
+            self.comms.paramsSet["trimRoll"]: Set the trim values for Roll.
+            self.comms.paramsSet["trimPitch"]: Set the trim values for Pitch.
+
+            self.carrot_res: Stores the fixed distance from carrot approach. The distances are defined in the self.carrot_res.ini file.
+            
+            self.imuLock: Two threads are using common variable to update and access the data, we lock the memory to prevent simulataneous reading and writing of the data in the shared variable.
+            self.commandLock: Two threads are using common variable to update and access the data, we lock the memory to prevent simulataneous reading and writing of the data in the shared variable.
+            
+            self.readThread: Creates a read thread to recieve and store data coming from the drone, such as IMU Data.
+            self.writeThread: Creates a write thread to send MSP commands to the drone.
+            
+            self.writeThread.start(): To start the writing thread.
+            self.readThread.start(): To start the reading thread.
+        """
         self.currentState = {"x":None,"y":None,"z":None}
         self.action =  {"Roll":1500,"Pitch":1500,"Yaw":1500,"Throttle":1500}
         self.config = config
@@ -32,6 +65,9 @@ class autoPluto:
         self.readThread.start()
     
     def updateState(self,xyz):
+        """
+        Parsing the Camera and IMU feed and updating the current state of the drone.
+        """
         print(xyz)
         if xyz is None:
             return
@@ -44,6 +80,10 @@ class autoPluto:
         """
     
     def updateAction(self):
+        """
+        Updating the control actions in terms of the calculated error by the PID and determining the values of
+        pitch, roll, throttle and yaw.
+        """ 
         curPose = []
         curPose.extend(self.currentState.values())
         self.ImuLock.acquire()
@@ -62,6 +102,11 @@ class autoPluto:
         self.action["Yaw"] = self.pid.set_yaw()
     
     def takeAction(self,exception = 0):
+        """
+        Sending the updated control actions using MSP Packets to the drone by setting the control parameters. In case of 
+        an undesired state of the drone, landing command is sent to it. For updating the states of the drone, we apply locking
+        between the threads, to read the states at one timestep.
+        """
         self.commandLock.acquire()
         if exception==0:
             # converting to integer as we can only send integral values via MSP Packets
@@ -75,6 +120,9 @@ class autoPluto:
         self.commandLock.release()
     
     def updateTarget(self,target,axis):
+        """
+        Update the Target Waypoints
+        """
         self.target = target
         self.axis = axis
         if axis=='z':
@@ -83,24 +131,55 @@ class autoPluto:
             self.ImuLock.release()
     
     def isReached(self):
+        """
+        Returns Boolean value after checking if the quadrotor has reached the target pose.
+        """
         return self.pid.isReached()
     
     def arm(self):
+        """
+        Function to arm the drone.
+        """
         self.comms.arm()
     
     def closeThreads(self):
+        """
+        Closes all the threads.
+        """
         self.comms.writeLoop = False
         self.comms.readLoop = False
         self.writeThread.join()
         self.readThread.join()
     
     def set_carrot_wp(self,target,cur,res):
+        """
+        Updates the target waypoint according to carrot approach.
+        
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            res: fixed distance values for carrot approach
+            
+        Returns:
+           carrot_target: target waypoint for carrot approach
+        """
         if target > cur:
             return min(cur+res,target) 
         else:
             return max(cur-res,target)
 
     def set_carrot_wps(self,target,cur):
+        """
+        Set the waypoints through carrot approach.
+        Carrot Approach: The target state of the drone is at a fixed distance from the current state of the drone, it keep updating at each instant.
+
+        Parameters:
+            target: target waypoint to go
+            cur: current position
+            
+        Returns:
+           carrot_target: target waypoint at fixed distance from drone
+        """
         carrot_target = []
         for i,axes in enumerate(['x','y','z']):
             carrot_target.append(self.set_carrot_wp(target[i],cur[axes],self.carrot_res[axes]))

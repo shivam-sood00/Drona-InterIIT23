@@ -8,11 +8,40 @@ import numpy as np
 
 class swarmPluto():
     """
-    
+    Class contains parameters and member functions for swarming of drones and completion of task 3 for both the drones. It 
+    creates an object of the autoPluto class, which initializes the communication and controller module. Apart from this, 
+    vision pipeline is initialized in this class.
+
+    Attributes:
+        debug: flag to enable prints in code for debugging. Default is False.
     """
     def __init__(self,debug=False) :
         """
+            self.debug: To enable debugging.
+            self.config: Object of ConfigParser used to parse data from configuration files (in this case, from droneData.ini).   
+            self.droneNo1: Stores drone number of first drone
+            self.droneNo2: Stores drone number of seconf drone
+            self.mode: Defined in the droneData.ini file, used to switch between rectangle mode and hover mode.
+
+            self.startTime: stores the start time of the process
+            self.endTime: stores the end time of the process
+            self.exception: flag variable stores exception created by each drone
+            self.done: flag variable, depicts if the process is complete
+            self.align: mentions if rectangular path is aligned
+            self.markerIdList: List of marker Ids placed on the 2 drones
+            
         
+            self.drone1: stores the first drone's configuration parameters
+            self.drone2: stores the second drone's configuration parameters
+
+            self.runLoopWaitTime: Variable to control the time period of the run loop that updates the states and take action based on PID output.
+            
+            self.rectangle: If rectangle mode enabled, generates waypoint in (x,y,z) of in a rectangular pathline, whose lengths, breadths and height are defined in droneData.ini.   
+            self.hover_z: If hover mode enabled, get the z coordinate setpoint from the droneData.ini.
+            self.trajectory: Depending on the mode, stores the data of self.rectangle or self.hover_z.
+
+            self.camera: Creates a vision pipeline object, to initialize RGB and depth camera and process the video frames to extract necessary data.
+            self.lastTime = time.time(): Stores the last time (used to calculate time elapsed).
         """
         import csv
         # open the file in the write mode
@@ -23,7 +52,7 @@ class swarmPluto():
         signal.signal(signal.SIGINT, self.handler)
         self.debug = debug
         self.config = ConfigParser()
-        self.config.read('task3/controls/droneData.ini') 
+        self.config.read('task3/controls/droneData_carrot.ini') 
         self.droneNo1 = "Drone " + str(self.config.getint("Drone Number","drone1"))
         self.droneNo2 = "Drone " + str(self.config.getint("Drone Number","drone2"))
         self.mode =  self.config.get("Mode","mode")
@@ -41,7 +70,7 @@ class swarmPluto():
         TODO: 
         1. Add Multi aruco detection based on the list sent
         
-        2. Caliberate Yaw Live
+        2. Calibrate Yaw Live
         """
         self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=self.markerIdList,debug=1,padding = 0)
         
@@ -53,19 +82,18 @@ class swarmPluto():
         
         self.runLoopWaitTime = 0.04
         self.done = False
-        
-        pass
     
     def arm(self):
         """
-        
+        Function to arm both the drones
         """
         self.drone1.arm()
         self.drone2.arm()
     
     def updateStates(self):
         """
-        To Do: rewrite after changes in cam_process()
+        Function to update states in both the drones.Parsing the Camera and IMU feed and updating 
+        the sensor data to determine the states of the drone for pose estimation.
         """
         xyz = self.camera.cam_process()
         print(xyz)
@@ -86,53 +114,53 @@ class swarmPluto():
     
     def takeActions(self):
         """
-        
+        Send the control actions to the two drones to move it to the desired state
         """
         self.drone1.takeAction(self.exception)
         self.drone2.takeAction(self.exception)
     
     def updateActions(self):
         """
-        
-        """
+        Updating the control actions in terms of the calculated error by the PID and determining the values of
+        pitch, roll, throttle and yaw.
+        """ 
         self.drone1.updateAction()
         self.drone2.updateAction()        
         
     def run(self):
+        """
+        Implements the complete pipeline on the two drones integrating the PID controller with pose estimation using
+        the vision pipeline.
+        """
         first = True
         i_target = 0
         dirOfMotion1 = 'z'
         lastUpdated = 2
         while(not self.done):
-            """
-            Update States
-            """
+            # Update States
             start_time_camera = time.time()
             self.updateStates()
             
             start_time_pid = time.time()
             if self.debug:
                 print(f"{start_time_pid-start_time_camera} s for camera")    
-            
-            """
-            Sanity checks:
-            1. State Must be detected
-            2. Yaw must be aligned 
-            """
+
+            # Sanity checks:
+            # 1. State Must be detected
+            # 2. Yaw must be aligned 
+
             if self.drone1.currentState['x'] is None or self.drone2.currentState['x'] is None:
                 continue
             
-            """
-            Make it live not in init
-            """
+            # Make it live not in init
             if np.linalg.norm(self.camera.cam_rvecs[self.markerIdList[0]] - self.camera.cam_rvecs[self.markerIdList[1]]) > 0.1:
                 continue
             
             if self.exception!=0:
                 self.takeActions()
-            """
-            Planning Trajectory
-            """
+            
+            # Planning Trajectory
+            
             if first:
                 if self.mode == "Rectangle":
                     if self.align == "y":
@@ -164,15 +192,15 @@ class swarmPluto():
             
             self.writer.writerow([self.drone1.currentState['x'],self.drone1.currentState['y'],self.drone1.currentState['z'],self.drone2.currentState['x'],self.drone2.currentState['y'],self.drone2.currentState['z']])
             self.updateActions()
-            """
-            Move this line somewhere else
-            """
+
+            # Move this line somewhere else
+
             self.camera.update_waypoint(self.drone1.pid.target_pose,self.markerIdList[0])
             self.camera.update_waypoint(self.drone2.pid.target_pose,self.markerIdList[1])
 
-            """
-            Check Conditions for trajectory waypoint update
-            """
+
+            # Check Conditions for trajectory waypoint update
+
             if self.drone1.isReached() and self.drone2.isReached():
                 if lastUpdated==2:
                     i_target+=1
@@ -206,14 +234,15 @@ class swarmPluto():
                     self.exception = -1
                     self.endTime = time.time()
                     print("time: ",self.endTime-self.startTime)
-            """
-            If both drones have completed trajectory then break and land
-            """
+
+            # If both drones have completed trajectory then break and land
+
             # if self.done:
             #     break
-            """
-            Update and Take Actions
-            """
+      
+            
+            # Update and Take Actions
+
             self.takeActions()
             
             loop_time = time.time() - start_time_camera
@@ -226,13 +255,16 @@ class swarmPluto():
             
             if loop_time < self.runLoopWaitTime:
                 time.sleep(self.runLoopWaitTime - loop_time)
-        """
-        Make both drones land
-        """
+
+        # Make both drones land
+
         self.takeActions()
         time.sleep(3)
     
     def handler(self, sigma, frame):
+        """
+        Handler function to land the drones and safely close the threads when the script is exited.
+        """
         msg = "Exit + Land"
         self.drone1.comms.paramsSet["currentCommand"] = 2
         self.drone2.comms.paramsSet["currentCommand"] = 2
