@@ -1,5 +1,5 @@
-from MSP_comms.plutoComms import COMMS
-from controls.pid_pluto import PID
+from task3.MSP_comms.plutoComms import COMMS
+from task3.controls.pid_pluto import PID
 import threading
 
 
