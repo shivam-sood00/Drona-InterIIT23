@@ -1,7 +1,0 @@
-kalman\_filter\_v2 module
-=========================
-
-.. automodule:: kalman_filter_v2
-    :members:
-    :undoc-members:
-    :show-inheritance:
