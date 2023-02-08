@@ -1,0 +1,22 @@
+Enter 's' to start: 178 - lastUpdated = 2 i_target = 0
+213 - lastUpdated = 1 i_target = 1
+178 - lastUpdated = 1 i_target = 1
+213 - lastUpdated = 2 i_target = 1
+178 - lastUpdated = 2 i_target = 1
+213 - lastUpdated = 1 i_target = 2
+178 - lastUpdated = 1 i_target = 2
+213 - lastUpdated = 2 i_target = 2
+178 - lastUpdated = 2 i_target = 2
+213 - lastUpdated = 1 i_target = 3
+178 - lastUpdated = 1 i_target = 3
+213 - lastUpdated = 2 i_target = 3
+178 - lastUpdated = 2 i_target = 3
+213 - lastUpdated = 1 i_target = 0
+178 - lastUpdated = 1 i_target = 0
+213 - lastUpdated = 0 i_target = 0
+178 - lastUpdated = 0 i_target = 0
+213 - lastUpdated = 0 i_target = 0
+landing due to exception:  -1
+landing due to exception:  -1
+total time taken:  100.8490800857544
+Complete + Land

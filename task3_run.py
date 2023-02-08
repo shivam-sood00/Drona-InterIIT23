@@ -175,6 +175,8 @@ class swarmPluto():
             """
             if self.drone1.isReached() and self.drone2.isReached():
 
+                print(f"178 - lastUpdated = {lastUpdated} i_target = {i_target}")
+
                 if lastUpdated==0:
                     self.exception = -1
                     self.endTime = time.time()
@@ -182,7 +184,7 @@ class swarmPluto():
                 
                 if lastUpdated==2:
                     i_target+=1
-                    if i_target==len(self.trajectory):
+                    if i_target>=4:
                         i_target = 0
                     if i_target%2==1:
                         if self.align == 'y':
@@ -207,6 +209,8 @@ class swarmPluto():
                     lastUpdated = 2
                     if i_target==0:
                         lastUpdated = 0
+                
+                print(f"213 - lastUpdated = {lastUpdated} i_target = {i_target}")
             """
             If both drones have completed trajectory then break and land
             """
