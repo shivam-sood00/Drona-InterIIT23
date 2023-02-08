@@ -132,7 +132,8 @@ class autoPluto:
             self.camera.cam_process(self.CamQueue)
             
             if self.debug:
-                print(f"{time.time()-start_time_camera} s for camera")
+                pass
+                # print(f"{time.time()-start_time_camera} s for camera")
     
             start_time_pid = time.time()
             self.updateState()
@@ -158,8 +159,8 @@ class autoPluto:
                         self.trajectory.append([self.currentState[0],  self.currentState[1]+(self.res_y-1-j)*self.rectangle[1]/(self.res_y-1),  self.currentState[2]+self.rectangle[2]])
                         self.axis_move.append('y')
                     # self.axis_move = ['z','x','y','x','y']
-                    print("Trajectory Waypoints:")
-                    print(self.trajectory)
+                    # print("Trajectory Waypoints:")
+                    # print(self.trajectory)
 
                 else:
                     self.trajectory.append([self.currentState[0],  self.currentState[1],  self.currentState[2]+self.hover_z])
@@ -211,7 +212,7 @@ class autoPluto:
                             self.hover_reached_flag = False
                 else:
                     self.pid.useWay = True
-                print("IS Reached True")
+                # print("IS Reached True")
             if i < len(self.trajectory):
                 carrot_wp = self.set_carrot_wps(self.trajectory[i],self.currentState[:3])
 
@@ -219,14 +220,16 @@ class autoPluto:
                 self.camera.update_waypoint(carrot_wp)
             
             if self.debug:
-                print(f"{time.time()-start_time_pid} s for pid")
+                pass
+                # print(f"{time.time()-start_time_pid} s for pid")
             
             loop_time = time.time() - start_time_camera
             if loop_time < self.runLoopWaitTime:
                 time.sleep(self.runLoopWaitTime - loop_time)
             
             if self.debug:
-                print(f"Total time {loop_time}s")
+                pass
+                # print(f"Total time {loop_time}s")
             
         time.sleep(2)
     

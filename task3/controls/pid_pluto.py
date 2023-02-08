@@ -231,7 +231,7 @@ class PID():
 		err = abs(err)
 		velCond = np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3])/0.04
 		self.vel_error = velCond
-		print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
+		# print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
 		if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
 			return True
 		return False

@@ -109,7 +109,8 @@ class swarmPluto():
             
             start_time_pid = time.time()
             if self.debug:
-                print(f"{start_time_pid-start_time_camera} s for camera")    
+                pass
+                # print(f"{start_time_pid-start_time_camera} s for camera")    
             
             """
             Sanity checks:
@@ -144,8 +145,7 @@ class swarmPluto():
                         self.trajectory.append([self.drone1.currentState['x']-self.rectangle[0],  self.drone1.currentState['y'], self.drone1.currentState['z'] + self.rectangle[2]])
                     
                 else:
-                    print("WHYYY HOVERRRR?? (Switch to rectange)")
-                
+                    pass
                 if abs(self.drone2.currentState['x'] - self.trajectory[-1][0])>0.10 or abs(self.drone2.currentState['y'] - self.trajectory[-1][1])>0.10:
                     continue
                 else:
@@ -175,7 +175,7 @@ class swarmPluto():
                 if lastUpdated==0:
                     self.exception = -1
                     self.endTime = time.time()
-                    print("time: ",self.endTime-self.startTime)
+                    # print("time: ",self.endTime-self.startTime)
                 
                 if lastUpdated==2:
                     i_target+=1
@@ -217,10 +217,12 @@ class swarmPluto():
             loop_time = time.time() - start_time_camera
             
             if self.debug:
-                print(f"{loop_time-start_time_pid} s for pid")
+                pass
+                # print(f"{loop_time-start_time_pid} s for pid")
             
             if self.debug:
-                print(f"Total time {loop_time}s")
+                pass
+                # print(f"Total time {loop_time}s")
             
             if loop_time < self.runLoopWaitTime:
                 time.sleep(self.runLoopWaitTime - loop_time)

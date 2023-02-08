@@ -604,7 +604,8 @@ class VisionPipeline():
             )
 
         if self.DEBUG:
-            print("[RAW ARUCO] (meters)--> X:", tVec[0, 0, 0] / 100.0, ", Y:", tVec[0, 0, 1] / 100.0, "Z:", tVec[0, 0, 2] / 100.0)
+            pass
+            # print("[RAW ARUCO] (meters)--> X:", tVec[0, 0, 0] / 100.0, ", Y:", tVec[0, 0, 1] / 100.0, "Z:", tVec[0, 0, 2] / 100.0)
             
         if self.camera_config['wandb']['use_wandb']:
             wandb.log({
@@ -846,11 +847,11 @@ class VisionPipeline():
                 # print("component_size "+ str(component_size))
                 comp_points.append([])
                 # print("dfs")
-                print("X<Y "+str(x)+" "+str(y))
+                # print("X<Y "+str(x)+" "+str(y))
                 coordinates.append(self.get_components(x,y, component_id, component_size, counter,start_x,start_y,end_x,end_y, comp_points, debug=True))
                 counter+=1
 
-        print("counter "+str(counter))
+        # print("counter "+str(counter))
         if counter==0:
             return None
         largest_component_id = 0
@@ -892,7 +893,8 @@ class VisionPipeline():
             # self.previous_pose[1] *= -1
         
         if self.DEBUG:
-            print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+            pass
+            # print("[RAW REALSENSE] (meters)--> X:", point_from_rs[0], "Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
 
 
         if self.camera_config['wandb']['use_wandb']:
@@ -913,7 +915,8 @@ class VisionPipeline():
 
 
         if self.DEBUG:
-            print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
+            pass
+            # print("[REALSENSE] (meters)--> X: ", point_from_rs[0], ", Y: ", point_from_rs[1], "Z: ", point_from_rs[2])
 
 
         if self.camera_config['wandb']['use_wandb']:
@@ -931,7 +934,7 @@ class VisionPipeline():
         mid_point = (mid_point + 0.5).astype(np.int32)
 
         self.current_midpoint = mid_point.copy()
-        print("aruco estimate: "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
+        # print("aruco estimate: "+str((mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))))
         return self.position_from_pixel(self.color_intrinsics, mid_point[0], mid_point[1], self.depth_frame_aligned.get_distance(mid_point[0], mid_point[1]))
         
 
@@ -939,7 +942,7 @@ class VisionPipeline():
         # return None
         drone_center = self.estimate_drone_center_from_depth()
 
-        print("DRNOE CENTER "+str(drone_center))
+        # print("DRNOE CENTER "+str(drone_center))
         if drone_center is None:
             return None
         # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
@@ -988,7 +991,7 @@ class VisionPipeline():
         if aruco_pose is not None:
             return aruco_pose
         elif depth_pose is not None and abs(depth_pose[0])>1e-6:
-            print("depth_pose: " + str(depth_pose))
+            # print("depth_pose: " + str(depth_pose))
             return depth_pose
         else:
             return []
@@ -1027,7 +1030,8 @@ class VisionPipeline():
 
         if self.DEBUG:
             if not(self.avg_fps is None):
-                print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
+                pass
+                # print(f"-----------------------------------------------------Average FPS: ", self.avg_fps)
             
 
         color_img = self.to_image(self.color_frame)
