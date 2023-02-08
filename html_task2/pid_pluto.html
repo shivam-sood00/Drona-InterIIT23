@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pid_pluto module &mdash; Task2  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="plutoComms module" href="plutoComms.html" />
+    <link rel="prev" title="autoPluto module" href="autoPluto.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Task2
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">code</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="autoPluto.html">autoPluto module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">pid_pluto module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plutoComms.html">plutoComms module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="vision_pipeline2.html">vision_pipeline2 module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Task2</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">code</a></li>
+      <li class="breadcrumb-item active">pid_pluto module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/pid_pluto.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-pid_pluto">
+<span id="pid-pluto-module"></span><h1>pid_pluto module<a class="headerlink" href="#module-pid_pluto" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="pid_pluto.PID">
+<em class="property">class </em><code class="descclassname">pid_pluto.</code><code class="descname">PID</code><span class="sig-paren">(</span><em>config</em>, <em>droneNo</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<blockquote>
+<div>This is the implementation of the PID controller.
+The current states are the x, y, z coordinates.</div></blockquote>
+<p>The control variables are thrust, roll, pitch in the range of 900-2100.
+Kp, Kd and Ki are the PID gains required to tune the control variables.</p>
+<dl class="method">
+<dt id="pid_pluto.PID.calc_diff_err">
+<code class="descname">calc_diff_err</code><span class="sig-paren">(</span><em>diff_frame</em>, <em>err_list</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.calc_diff_err" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating the differential error and storing the differtial error in list of length diff_moving_win_len
+and then storing the corresponding min, average or low pass filter function being called in the diff_fn.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.calc_err">
+<code class="descname">calc_err</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.calc_err" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating the error terms for the proportional, integral and derivative gain of the PID controller 
+corresponding to the thrust, roll, pitch and yaw.<br>
+Simultaneously appending the list containing prev_err_list with the current error term for thrust, roll, pitch and yaw.
+Clipping the error term to the range of -100 to 100 for thrust and -30 to 30 for roll, pitch and yaw respectively.
+Calculating the err_pitch_with_sse, err_roll_with_sse and err_thrust_with_sse for the steady state error in pitch, roll and thrust respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.isReached">
+<code class="descname">isReached</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.isReached" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boolean function to check if the quadrotor has reached the target pose.<br>
+When the error in velocity and position is less than a threshold value, the quadrotor is considered to have reached the target pose,
+function returns True, else False.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.low_pass_filter">
+<code class="descname">low_pass_filter</code><span class="sig-paren">(</span><em>diff_error_list</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.low_pass_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter to smoothen the error signal for PID controller.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset the error terms.<br>
+err_thrust: Error in thrust.<br>
+err_roll: Error in roll.<br>
+err_pitch: Error in pitch.<br>
+err_roll_with_sse: Bias term corresponding to the steady state error in roll due to external disturbances at the setpoint.<br>
+err_pitch_with_sse: Bias term corresponding to the steady state error in pitch  due to external disturbancesat the setpoint.<br>
+err_thrust_with_sse: Bias term corresponding to the steady state error in thrust due to external disturbances at the setpoint.<br>
+err_yaw: Error in yaw.<br>
+prev_err: Previous error.<br>
+prev_err_list: List of previous errors corresponding to thrust, roll, pitch and yaw respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.set_pitch_and_roll">
+<code class="descname">set_pitch_and_roll</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_pitch_and_roll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating output of the PID controller corresponding to Pitch and Roll and clipping it to the range of -250 to 250 respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.set_target_pose">
+<code class="descname">set_target_pose</code><span class="sig-paren">(</span><em>point</em>, <em>axis</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_target_pose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updating the target position using the carrot approach.<br>
+Carrot Approach: The target state of the drone is at a fixed distance from the current state of the drone, it keep updating at each instant.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.set_thrust">
+<code class="descname">set_thrust</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_thrust" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating output of the PID controller corresponding to Thrust and clipping it to the range of -250 to 250.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.set_yaw">
+<code class="descname">set_yaw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.set_yaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating output of the PID controller corresponding to Yaw and clipping it to the range of -150 to 150 respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.update_int_err">
+<code class="descname">update_int_err</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.update_int_err" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pid_pluto.PID.update_pos">
+<code class="descname">update_pos</code><span class="sig-paren">(</span><em>curPose</em><span class="sig-paren">)</span><a class="headerlink" href="#pid_pluto.PID.update_pos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updating the previous position and the current position of the quadrotor respectively.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="autoPluto.html" class="btn btn-neutral float-left" title="autoPluto module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="plutoComms.html" class="btn btn-neutral float-right" title="plutoComms module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, -.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

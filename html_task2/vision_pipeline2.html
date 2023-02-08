@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vision_pipeline2 module &mdash; Task2  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="plutoComms module" href="plutoComms.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Task2
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">code</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="autoPluto.html">autoPluto module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pid_pluto.html">pid_pluto module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plutoComms.html">plutoComms module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">vision_pipeline2 module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Task2</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">code</a></li>
+      <li class="breadcrumb-item active">vision_pipeline2 module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/vision_pipeline2.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-vision_pipeline2">
+<span id="vision-pipeline2-module"></span><h1>vision_pipeline2 module<a class="headerlink" href="#module-vision_pipeline2" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="vision_pipeline2.VisionPipeline">
+<em class="property">class </em><code class="descclassname">vision_pipeline2.</code><code class="descname">VisionPipeline</code><span class="sig-paren">(</span><em>depth_res=(720</em>, <em>1280)</em>, <em>rgb_res=(720</em>, <em>1280)</em>, <em>align_to='rgb'</em>, <em>marker_size=3.75</em>, <em>marker_type=0</em>, <em>required_marker_id=1</em>, <em>debug=0</em>, <em>padding=50</em>, <em>config_file='./task2/vision/config.yaml'</em>, <em>fps_moving_window_size=10</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>This is a class for initializing Intel Pyrealsense2 D435i camera and also finding 
+depth and rgb frames along with detection of aruco marker.</p>
+<dl class="docutils">
+<dt>Attributes:</dt>
+<dd>depth_res: defines the depth resolution. Default is (720, 1080).<br>
+rgb_res: defines the rgb resolution. Default is (720, 1080).<br>
+align_to: defines frame to which alignment must be done. Default is “rgb”.<br>
+marker_size: defines the marker size of the aruco tag. Default is 3.75.<br>
+marker_type: defines the aruco marker type. Default is DICT_4X4_50.<br>
+marker_dict: gets the required aruco dictionary.<br>
+require_marker_id: defines the marker id of the aruco tag placed on the drone.<br>
+calib_file_path: defines the path for camera calibration.<br>
+DEBUG: a flag to enable prints in code for debugging. Default is False.</dd>
+</dl>
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.axisplot">
+<code class="descname">axisplot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.axisplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots the axis determined by the initial pose of aruco.
+Parameter:</p>
+<blockquote>
+<div>None</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.calibrate_yaw">
+<code class="descname">calibrate_yaw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.calibrate_yaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the estimated initial yaw in the rotation vector, by taking median of multiple yaw readings.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.cam_init">
+<code class="descname">cam_init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.cam_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes camera and starts ArUco detection.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.cam_process">
+<code class="descname">cam_process</code><span class="sig-paren">(</span><em>cam_queue</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.cam_process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes video frames to detect and locate Aruco markers, find depth value using the depth frame and then updating the camera data queue with the estimated readings.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>cam_queue: a queue that is storing camera data where the latest reading is accessed by its last element</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.depth_from_marker">
+<code class="descname">depth_from_marker</code><span class="sig-paren">(</span><em>depth_frame_aligned</em>, <em>marker_corners</em>, <em>kernel_size=1</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.depth_from_marker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds depth from the estimated pose obtained from the ArUco tag.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>self.depth_frame_aligned: Aligned Depth Frame<br>
+marker_corners: contains the list of aruco marker corners<br>
+kernel_size: contains the size of the kernel</dd>
+<dt>Returns:</dt>
+<dd>depths: depth of the point filtered using median filter</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.detect_marker">
+<code class="descname">detect_marker</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.detect_marker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detection of ArUco markers returning its corners.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame: input frame of type numpy.array</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>Case 1:</dt>
+<dd>None : Returns if no marker detected</dd>
+<dt>Case 2:</dt>
+<dd>marker_corners : Returns Corners of detected Aruco Marker</dd>
+<dt>Case 3:</dt>
+<dd>“None” : Returns a string, if goes out of region of interest</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.estimate_drone_center_from_depth">
+<code class="descname">estimate_drone_center_from_depth</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.estimate_drone_center_from_depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the center of drone which is estimated from the depth camera. This is required as it provides extra FOV which enables us to track it,
+even after it goes out of field of vision of RGB Camera.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>x,y pixel coordinate of center of aruco</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.estimate_pose">
+<code class="descname">estimate_pose</code><span class="sig-paren">(</span><em>marker_corners</em>, <em>frame_of_ref='camera'</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.estimate_pose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates the pose of the transform matrix using large ArUco tag.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>marker_corners: list of marker corners
+frame_of_ref: frame of reference. Default value is “camera”</dd>
+<dt>Returns:</dt>
+<dd>6-DOF pose estimate of aruco marker in world frame</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.estimate_uncalib_pose">
+<code class="descname">estimate_uncalib_pose</code><span class="sig-paren">(</span><em>marker_corners</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.estimate_uncalib_pose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns attitude of Aruco to estimate initial yaw (used by calibrate_yaw() method).</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>marker_corners: corners of the detected aruco tag</dd>
+<dt>Returns:</dt>
+<dd>uncalib_rot: returns attitude of Aruco</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.extract_depth">
+<code class="descname">extract_depth</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.extract_depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns depth frame from Realsense Depth Camera.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame</dd>
+<dt>Returns:</dt>
+<dd>depth frame</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.extract_rgb">
+<code class="descname">extract_rgb</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.extract_rgb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts RGB frame from Realsense RGB Camera.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame</dd>
+<dt>Returns:</dt>
+<dd>frame.get_self.color_frame(): colour frame</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.find_area">
+<code class="descname">find_area</code><span class="sig-paren">(</span><em>corners</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.find_area" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to find area of the quadrilateral using corner data.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>corners: co-ordinate of the corners whose area needs to be calculated</dd>
+<dt>Returns:</dt>
+<dd>area:  returns area of the quadrilateral, specified by its corners</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.get_components">
+<code class="descname">get_components</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>component_id</em>, <em>component_size</em>, <em>counter</em>, <em>start_x</em>, <em>start_y</em>, <em>end_x</em>, <em>end_y</em>, <em>comp_points</em>, <em>debug=False</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.get_components" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using Connected Components Algorithm to find the cluster of connected points in depth frame (points together with almost same depth)
+to detect drone via depth frame.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>x: x pixel coordinate where connected components algorithm is applied<br>
+y: y pixel coordinate where connected components algorithm is applied<br>
+component_id: cluster ID<br>
+component_size: Size of the cluster<br>
+counter: cluster ID<br>
+start_x: starting x pixel coordinate of ROI<br>
+start_y: starting y pixel coordinate of ROI<br>
+end_x: ending x pixel coordinate of ROI<br>
+end_y: ending y pixel coordinate of ROI</dd>
+<dt>Returns:</dt>
+<dd>centroid of the cluster</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.get_distance">
+<code class="descname">get_distance</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.get_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the depth from depth camera corresponding to x,y coordinate in image frame.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>x: x coordinate of pixel<br>
+y: y coordinate of pixel</dd>
+<dt>Returns:</dt>
+<dd>depth corresponding x,y pixel</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.get_frames">
+<code class="descname">get_frames</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.get_frames" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the aligned depth and rgb frames for proper depth detection.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>aligned frames: Returns frame with depth and RGB frame aligned.</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.init_aruco_detector">
+<code class="descname">init_aruco_detector</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.init_aruco_detector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes camera Intrinsic and Extrinsic Parameters and generates Aruco detector parameters.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.init_intrinsics">
+<code class="descname">init_intrinsics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.init_intrinsics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setup the intrinsics parameters of the camera.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.init_realsense">
+<code class="descname">init_realsense</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.init_realsense" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes Realsense by enabling both depth and RGB stream and sets up parameters such as sharpness, contrast, exposure etc.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.make_tf_matrix">
+<code class="descname">make_tf_matrix</code><span class="sig-paren">(</span><em>rvec</em>, <em>tvec</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.make_tf_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the transformation matrix using the rotation and translational vectors.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>rvec: contains rotational vectors<br>
+tvec: contains trsnslational vectors</dd>
+<dt>Returns:</dt>
+<dd>tf: transformation matrix for the camera</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.outformat_to_tf">
+<code class="descname">outformat_to_tf</code><span class="sig-paren">(</span><em>input</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.outformat_to_tf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the list to the transformation matrix.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>out_vec: conversion of the transformation matrix into list</dd>
+<dt>Returns:            </dt>
+<dd>tf: transformation matrix</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.plot_markers">
+<code class="descname">plot_markers</code><span class="sig-paren">(</span><em>frame</em>, <em>marker_corners</em>, <em>marker_ids</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.plot_markers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draws lines around the detected frames.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame: RGB frame
+marker_corners: corners of the detected aruco tag<br>
+marker_ids: ids of the detected markers</dd>
+<dt>Returns:</dt>
+<dd>frame with plotted markers</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.plot_rej_markers">
+<code class="descname">plot_rej_markers</code><span class="sig-paren">(</span><em>frame</em>, <em>marker_corners</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.plot_rej_markers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draws lines around the detected frames.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame: RGB frame
+marker_corners: corners of the detected aruco tag</dd>
+<dt>Returns:</dt>
+<dd>frame: frame with plotted rejected markers</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.point_to_pixel">
+<code class="descname">point_to_pixel</code><span class="sig-paren">(</span><em>point</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.point_to_pixel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts coordinates in camera frame to image frame and returns the projected point.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>point: x,y,z position from camera frame</dd>
+<dt>Returns:</dt>
+<dd>point_2d:  x,y pixel location in image frame</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.pose_estimation">
+<code class="descname">pose_estimation</code><span class="sig-paren">(</span><em>use_cam=True</em>, <em>use_depth=True</em>, <em>marker_corners=None</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.pose_estimation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates position using the Depth Camera and Aruco Marker. Returns position calculated using Depth Camera when Aruco Data is 
+not available ( happens when Aruco Marker goes out of FOV of RGB Camera )</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>use_cam: Whether to perform position estimation using Aruco. Default is True.<br>
+use_depth: Whether to perform position estimation using Depth Camera. Default is True.<br>
+marker_corners: Location of corners of detected aruco.</dd>
+<dt>Returns:</dt>
+<dd>depth_pose: Return pose estimated from depth if Depth Cam Estimation enabled and Aruco is not detected<br>
+aruco_pose: Return pose estimated from Aruco</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.pose_estimation_from_aruco">
+<code class="descname">pose_estimation_from_aruco</code><span class="sig-paren">(</span><em>marker_corners</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.pose_estimation_from_aruco" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates the x,y position of Aruco Markers in camera frame whose corners are detected via RGB Camera.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>marker_corners: Pixel coordinates of corners of detected aruco markers</dd>
+<dt>Returns:</dt>
+<dd>aruco_estimate: x,y camera frame coordinate of aruco Marker</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.pose_estimation_from_depth_camera">
+<code class="descname">pose_estimation_from_depth_camera</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.pose_estimation_from_depth_camera" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates the x,y position of drone in camera frame using depth camera intrinsics.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd><a href="#id1"><span class="problematic" id="id2">depth_estimate_</span></a>: x,y camera frame coordinate (claculated using region with least depth)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.position_from_pixel">
+<code class="descname">position_from_pixel</code><span class="sig-paren">(</span><em>intrinsics_</em>, <em>pixel_x</em>, <em>pixel_y</em>, <em>depth</em>, <em>update_previous_pose=True</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.position_from_pixel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets x,y camera frame coordinate from realsense camera.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd><a href="#id3"><span class="problematic" id="id4">intrinsics_</span></a>: Intrinsics parameters of the camera<br>
+pixel_x: x coordinate of pixel, whose position needs to be estimated<br>
+pixel_y: y coordinate of pixel, whose position needs to be estimated<br>
+depth: Depth at pixel_x, pixel_y</dd>
+<dt>Returns:</dt>
+<dd>Position of Drone along with depth</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.process_yaw">
+<code class="descname">process_yaw</code><span class="sig-paren">(</span><em>yaw</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.process_yaw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processes Yaw of the drone at the current state. This is a minor fix when sometimes yaw is wrongly estimated.
+Parameter:</p>
+<blockquote>
+<div>yaw: Initial yaw obtained from IMU readings</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>yaw: Final yaw calculated by the function</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.show_frame">
+<code class="descname">show_frame</code><span class="sig-paren">(</span><em>frame</em>, <em>rgb_frame</em>, <em>window_name='Frame'</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.show_frame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays frame for debugging purpose.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame: edited RGB Frame with texts<br>
+rgb_frame: original RGB Frame <br>
+window_name: name of the window where the frame is displayed</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops the pipeline.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.tf_to_outformat">
+<code class="descname">tf_to_outformat</code><span class="sig-paren">(</span><em>tf</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.tf_to_outformat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the transformation matrix to a list.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>tf: transformation matrix</dd>
+<dt>Returns:</dt>
+<dd>out_vec: conversion of the transformation matrix into list</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.to_image">
+<code class="descname">to_image</code><span class="sig-paren">(</span><em>frame</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.to_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts pyrealsense2.frame to np.array.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>frame: input frame of type pyrealsense2.frame</dd>
+<dt>Returns:</dt>
+<dd>np.asarray(frame.get_data())</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.update_waypoint">
+<code class="descname">update_waypoint</code><span class="sig-paren">(</span><em>waypoint</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.update_waypoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the waypoint that is plotted on the image frame to be displayed.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>waypoint: this is the new waypoint to be updated</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="vision_pipeline2.VisionPipeline.wandb_init">
+<code class="descname">wandb_init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.VisionPipeline.wandb_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>WandB is a central dashboard to keep track of your hyperparameters, system metrics, and predictions so we can 
+compare models, graphs etc live.</p>
+<dl class="docutils">
+<dt>Parameter:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="vision_pipeline2.trackChaned">
+<code class="descclassname">vision_pipeline2.</code><code class="descname">trackChaned</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#vision_pipeline2.trackChaned" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="plutoComms.html" class="btn btn-neutral float-left" title="plutoComms module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, -.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
