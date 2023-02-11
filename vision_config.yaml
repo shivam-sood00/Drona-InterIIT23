@@ -1,5 +1,5 @@
 # for camera 1
-active_camera: 2
+active_camera: 1
 camera: 
   1:
     intrinsics:
@@ -9,7 +9,7 @@ camera:
     extrinsics:
       global_origin:  [0.0, 0.0, 0.0] #[32.09, 3.832, 280.2] #[0.0, 0.0, 0.0] #[46.22983901,   1.60285046, 278.0799618] # From aruco
       realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
-      imu_correction: [-0.04298656,  0.01464409,  0.        ]
+      imu_correction: [-0.00310958,  0.03258534,  0.        ]
       calibrate_yaw: False
       max_iters: 30
       default_yaw: [0.0, 0.0, 0.0] # Yaw used if calibrate yaw is set to false
@@ -35,7 +35,7 @@ camera:
     extrinsics:
       global_origin:  [0.0, 0.0, 0.0] #[32.09, 3.832, 280.2] #[0.0, 0.0, 0.0] #[46.22983901,   1.60285046, 278.0799618] # From aruco
       realsense_origin: [0.0, 0.0, 0.0] #[0.3379, 0.04129, 2.98]
-      imu_correction: [-0.00947533,  0.01367356,  0.        ]
+      imu_correction: [-0.02657218,  0.00845852,  0.        ]
       calibrate_yaw: False
       default_yaw: [0.0, 0.0, 0.0] # Yaw used if calibrate yaw is set to false
       camera_depth_translation: [0.014949, 0.0002385, 0.0002678]
@@ -47,12 +47,12 @@ camera_params:
   enable_auto_white_balance: 0
   sharpness: 100
   contrast: 50
-  brightness: 30
+  brightness: 10
   exposure: 100
 
 
 tracking:
-  enable: False
+  enable: True
   area_th: 160
   centroid_th: 12
 
@@ -64,3 +64,10 @@ wandb:
 use_aruco_xy: False
 
 yaw_error_threshold: 0.035
+
+rectangle_length: 2.0
+rectangle_width: 1.0
+
+depth_tracking:
+  min_dist: 0.5
+  max_dist: 2.25

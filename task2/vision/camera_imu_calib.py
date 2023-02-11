@@ -25,7 +25,7 @@ Utility Script for camera roll and pitch callibration using IMU data of Realsens
 # motion_data = frame.as_motion_frame().get_motion_data()
 
 # Save the Acceleration in accel_param
-accel_param = np.array([0.127, 0.088, -9.287]).reshape(-1,3)
+accel_param = np.array([0.078, 0.245, -9.218]).reshape(-1,3)
 
 # Find the net Acceleration
 accel_param_norm  = np.linalg.norm(accel_param)
