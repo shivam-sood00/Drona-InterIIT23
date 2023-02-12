@@ -234,15 +234,15 @@ class VisionPipeline():
         # rs.option.enable_auto_exposure
         rs.option.enable_motion_correction
 
-        colorSensor.set_option(rs.option.enable_auto_exposure, self.camera_config['camera_params']['enable_auto_exposure'])
-        colorSensor.set_option(rs.option.enable_auto_white_balance, self.camera_config['camera_params']['enable_auto_white_balance'])
+        colorSensor.set_option(rs.option.enable_auto_exposure, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['enable_auto_exposure'])
+        colorSensor.set_option(rs.option.enable_auto_white_balance, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['enable_auto_white_balance'])
 
-        colorSensor.set_option(rs.option.sharpness, self.camera_config['camera_params']['sharpness'])
-        colorSensor.set_option(rs.option.contrast, self.camera_config['camera_params']['contrast'])
+        colorSensor.set_option(rs.option.sharpness, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['sharpness'])
+        colorSensor.set_option(rs.option.contrast, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['contrast'])
         # colorSensor.set_option(rs.option.gamma, 0)
-        colorSensor.set_option(rs.option.brightness, self.camera_config['camera_params']['brightness'])
+        colorSensor.set_option(rs.option.brightness, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['brightness'])
 
-        colorSensor.set_option(rs.option.exposure, self.camera_config['camera_params']['exposure'])
+        colorSensor.set_option(rs.option.exposure, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['exposure'])
         # colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()

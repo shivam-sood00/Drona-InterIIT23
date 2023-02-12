@@ -39,7 +39,7 @@ class VisionPipeline():
                  padding=0,
                  config_file="vision_config.yaml",
                  fps_moving_window_size=10,
-                 debug_calib=False) -> None:
+                 display_depth_window = False) -> None:
 
         self.DEPTH_DETECTION_THRESHOLD = 2
         self.depth_res = depth_res
@@ -48,8 +48,9 @@ class VisionPipeline():
         self.marker_size = marker_size
         self.marker_type = marker_type
         self.marker_dict = aruco.getPredefinedDictionary(self.marker_type)
-        self.debug_calib = debug_calib
         self.required_marker_id = required_marker_id
+
+        self.display_depth_window = display_depth_window
 
         with open(config_file, 'r') as f:
             self.camera_config = yaml.load(f)
@@ -112,7 +113,7 @@ class VisionPipeline():
 
         self.rp_correction = Rotation.from_euler('xyz', np.array(self.imu_calib_data)).as_matrix()
         
-        if self.calib_yaw_at_start and (not debug_calib):
+        if self.calib_yaw_at_start:
             self.calibrate_yaw()
         else:
             self.cam_rvec = np.array(self.camera_extrinsic['default_yaw']) #np.array([0.0, 0.0, 0.0])
@@ -360,15 +361,15 @@ class VisionPipeline():
         # rs.option.enable_auto_exposure
         rs.option.enable_motion_correction
 
-        colorSensor.set_option(rs.option.enable_auto_exposure, self.camera_config['camera_params']['enable_auto_exposure'])
-        colorSensor.set_option(rs.option.enable_auto_white_balance, self.camera_config['camera_params']['enable_auto_white_balance'])
+        colorSensor.set_option(rs.option.enable_auto_exposure, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['enable_auto_exposure'])
+        colorSensor.set_option(rs.option.enable_auto_white_balance, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['enable_auto_white_balance'])
 
-        colorSensor.set_option(rs.option.sharpness, self.camera_config['camera_params']['sharpness'])
-        colorSensor.set_option(rs.option.contrast, self.camera_config['camera_params']['contrast'])
+        colorSensor.set_option(rs.option.sharpness, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['sharpness'])
+        colorSensor.set_option(rs.option.contrast, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['contrast'])
         # colorSensor.set_option(rs.option.gamma, 0)
-        colorSensor.set_option(rs.option.brightness, self.camera_config['camera_params']['brightness'])
+        colorSensor.set_option(rs.option.brightness, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['brightness'])
 
-        colorSensor.set_option(rs.option.exposure, self.camera_config['camera_params']['exposure'])
+        colorSensor.set_option(rs.option.exposure, self.camera_config['camera'][self.camera_config['active_camera']]['camera_params']['exposure'])
         # colorSensor.set_option(rs.option.gain, 300)
 
         self.depth_sensor = profile.get_device().first_depth_sensor()
@@ -1141,29 +1142,35 @@ class VisionPipeline():
 
         (x_mean,y_mean) = (0,0)
         qu = Queue()
-
+        component_id[x-start_x][y-start_y]=counter
+        component_size[counter] += 1
+        # if debug:
+        #     comp_points[counter].append((x,y))
         qu.put((x,y))
 
         while not qu.empty():
             (x_t, y_t) = qu.get()
-            if(component_id[x_t-start_x][y_t-start_y]==counter):
-                continue
+            # if(component_id[x_t-start_x][y_t-start_y]==counter):
+            #     continue
             # print("component_id[x_t][y_t] "+str(component_id[x_t-start_x][y_t-start_y]))
             # print("(x_t, y_t) "+str((x_t, y_t)))
             # print("component_size[counter] "+str(component_size[counter]))
-            if debug:
-                comp_points[counter].append((x_t,y_t))
+            # if debug:
+            #     comp_points[counter].append((x_t,y_t))
             x_mean+=x_t
             y_mean+=y_t
-            component_id[x_t-start_x][y_t-start_y]=counter
-            component_size[counter] += 1
-            for xx in range(x_t-2, x_t+4,2):
-                for yy in range(y_t-2, y_t+4,2):
+           
+            for xx in range(x_t-2, x_t+3,2):
+                for yy in range(y_t-2, y_t+3,2):
                     if (x_t==xx and y_t==yy) or yy<start_y or xx<start_x or xx>=end_x or yy>=end_y:
                         continue
                     if component_id[xx-start_x][yy-start_y] == -1 and self.depth_full_distances[yy][xx]<self.DEPTH_DETECTION_THRESHOLD:
                         if abs(self.depth_full_distances[y_t][x_t]-self.depth_full_distances[yy][xx])< 0.025 and abs(xx-x) < 3*self.DEPTH_SEARCH_REGION and abs(yy-y) < 3*self.DEPTH_SEARCH_REGION:
                             # print("(xx,yy) "+str((xx,yy)))
+                            component_id[xx-start_x][yy-start_y]=counter
+                            component_size[counter] += 1
+                            # if debug:
+                            #     comp_points[counter].append((xx,yy))
                             # print("component_id[xx-start_x][yy-start_y] "+str(component_id[xx-start_x][yy-start_y]))
                             qu.put((xx,yy))
 
@@ -1242,11 +1249,11 @@ class VisionPipeline():
         if component_size[largest_component_id] < 30:
             return None
 
-        if self.DEBUG:
-            drone_image = 10*np.asarray(self.depth_frame_full.get_data())
+        if self.DEBUG and self.display_depth_window:
             # print(drone_image)
             # for (x,y) in comp_points[largest_component_id]:
             #     drone_image[y][x] = 100000
+            drone_image = 10*np.asarray(self.depth_frame_full.get_data())
             cv2.circle(drone_image, (x_mean, y_mean), 7, 0, -1)
             cv2.imshow("drone_segmented", drone_image)
             cv2.waitKey(1)
@@ -1453,7 +1460,8 @@ class VisionPipeline():
                     self.estimated_pose_all[key] = estimated_pose
                 else:
                     self.counter[key] += 1
-                    if self.counter[key] >= 30:
+                    self.estimated_pose_all[key] = 100
+                    if self.counter[key] >= 20:
                         flag = 2
                         # cam_queue.append([flag])
                         self.counter[key] = 0

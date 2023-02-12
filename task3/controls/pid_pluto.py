@@ -92,6 +92,8 @@ class PID():
 		self.diff_fn_dict = {'min':np.min, 'avg':np.average, 'lpf':self.low_pass_filter}
 		self.diff_fn = self.diff_fn_dict[config.get(droneNo,"diff_fn")]
 		self.alpha = float(config.get(droneNo,"alpha_low_pass"))
+
+		self.is_hovering = True
 		self.reset()
 		
 	"""
@@ -209,8 +211,12 @@ class PID():
 		self.pitch = pitch
 		self.roll= roll
 		yaw_ref = np.radians(self.cur_pose[3] - self.zero_yaw)
-		self.pitch = 1500 + np.clip(self.pitch, -25, 25) 
-		self.roll = 1500 - np.clip(self.roll, -25, 25)
+		if self.is_hovering:
+			self.pitch = 1500 + np.clip(self.pitch, -25, 25) 
+			self.roll = 1500 - np.clip(self.roll, -25, 25)
+		else:
+			self.pitch = 1500 + np.clip(self.pitch, -25, 25) 
+			self.roll = 1500 - np.clip(self.roll, -25, 25)
 		return self.pitch, self.roll  
 	
 	def set_yaw(self):
@@ -232,7 +238,10 @@ class PID():
 		velCond = np.linalg.norm(self.cur_pose[:3] - self.prev_pose[:3])/0.04
 		self.vel_error = velCond
 		# print("x_err,y_err, velCond, z_err",err[0],err[1],velCond,err[2])
-		if np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
+		if self.is_hovering:
+			if np.all(err[:2]< (self.xy_thresh+0.1)) and velCond < (self.vel_thresh+0.05) and err[2]<self.z_thresh:
+				return True 
+		elif np.all(err[:2]< self.xy_thresh) and velCond < self.vel_thresh and err[2]<self.z_thresh:
 			return True
 		return False
 

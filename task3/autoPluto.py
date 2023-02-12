@@ -1,6 +1,7 @@
 from task3.MSP_comms.plutoComms import COMMS
 from task3.controls.pid_pluto import PID
 import threading
+import numpy as np
 
 
 class autoPluto:
@@ -73,6 +74,20 @@ class autoPluto:
             self.comms.paramsSet["Pitch"] = int(self.action["Pitch"])
             self.comms.paramsSet["Throttle"] = int(self.action["Throttle"])
             self.comms.paramsSet["Yaw"] = int(self.action["Yaw"])
+        elif exception==100:
+            if bool(self.config.get("Reset","active")):
+                print("reseting Pid")
+
+                roll_clip = 9
+                pitch_clip = 9
+                throttle_clip = 300
+                yaw_clip = 9
+
+
+                self.comms.paramsSet["Roll"] = np.clip(int(self.action["Roll"]),1500 - roll_clip, 1500 + roll_clip)
+                self.comms.paramsSet["Pitch"] = np.clip(int(self.action["Pitch"]),1500 - pitch_clip, 1500 + pitch_clip)
+                self.comms.paramsSet["Throttle"] = np.clip(int(self.action["Throttle"]),1525 - throttle_clip, 1525 + throttle_clip)
+                self.comms.paramsSet["Yaw"] = np.clip(int(self.action["Yaw"]),1500 - yaw_clip, 1500 + yaw_clip)
         else:
             self.comms.paramsSet["currentCommand"] = 2
             print("landing due to exception: ",exception)

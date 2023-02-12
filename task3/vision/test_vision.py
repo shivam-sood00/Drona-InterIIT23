@@ -21,7 +21,7 @@ if __name__ == '__main__':
     marker_type=aruco.DICT_4X4_50
     required_marker_id = [6,8]
 
-    pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, debug=DEBUG)
+    pipeline = VisionPipeline(depth_res, rgb_res, align_to, marker_size, marker_type, required_marker_id, debug=DEBUG,display_depth_window = False)
     # pipeline.update_waypoint([0, 0, -2.4], 6)
     while True:
         pipeline.cam_process()

@@ -23,16 +23,16 @@ config.read("controls/droneData.ini")
 with open(join(folder_name,"DroneData.ini"), 'w') as configfile:
     config.write(configfile)
 
-shutil.copy2('debug.txt',folder_name)
+# shutil.copy2('debug.txt',folder_name)
 
-shutil.copy2('debug.csv',folder_name)
+shutil.copy2('../debug.csv',folder_name)
 
 
-df = pd.read_csv("debug.csv")
-plt.plot(df['x1'],df['y1'])
+df = pd.read_csv("../debug.csv")
+plt.scatter(df['x1'],df['y1'])
 plt.savefig(f"{folder_name}/xvsy1.png")
 plt.clf()
 
-plt.plot(df['x2'],df['y2'])
+plt.scatter(df['x2'],df['y2'])
 plt.savefig(f"{folder_name}/xvsy2.png")
 plt.clf()

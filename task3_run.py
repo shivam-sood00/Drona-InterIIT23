@@ -41,7 +41,7 @@ class swarmPluto():
         
         2. Caliberate Yaw Live
         """
-        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=self.markerIdList,debug=1,padding = 0)
+        self.camera = VisionPipeline(rgb_res=(1080,1920),marker_size=3.6,required_marker_id=self.markerIdList,debug=1)
         
         self.trajectory = []
         self.exception = 0
@@ -87,7 +87,8 @@ class swarmPluto():
         """
         self.drone1.takeAction(self.exception)
         self.drone2.takeAction(self.exception)
-
+        if self.exception==100:
+            self.exception=0
         if self.exception != 0:
             self.exit_land()
     
@@ -196,7 +197,10 @@ class swarmPluto():
                             dirOfMotion1 = 'y'
                         elif self.align == 'x':
                             dirOfMotion1 = 'x'
-                    self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)                    
+                    self.drone1.updateTarget(self.trajectory[i_target],dirOfMotion1)
+                    self.drone2.pid.is_hovering = True
+                    self.drone1.pid.is_hovering = False                 
+              
                     # self.camera.update_waypoint(self.trajectory[i_target],self.markerIdList[0])
                     lastUpdated = 1
                 elif lastUpdated==1:
@@ -207,6 +211,10 @@ class swarmPluto():
                         self.drone2.updateTarget(self.trajectory[i_target-1],'x')
                         # self.camera.update_waypoint(self.trajectory[i_target-1],self.markerIdList[1])
                     lastUpdated = 2
+                    self.drone1.pid.is_hovering = True
+                    self.drone2.pid.is_hovering = False
+                 
+
                     if i_target==0:
                         lastUpdated = 0
                 
